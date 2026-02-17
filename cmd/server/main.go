@@ -10,14 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
-	"github.com/google/uuid"
 	"github.com/jeffwnelson/sodatracker/internal/api"
 	"github.com/jeffwnelson/sodatracker/internal/config"
-	"github.com/jeffwnelson/sodatracker/internal/domain"
 	"github.com/jeffwnelson/sodatracker/internal/events"
 	"github.com/jeffwnelson/sodatracker/internal/events/local"
+	"github.com/jeffwnelson/sodatracker/internal/seed"
 	"github.com/jeffwnelson/sodatracker/internal/service"
 	"github.com/jeffwnelson/sodatracker/internal/store/sqlite"
 )
@@ -32,7 +29,7 @@ func main() {
 	defer st.Close()
 
 	// Seed admin user if not exists
-	seedAdminUser(st, cfg.AdminPassword)
+	seed.AdminUser(st, cfg.AdminPassword)
 
 	bus := local.New()
 	defer bus.Close()
@@ -84,34 +81,4 @@ func main() {
 		log.Fatalf("shutdown error: %v", err)
 	}
 	log.Println("server stopped")
-}
-
-func seedAdminUser(st *sqlite.SQLiteStore, password string) {
-	ctx := context.Background()
-	existing, err := st.GetUserByUsername(ctx, "admin")
-	if err != nil {
-		log.Printf("warning: failed to check admin user: %v", err)
-		return
-	}
-	if existing != nil {
-		return
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Printf("warning: failed to hash admin password: %v", err)
-		return
-	}
-
-	u := &domain.User{
-		ID:           uuid.NewString(),
-		Username:     "admin",
-		PasswordHash: string(hash),
-		Role:         "admin",
-	}
-	if err := st.CreateUser(ctx, u); err != nil {
-		log.Printf("warning: failed to seed admin user: %v", err)
-		return
-	}
-	log.Println("seeded admin user")
 }

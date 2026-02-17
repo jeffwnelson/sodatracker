@@ -27,7 +27,7 @@ Note: Some legacy debris (`sodaTracker.js`, `npm-debug.log`, `quick2wire-gpio-ad
 - **Events:** SNS (AWS) / in-process channel-based pub/sub (self-hosted) — behind an `EventBus` interface (Phase 3)
 - **Frontend:** React 19 + TypeScript + Vite + TanStack Query + Recharts + Tailwind CSS v4 (Vite plugin, no `tailwind.config.js`) + react-router-dom v7
 - **Pi agent:** Go binary cross-compiled for ARM, mock GPIO implementation (real `periph.io` GPIO not yet implemented — build tag `rpi` reserved), SQLite local cache
-- **IaC:** AWS CDK in Go (Phase 4)
+- **IaC:** OpenTofu (Terraform-compatible) for AWS infrastructure (DynamoDB, Lambda, API Gateway, S3, CloudFront, SNS)
 - **Auth:** JWT (HS256, 24h expiry) for admin dashboard, API key for Pi agent, `APIKeyOrJWT` middleware on shared admin routes
 - **IDs:** Server-generated UUIDs via `google/uuid`
 
@@ -37,17 +37,18 @@ Note: Some legacy debris (`sodaTracker.js`, `npm-debug.log`, `quick2wire-gpio-ad
 sodaTracker/
 ├── cmd/
 │   ├── server/main.go        # Self-hosted HTTP server
-│   ├── lambda/                # AWS Lambda entry point (Phase 4, empty stub)
+│   ├── lambda/main.go        # AWS Lambda entry point (chi adapter v2)
 │   ├── piagent/main.go        # Raspberry Pi GPIO agent
 │   ├── slackbot/              # Slack bot (Phase 3, empty stub)
 │   └── discordbot/            # Discord bot (Phase 3, empty stub)
 ├── internal/
 │   ├── api/                   # chi router, middleware, handlers
-│   ├── domain/                # Entity structs (Product, Machine, Slot, Dispense, Restock, User, AlertConfig, AlertEvent, StockPrediction)
-│   ├── store/                 # Store interface + sqlite/ implementation (dynamo/ in Phase 4)
-│   ├── events/                # EventBus interface + local/ in-process implementation (sns/ in Phase 4)
-│   ├── service/               # Business logic (dispense, restock, stock calculation, login, stats, alerts, predictions)
-│   ├── notify/                # Slack and Discord notification clients (Phase 3+)
+│   ├── domain/                # Entity structs (Product, Machine, Slot, Dispense, Restock, User)
+│   ├── store/                 # Store interface + sqlite/ and dynamo/ implementations
+│   ├── events/                # EventBus interface + local/ and sns/ implementations
+│   ├── service/               # Business logic (dispense, restock, stock calculation, login, stats)
+│   ├── seed/                  # Admin user seeding (shared between server and Lambda)
+│   ├── notify/                # Slack and Discord notification clients (Phase 3)
 │   ├── auth/                  # API key middleware + JWT middleware (auth.go, jwt.go)
 │   └── config/                # Env-based config loading
 ├── pkg/
@@ -55,11 +56,11 @@ sodaTracker/
 │   └── piagent/               # Agent logic, local SQLite cache, YAML config
 ├── web/                       # React frontend (Vite + Tailwind)
 │   └── src/
-│       ├── pages/             # CustomerDashboard, LoginPage, AdminDashboard, MachineDetailPage, RestockPage, AlertsPage
+│       ├── pages/             # CustomerDashboard, LoginPage, AdminDashboard, MachineDetailPage, RestockPage
 │       ├── components/        # StockGrid, AdminLayout, ProtectedRoute
 │       ├── context/           # AuthContext (JWT token + user state, localStorage persistence)
 │       └── api/               # API client + TypeScript types
-├── infra/cdk/                 # AWS CDK stack (Phase 4, empty stub)
+├── infra/                     # OpenTofu infrastructure (DynamoDB, Lambda, API GW, S3, CloudFront, SNS)
 ├── docker-compose.yml         # Self-hosted: single container, SQLite volume
 ├── Dockerfile                 # Multi-stage: Go API (CGO_ENABLED=0) + React static files
 ├── Makefile
@@ -111,6 +112,14 @@ make docker-up      # docker compose up --build -d
 make docker-down    # docker compose down
 ```
 
+### Lambda (AWS)
+```bash
+make build-lambda        # Cross-compile for Lambda (linux/arm64), creates bin/lambda.zip
+make tf-plan             # OpenTofu plan (cd infra && tofu plan)
+make tf-apply            # OpenTofu apply (cd infra && tofu apply)
+make deploy-frontend     # Build frontend, sync to S3, invalidate CloudFront
+```
+
 ### Pi Agent
 ```bash
 make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
@@ -126,20 +135,18 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 - **Admin password:** `dev-admin-password` (env `ADMIN_PASSWORD`) — bcrypt-hashed on first startup to seed the `admin` user
 - **Static file dir:** empty in dev, `/app/static` in Docker (env `STATIC_DIR`) — serves SPA with index.html fallback
 - **Frontend dev server:** port 4000 with proxy to API at :3000
+- **DynamoDB table name:** (env `TABLE_NAME`) — only set for Lambda deployment
+- **SNS topic ARN:** (env `SNS_TOPIC_ARN`) — only set for Lambda deployment, enables SNS event fan-out
 - **Pi agent config:** YAML file only (no env var fallback) — see `piagent.yaml.example`
 - **Pi agent cache DB:** `piagent-cache.db` (default, configurable in YAML)
 
 ## Data Model
 
-**Domain entities:** Product (upc, name, costPerCan, imageUrl), Machine (name, location, slotCount), Slot (machineId, position, productId, gpioPin, capacity, lowThreshold), Dispense (machineId, productId, slotPosition, sourceType, timestamp), Restock (machineId, userId, slots[], timestamp), User (username, passwordHash `json:"-"`, role), AlertConfig (machineId, slotPosition, lowThreshold, enabled), AlertEvent (machineId, slotPosition, productId, alertType, currentStock, threshold, cleared, timestamp, clearedAt), StockPrediction (computed on read — not persisted)
+**Domain entities:** Product (upc, name, costPerCan, imageUrl), Machine (name, location, slotCount), Slot (machineId, position, productId, gpioPin, capacity, lowThreshold), Dispense (machineId, productId, slotPosition, sourceType, timestamp), Restock (machineId, userId, slots[], timestamp), User (username, passwordHash `json:"-"`, role)
 
 **Stock calculation:** Computed on read — last restock quantity minus dispenses since that restock. No stored counter (avoids write contention). Stock is capped at 0 minimum (never goes negative).
 
 **Slot status thresholds:** `currentStock > lowThreshold` = "ok" (green), `currentStock > 0 && <= lowThreshold` = "low" (yellow), `currentStock <= 0` = "empty" (red)
-
-**Alert deduplication:** `GetActiveAlert` checks for an existing uncleared alert of the same type for the same machine/slot before creating a new one. Alerts are cleared per-slot on restock via `ClearAlertEvents`.
-
-**Stock predictions:** `GetStockPredictions` computes `dispensesPerDay = count / lookbackDays` (default 14 days), then `estimatedDaysLeft = currentStock / dispensesPerDay`. Returns -1 for no data.
 
 ## API Routes
 
@@ -163,10 +170,10 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 | POST | `/api/v1/machines/:id/alerts` | API Key or JWT | Create alert config | Done |
 | PUT | `/api/v1/alerts/:id` | API Key or JWT | Update alert config | Done |
 | DELETE | `/api/v1/alerts/:id` | API Key or JWT | Delete alert config | Done |
-| GET | `/api/v1/machines/:id/alert-events` | API Key or JWT | Alert events (`?active=true&limit=50`) | Done |
-| GET | `/api/v1/machines/:id/predictions` | API Key or JWT | Stock predictions (`?lookbackDays=14`) | Done |
+| GET | `/api/v1/machines/:id/alert-events` | API Key or JWT | List fired alerts | Done |
+| GET | `/api/v1/machines/:id/predictions` | API Key or JWT | Stock-out predictions | Done |
 | GET | `/api/v1/reports/dispenses` | JWT | Export CSV/PDF | Phase 5 |
-| CRUD | `/api/v1/webhooks` | JWT | Webhook subscriptions | Phase 3+ |
+| CRUD | `/api/v1/webhooks` | JWT | Webhook subscriptions | Phase 3 |
 
 **Auth:** API key middleware accepts both `X-API-Key: <key>` and `Authorization: Bearer <key>` headers. The `APIKeyOrJWT` middleware on admin CRUD routes accepts either an API key or a valid JWT token, so both the Pi agent and the admin dashboard can call them.
 
@@ -186,30 +193,33 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 - **Dockerfile** builds with `CGO_ENABLED=0` — this is why `modernc.org/sqlite` (pure Go) is used instead of `mattn/go-sqlite3`.
 - **In-memory aggregation** — `GetDispenseStats` fetches dispenses via `ListDispenses` and aggregates in Go (hourly bucketing, product ranking by count). No SQL GROUP BY queries — acceptable for current scale.
 - **Service owns JWT signing** — `service.Login()` calls `auth.GenerateToken()` internally. JWT secret is passed to the Service constructor.
+- **EventBus** — `events.EventBus` interface (`internal/events/events.go`) with `Publish`, `Subscribe`, `Close`. Local implementation (`internal/events/local/`) uses synchronous in-process dispatch with `sync.RWMutex`. Event data uses `map[string]any` to stay generic for future SNS/webhook delivery. Bus is nil-safe — service skips publish if bus is nil.
+- **Alert evaluation flow** — `RegisterDispense` → publishes `EventDispense` → subscriber calls `EvaluateStockAlert` → computes stock → checks alert configs (slot-specific > machine-wide `slotPosition=0` > slot's own `lowThreshold`) → creates `AlertEvent` if threshold breached and no active alert exists (deduplication via `GetActiveAlert`). `CreateRestock` clears active alerts for restocked slots.
+- **AlertConfig `slotPosition=0`** means machine-wide default. `LowThreshold=-1` means use the slot's own threshold. Stored with `UNIQUE(machine_id, slot_position)` constraint (upsert on create).
+- **Predictive stock-out** — `GetStockPredictions` computes `dispensesPerDay = count / lookbackDays` (default 14 days) per slot, then `estimatedDaysLeft = currentStock / dispensesPerDay`. Returns -1 if no dispense data.
 - **Frontend token storage** — localStorage with key `soda_token`. AuthContext initializes from localStorage so page refresh preserves login state.
 - **Frontend refresh intervals:** machine list refreshes every 30s, individual machine status cards every 10s, admin stats staleTime is 30s, TanStack Query default staleTime is 5s.
 - **TypeScript strict mode** enabled with `verbatimModuleSyntax` — all type imports must use `import type`.
-- **EventBus** — `events.EventBus` interface with `Publish`, `Subscribe` (returns unsubscribe func), `Close`. `local.LocalBus` is synchronous in-process dispatch; subscriber errors are logged but don't block other subscribers. Event `Data` is `map[string]any` for generic serialization.
-- **Event types:** `dispense`, `low_stock`, `out_of_stock`, `stock_cleared`. Published by `service.RegisterDispense` and `service.CreateRestock`.
-- **Alert evaluation wiring** — `cmd/server/main.go` subscribes to `EventDispense` and calls `svc.EvaluateStockAlert`. Alert config precedence: slot-specific (slotPosition > 0) overrides machine-wide (slotPosition = 0), which overrides slot's own `lowThreshold`. A `lowThreshold` of -1 means "use slot default".
-- **CreateAlertConfig** is an upsert (`ON CONFLICT(machine_id, slot_position) DO UPDATE`), matching the Product/Machine pattern.
-- **Service.CreateRestock** wraps `store.CreateRestock` + clears alerts per restocked slot + publishes `stock_cleared` events. The `createRestock` handler calls `svc.CreateRestock` (not `store.CreateRestock` directly).
-- **Service constructor** now requires an `events.EventBus` parameter (nil-safe — all bus operations are guarded by `if s.bus != nil`).
+- **DynamoDB single-table design** — Table `SodaTracker-{env}`, PK/SK (both S), GSI1 (GSI1PK/GSI1SK, projection ALL). Entity types: Product, Machine, Slot, Dispense, Restock, User, AlertConfig, AlertEvent. Key patterns use `#`-delimited composite keys with RFC3339Nano timestamps for lexicographic sort. AlertEvent GSI1PK switches from `ACTIVEALERT#...` to `CLEARED#...` when cleared (enables efficient active alert queries).
+- **Lambda deployment** — Single Lambda (ARM64/Graviton, 256MB, provided.al2023) serving all routes via `aws-lambda-go-api-proxy/chi` V2 adapter. HTTP API v2 (API Gateway) routes `ANY /api/{proxy+}` to Lambda. CloudFront serves S3 frontend with `/api/*` behavior forwarding to API Gateway. Admin seeding (`internal/seed/`) runs on cold start.
+- **SNS publisher** — Optional SNS event fan-out registered as a subscriber on the local EventBus. Publishes all event types with `eventType` message attribute for filtering. Only active when `SNS_TOPIC_ARN` env var is set.
+- **OpenTofu infrastructure** — `infra/` directory with S3 backend state, DynamoDB table, Lambda function, HTTP API v2, SNS topic, S3 + CloudFront frontend. AWS account 136532201934, region us-west-2, profile "personal". Sensitive vars: api_key, jwt_secret, admin_password.
 
 ## Test Structure
 
-Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **26 tests total** across 5 packages.
+Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **32 tests total** across 5 packages. DynamoDB integration tests (6 tests, `//go:build integration` tag) require DynamoDB Local.
 
-- `internal/events/local/local_test.go` — EventBus tests: `TestPublishSubscribe`, `TestMultipleSubscribers`, `TestUnsubscribe`, `TestPublishNoSubscribers`, `TestDifferentEventTypes`
-- `internal/store/sqlite/sqlite_test.go` — Store CRUD tests: `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestUserCRUD`, `TestAlertConfigCRUD`, `TestAlertEventCRUD`, `TestDispenseAndRestock`
-- `internal/auth/jwt_test.go` — JWT tests: `TestGenerateAndValidateToken`, `TestJWTMiddleware_MissingToken`, `TestJWTMiddleware_InvalidToken`, `TestJWTMiddleware_ValidToken`
-- `internal/service/service_test.go` — Service logic tests: `TestLogin` (success + bad password + non-existent user), `TestGetDispenseStats` (verify counts/ranking/cost), `TestGetMachineCost`, `TestEvaluateStockAlert` (low_stock + dedup + out_of_stock), `TestCreateRestockClearsAlerts`, `TestGetStockPredictions` (rate calc + days left)
-- `internal/api/handlers_test.go` — API integration tests using `httptest.NewRecorder()` against the real chi router with wired EventBus: `TestHealth`, `TestCreateAndListMachines`, `TestDispenseRequiresAPIKey`, `TestLoginSuccess`, `TestLoginBadPassword`, `TestAdminStatsRequiresAuth`, `TestFullWorkflow` (API key auth), `TestFullWorkflowWithJWT` (JWT auth), `TestAlertConfigCRUD` (create/list/update/delete via API), `TestPredictionsEndpoint`, `TestFullWorkflowWithAlerts` (dispense→low_stock alert→restock clears alerts)
+- `internal/events/local/local_test.go` — EventBus tests (5): `TestPublishSubscribe`, `TestMultipleSubscribers`, `TestUnsubscribe`, `TestPublishNoSubscribers`, `TestDifferentEventTypes`
+- `internal/store/sqlite/sqlite_test.go` — Store CRUD tests (6): `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestUserCRUD`, `TestAlertConfigCRUD`, `TestAlertEventCRUD`, `TestDispenseAndRestock`
+- `internal/auth/jwt_test.go` — JWT tests (4): `TestGenerateAndValidateToken`, `TestJWTMiddleware_MissingToken`, `TestJWTMiddleware_InvalidToken`, `TestJWTMiddleware_ValidToken`
+- `internal/service/service_test.go` — Service logic tests (6): `TestLogin` (success + bad password + non-existent user), `TestGetDispenseStats`, `TestGetMachineCost`, `TestEvaluateStockAlert`, `TestCreateRestockClearsAlerts`, `TestGetStockPredictions`
+- `internal/api/handlers_test.go` — API integration tests (11) using `httptest.NewRecorder()` against the real chi router with EventBus wired: `TestHealth`, `TestCreateAndListMachines`, `TestDispenseRequiresAPIKey`, `TestLoginSuccess`, `TestLoginBadPassword`, `TestAdminStatsRequiresAuth`, `TestFullWorkflow`, `TestFullWorkflowWithJWT`, `TestAlertConfigCRUD`, `TestPredictionsEndpoint`, `TestFullWorkflowWithAlerts`
+- `internal/store/dynamo/dynamo_test.go` — DynamoDB integration tests (6, `//go:build integration`): `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestDispenseAndRestock`, `TestUserCRUD`, `TestAlertConfigCRUD`, `TestAlertEventCRUD`. Requires DynamoDB Local (`docker run -p 8000:8000 amazon/dynamodb-local`), run with `go test -tags integration ./internal/store/dynamo/...`
 
 ## Key Business Logic
 
-- `internal/service/service.go` — `GetMachineStatus`: computes stock per slot (restock qty - dispenses since restock), assigns status (ok/low/empty), caps stock at 0. `Login`: bcrypt verify + JWT generation. `GetDispenseStats`: in-memory aggregation (hourly bucketing, product ranking, cost). `GetMachineCost`: sum of costPerCan for all dispenses. `ListRestocks`: delegates to store. `RegisterDispense`: creates dispense + publishes event. `CreateRestock`: creates restock + clears alerts + publishes events. `EvaluateStockAlert`: computes stock, resolves threshold from alert configs (slot > machine-wide > slot default), deduplicates via `GetActiveAlert`, creates `low_stock` or `out_of_stock` AlertEvent. `GetStockPredictions`: computes dispensesPerDay and estimatedDaysLeft per slot.
-- `internal/api/handlers.go` — `createDispense`: auto-resolves productId from slot config if not provided. `login`: authenticates and returns JWT. `getAdminStats`, `getMachineCost`, `listRestocks`: admin analytics endpoints. `listAlertConfigs`, `createAlertConfig`, `updateAlertConfig`, `deleteAlertConfig`: alert config CRUD. `listAlertEvents`: filtered by active/all. `getStockPredictions`: computed predictions with configurable lookback.
+- `internal/service/service.go` — `GetMachineStatus`: computes stock per slot (restock qty - dispenses since restock), assigns status (ok/low/empty), caps stock at 0. `Login`: bcrypt verify + JWT generation. `GetDispenseStats`: in-memory aggregation (hourly bucketing, product ranking, cost). `GetMachineCost`: sum of costPerCan for all dispenses. `RegisterDispense`: store + publish EventDispense. `CreateRestock`: store + clear alerts + publish EventStockCleared. `EvaluateStockAlert`: compute stock, resolve threshold from configs, deduplicate, create AlertEvent. `GetStockPredictions`: dispenses/day over lookback window, estimate days until stock-out.
+- `internal/api/handlers.go` — `createDispense`: auto-resolves productId from slot config if not provided. `login`: authenticates and returns JWT. `getAdminStats`, `getMachineCost`, `listRestocks`: admin analytics. Alert CRUD: `listAlertConfigs`, `createAlertConfig`, `updateAlertConfig`, `deleteAlertConfig`. `listAlertEvents`: fired alerts with `?active=true` filter. `getStockPredictions`: per-slot predictions with `?lookbackDays` param.
 - `pkg/piagent/agent.go` — polls GPIO pins every 100ms, detects button release (1→0 transition for active-low buttons), sends to API, caches failures in local SQLite for retry every 30s (max 50 pending events per retry cycle, stops on first failure)
 - `internal/store/sqlite/sqlite.go` — `GetLastRestock`: walks restocks in reverse chronological order to find the most recent one containing the target slot position
 
@@ -244,28 +254,26 @@ Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed.
 - [x] Cost tracking (costPerCan * dispenses, aggregated in GetDispenseStats and GetMachineCost)
 - [x] Tests: 15 total — JWT auth (4), service logic (3), store CRUD (4), API integration (4 including TestFullWorkflowWithJWT)
 
-### Phase 3 — Events, Alerts & Predictions [COMPLETE]
-- [x] EventBus interface (`internal/events/events.go`) + local in-process implementation (`internal/events/local/`)
-- [x] Alert service: evaluates stock after each dispense via event subscriber, fires `low_stock`/`out_of_stock` events with deduplication
-- [x] AlertConfig CRUD: per-machine/slot threshold configuration (`alert_configs` table, upsert on create)
-- [x] AlertEvent tracking: append-only log, cleared per-slot on restock (`alert_events` table)
-- [x] Predictive stock-out: linear rate estimation (dispenses/day over configurable lookback window)
-- [x] Alert configuration UI (`/admin/alerts`): active alerts, stock predictions table, config management
-- [x] MachineDetailPage enhancement: prediction badges on stock gauges (< 1 day red, < 3 days orange)
-- [x] Restock handler updated to call `svc.CreateRestock` (clears alerts + publishes events)
-- [x] Server wiring: EventBus created in `cmd/server/main.go`, dispense→alert subscriber registered
-- [x] Tests: 26 total — EventBus (5), store alert CRUD (2), service alerts/predictions (3), API alerts (3), plus all existing tests updated
-
-**Deferred to Phase 3+:**
+### Phase 3 — Events & Notifications [COMPLETE]
+- [x] EventBus interface + local (in-process channel) implementation (`internal/events/`, `internal/events/local/`)
+- [x] Alert service: evaluates stock after each dispense, fires low_stock/out_of_stock events, deduplicates, clears on restock
+- [x] Alert config CRUD: per-machine/slot threshold configuration (store, service, API, UI)
+- [x] Alert configuration UI (`/admin/alerts`): active alerts, config management
+- [x] Predictive stock-out: linear regression on dispense rate, shown in alerts page + machine detail page
+- [x] Tests: 32 total — EventBus (5), store (6), auth (4), service (6), API (11)
 - [ ] Slack bot: push notifications on events, pull commands (`/soda status`, `/soda top`)
 - [ ] Discord bot: `discordgo` persistent WebSocket, same push/pull features
 - [ ] Webhook system: CRUD + HMAC-signed delivery
 
-### Phase 4 — AWS Deployment
-- [ ] DynamoDB store implementation (single-table design: PK/SK patterns, one GSI)
-- [ ] SNS event bus implementation
-- [ ] Lambda entry point (`cmd/lambda/`) using `aws-lambda-go-api-proxy/chi`
-- [ ] CDK stack in Go (`infra/cdk/`): DynamoDB, Lambda, API Gateway, SNS, SQS, S3, CloudFront
+### Phase 4 — AWS Deployment [COMPLETE]
+- [x] Config updates: `TABLE_NAME`, `SNS_TOPIC_ARN` env vars (`internal/config/`)
+- [x] Admin seeding extracted to shared package (`internal/seed/`) for server + Lambda reuse
+- [x] DynamoDB store implementation: single-table design, PK/SK/GSI1 patterns, all 35 Store methods (`internal/store/dynamo/`)
+- [x] DynamoDB integration tests (6 tests, `//go:build integration` tag)
+- [x] SNS event publisher: forwards events from local bus to SNS topic (`internal/events/sns/`)
+- [x] Lambda entry point: chi V2 adapter, DynamoDB store, local bus + optional SNS fan-out (`cmd/lambda/`)
+- [x] OpenTofu infrastructure: DynamoDB, Lambda (ARM64), HTTP API v2, SNS, S3, CloudFront, IAM (`infra/`)
+- [x] Build targets: `make build-lambda`, `make deploy-frontend`, `make tf-plan`, `make tf-apply`
 - [ ] CI/CD via GitHub Actions
 
 ### Phase 5 — Polish

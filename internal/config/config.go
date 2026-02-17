@@ -12,6 +12,8 @@ type Config struct {
 	JWTSecret     string
 	StaticDir     string
 	AdminPassword string
+	TableName     string
+	SNSTopicARN   string
 }
 
 func Load() Config {
@@ -22,6 +24,8 @@ func Load() Config {
 		JWTSecret:     getEnv("JWT_SECRET", "dev-jwt-secret"),
 		StaticDir:     getEnv("STATIC_DIR", ""),
 		AdminPassword: getEnv("ADMIN_PASSWORD", "dev-admin-password"),
+		TableName:     getEnv("TABLE_NAME", ""),
+		SNSTopicARN:   getEnv("SNS_TOPIC_ARN", ""),
 	}
 }
 

@@ -12,6 +12,12 @@ web/node_modules/
 __debug_bin*
 .DS_Store
 
+# OpenTofu / Terraform
+infra/.terraform/
+infra/*.tfstate*
+infra/.terraform.lock.hcl
+*.tfvars
+
 # Legacy debris (from original prototype)
 sodaTracker.js
 npm-debug.log

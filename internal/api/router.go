@@ -11,7 +11,7 @@ import (
 	"github.com/jeffwnelson/sodatracker/internal/store"
 )
 
-func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret string, staticDir string) http.Handler {
+func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret string, staticDir string) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
