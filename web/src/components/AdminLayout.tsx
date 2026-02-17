@@ -31,6 +31,9 @@ export function AdminLayout() {
               <Link to="/admin/alerts" className="hover:text-white">
                 Alerts
               </Link>
+              <Link to="/admin/setup" className="hover:text-white">
+                Setup
+              </Link>
               {machines?.map((m) => (
                 <Link
                   key={m.id}

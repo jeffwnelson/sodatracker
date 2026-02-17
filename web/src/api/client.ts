@@ -1,6 +1,8 @@
 import type {
   Machine,
   MachineStatus,
+  Product,
+  Slot,
   LoginResponse,
   DispenseStats,
   Restock,
@@ -84,6 +86,39 @@ export function listMachines(): Promise<Machine[]> {
 
 export function getMachineStatus(id: string): Promise<MachineStatus> {
   return fetchJSON(`/machines/${id}/status`);
+}
+
+export function listProducts(): Promise<Product[]> {
+  return fetchJSONAuth("/products");
+}
+
+export function createProduct(product: {
+  upc: string;
+  name: string;
+  costPerCan?: number;
+}): Promise<Product> {
+  return postJSONAuth("/products", product);
+}
+
+export function createMachine(machine: {
+  name: string;
+  location?: string;
+  slotCount: number;
+}): Promise<Machine> {
+  return postJSONAuth("/machines", machine);
+}
+
+export function setSlots(
+  machineId: string,
+  slots: {
+    position: number;
+    productId: string;
+    capacity: number;
+    lowThreshold: number;
+    gpioPin?: number;
+  }[]
+): Promise<Slot[]> {
+  return postJSONAuth(`/machines/${machineId}/slots`, slots);
 }
 
 // Auth

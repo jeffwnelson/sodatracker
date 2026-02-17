@@ -9,6 +9,7 @@ import { AdminDashboard } from "./pages/AdminDashboard";
 import { MachineDetailPage } from "./pages/MachineDetailPage";
 import { RestockPage } from "./pages/RestockPage";
 import { AlertsPage } from "./pages/AlertsPage";
+import { SetupPage } from "./pages/SetupPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +40,7 @@ function App() {
               <Route path="machines/:id" element={<MachineDetailPage />} />
               <Route path="machines/:id/restock" element={<RestockPage />} />
               <Route path="alerts" element={<AlertsPage />} />
+              <Route path="setup" element={<SetupPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
