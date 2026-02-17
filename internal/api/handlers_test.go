@@ -202,7 +202,7 @@ func TestFullWorkflow(t *testing.T) {
 	r := setup(t)
 
 	// 1. Create product
-	body, _ := json.Marshal(domain.Product{UPC: "123456789012", Name: "Cola", CostPerCan: 0.50})
+	body, _ := json.Marshal(domain.Product{UPC: "123456789012", Name: "Cola", Description: "Classic cola", CostPerCan: 0.50})
 	req := httptest.NewRequest("POST", "/api/v1/products", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-API-Key", "test-key")
@@ -293,7 +293,7 @@ func TestFullWorkflowWithJWT(t *testing.T) {
 	token := loginAndGetToken(t, r)
 
 	// 1. Create product with JWT
-	body, _ := json.Marshal(domain.Product{UPC: "123456789012", Name: "Cola", CostPerCan: 0.50})
+	body, _ := json.Marshal(domain.Product{UPC: "123456789012", Name: "Cola", Description: "Classic cola", CostPerCan: 0.50})
 	req := httptest.NewRequest("POST", "/api/v1/products", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -458,7 +458,7 @@ func TestPredictionsEndpoint(t *testing.T) {
 	r := setup(t)
 
 	// Create product + machine + slots + restock
-	body, _ := json.Marshal(domain.Product{ID: "p1", UPC: "111", Name: "Cola"})
+	body, _ := json.Marshal(domain.Product{ID: "p1", UPC: "111", Name: "Cola", Description: "Classic cola"})
 	req := httptest.NewRequest("POST", "/api/v1/products", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-API-Key", "test-key")
@@ -508,7 +508,7 @@ func TestFullWorkflowWithAlerts(t *testing.T) {
 	r := setup(t)
 
 	// 1. Create product
-	body, _ := json.Marshal(domain.Product{ID: "p1", UPC: "111", Name: "Cola"})
+	body, _ := json.Marshal(domain.Product{ID: "p1", UPC: "111", Name: "Cola", Description: "Classic cola"})
 	req := httptest.NewRequest("POST", "/api/v1/products", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-API-Key", "test-key")
@@ -603,7 +603,7 @@ func setupExportData(t *testing.T, r http.Handler, st *sqlite.SQLiteStore) strin
 	t.Helper()
 
 	// Create product
-	body, _ := json.Marshal(domain.Product{ID: "p1", UPC: "111222333444", Name: "Cola", CostPerCan: 0.50})
+	body, _ := json.Marshal(domain.Product{ID: "p1", UPC: "111222333444", Name: "Cola", Description: "Classic cola", CostPerCan: 0.50})
 	req := httptest.NewRequest("POST", "/api/v1/products", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-API-Key", "test-key")

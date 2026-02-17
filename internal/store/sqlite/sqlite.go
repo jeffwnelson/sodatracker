@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jeffwnelson/sodatracker/internal/domain"
@@ -36,10 +37,11 @@ func (s *SQLiteStore) migrate() error {
 	migrations := []string{
 		`CREATE TABLE IF NOT EXISTS products (
 			id TEXT PRIMARY KEY,
-			upc TEXT UNIQUE NOT NULL,
+			upc TEXT DEFAULT '',
 			name TEXT NOT NULL,
 			cost_per_can REAL DEFAULT 0,
-			image_url TEXT DEFAULT ''
+			image_url TEXT DEFAULT '',
+			description TEXT DEFAULT ''
 		)`,
 		`CREATE TABLE IF NOT EXISTS machines (
 			id TEXT PRIMARY KEY,
@@ -107,31 +109,80 @@ func (s *SQLiteStore) migrate() error {
 			return fmt.Errorf("exec migration: %w", err)
 		}
 	}
+
+	// Schema evolution for existing databases: add description column if missing.
+	s.db.Exec(`ALTER TABLE products ADD COLUMN description TEXT DEFAULT ''`)
+
+	// Schema evolution: remove UNIQUE constraint on upc for existing databases.
+	if err := s.migrateProductsDropUPCUnique(); err != nil {
+		return fmt.Errorf("migrate products upc: %w", err)
+	}
+
 	return nil
+}
+
+// migrateProductsDropUPCUnique recreates the products table without the UNIQUE
+// constraint on upc, if the constraint still exists. This is idempotent.
+func (s *SQLiteStore) migrateProductsDropUPCUnique() error {
+	var tableSql string
+	err := s.db.QueryRow("SELECT sql FROM sqlite_master WHERE type='table' AND name='products'").Scan(&tableSql)
+	if err != nil {
+		return nil // table doesn't exist, skip
+	}
+	if !strings.Contains(tableSql, "UNIQUE") {
+		return nil // already migrated
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmts := []string{
+		`CREATE TABLE products_new (
+			id TEXT PRIMARY KEY,
+			upc TEXT DEFAULT '',
+			name TEXT NOT NULL,
+			cost_per_can REAL DEFAULT 0,
+			image_url TEXT DEFAULT '',
+			description TEXT DEFAULT ''
+		)`,
+		`INSERT INTO products_new (id, upc, name, cost_per_can, image_url, description)
+		 SELECT id, upc, name, cost_per_can, image_url, COALESCE(description, '') FROM products`,
+		`DROP TABLE products`,
+		`ALTER TABLE products_new RENAME TO products`,
+	}
+	for _, stmt := range stmts {
+		if _, err := tx.Exec(stmt); err != nil {
+			return fmt.Errorf("products upc migration: %w", err)
+		}
+	}
+	return tx.Commit()
 }
 
 // --- Products ---
 
 func (s *SQLiteStore) CreateProduct(ctx context.Context, p *domain.Product) error {
 	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO products (id, upc, name, cost_per_can, image_url) VALUES (?, ?, ?, ?, ?)
-		 ON CONFLICT(id) DO UPDATE SET upc=excluded.upc, name=excluded.name, cost_per_can=excluded.cost_per_can, image_url=excluded.image_url`,
-		p.ID, p.UPC, p.Name, p.CostPerCan, p.ImageURL)
+		`INSERT INTO products (id, upc, name, cost_per_can, image_url, description) VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET upc=excluded.upc, name=excluded.name, cost_per_can=excluded.cost_per_can, image_url=excluded.image_url, description=excluded.description`,
+		p.ID, p.UPC, p.Name, p.CostPerCan, p.ImageURL, p.Description)
 	return err
 }
 
 func (s *SQLiteStore) GetProduct(ctx context.Context, id string) (*domain.Product, error) {
-	row := s.db.QueryRowContext(ctx, `SELECT id, upc, name, cost_per_can, image_url FROM products WHERE id = ?`, id)
+	row := s.db.QueryRowContext(ctx, `SELECT id, upc, name, cost_per_can, image_url, description FROM products WHERE id = ?`, id)
 	return scanProduct(row)
 }
 
 func (s *SQLiteStore) GetProductByUPC(ctx context.Context, upc string) (*domain.Product, error) {
-	row := s.db.QueryRowContext(ctx, `SELECT id, upc, name, cost_per_can, image_url FROM products WHERE upc = ?`, upc)
+	row := s.db.QueryRowContext(ctx, `SELECT id, upc, name, cost_per_can, image_url, description FROM products WHERE upc = ?`, upc)
 	return scanProduct(row)
 }
 
 func (s *SQLiteStore) ListProducts(ctx context.Context) ([]domain.Product, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, upc, name, cost_per_can, image_url FROM products ORDER BY name`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, upc, name, cost_per_can, image_url, description FROM products ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +190,7 @@ func (s *SQLiteStore) ListProducts(ctx context.Context) ([]domain.Product, error
 	var products []domain.Product
 	for rows.Next() {
 		var p domain.Product
-		if err := rows.Scan(&p.ID, &p.UPC, &p.Name, &p.CostPerCan, &p.ImageURL); err != nil {
+		if err := rows.Scan(&p.ID, &p.UPC, &p.Name, &p.CostPerCan, &p.ImageURL, &p.Description); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -149,7 +200,7 @@ func (s *SQLiteStore) ListProducts(ctx context.Context) ([]domain.Product, error
 
 func scanProduct(row *sql.Row) (*domain.Product, error) {
 	var p domain.Product
-	if err := row.Scan(&p.ID, &p.UPC, &p.Name, &p.CostPerCan, &p.ImageURL); err != nil {
+	if err := row.Scan(&p.ID, &p.UPC, &p.Name, &p.CostPerCan, &p.ImageURL, &p.Description); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}

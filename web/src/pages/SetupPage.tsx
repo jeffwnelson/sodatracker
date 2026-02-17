@@ -30,6 +30,7 @@ function ProductsSection() {
 
   const [name, setName] = useState("");
   const [upc, setUpc] = useState("");
+  const [description, setDescription] = useState("");
   const [costPerCan, setCostPerCan] = useState("");
   const [error, setError] = useState("");
 
@@ -37,13 +38,15 @@ function ProductsSection() {
     mutationFn: () =>
       createProduct({
         name,
-        upc,
+        ...(upc ? { upc } : {}),
+        ...(description ? { description } : {}),
         ...(costPerCan ? { costPerCan: Number(costPerCan) } : {}),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       setName("");
       setUpc("");
+      setDescription("");
       setCostPerCan("");
       setError("");
     },
@@ -52,7 +55,7 @@ function ProductsSection() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !upc.trim()) return;
+    if (!name.trim()) return;
     mutation.mutate();
   };
 
@@ -66,6 +69,7 @@ function ProductsSection() {
             <thead>
               <tr className="border-b text-left text-gray-500">
                 <th className="pb-2 font-medium">Name</th>
+                <th className="pb-2 font-medium">Description</th>
                 <th className="pb-2 font-medium">UPC</th>
                 <th className="pb-2 font-medium">Cost/Can</th>
               </tr>
@@ -74,8 +78,11 @@ function ProductsSection() {
               {products.map((p) => (
                 <tr key={p.id} className="border-b last:border-0">
                   <td className="py-2 text-gray-700">{p.name}</td>
+                  <td className="py-2 text-gray-500 text-xs">
+                    {p.description || "—"}
+                  </td>
                   <td className="py-2 text-gray-500 font-mono text-xs">
-                    {p.upc}
+                    {p.upc || "—"}
                   </td>
                   <td className="py-2 text-gray-700">
                     {p.costPerCan != null ? `$${p.costPerCan.toFixed(2)}` : "—"}
@@ -87,7 +94,7 @@ function ProductsSection() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-end gap-3 pt-2 border-t">
+      <form onSubmit={handleSubmit} className="flex items-end gap-3 flex-wrap pt-2 border-t">
         <div>
           <label className="block text-xs text-gray-500 mb-1">Name</label>
           <input
@@ -100,6 +107,16 @@ function ProductsSection() {
           />
         </div>
         <div>
+          <label className="block text-xs text-gray-500 mb-1">Description</label>
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="12oz can"
+            className="border rounded px-2 py-1.5 text-sm w-36"
+          />
+        </div>
+        <div>
           <label className="block text-xs text-gray-500 mb-1">UPC</label>
           <input
             type="text"
@@ -107,7 +124,6 @@ function ProductsSection() {
             onChange={(e) => setUpc(e.target.value)}
             placeholder="049000006346"
             className="border rounded px-2 py-1.5 text-sm w-36"
-            required
           />
         </div>
         <div>

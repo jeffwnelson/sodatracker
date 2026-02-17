@@ -22,7 +22,7 @@ func TestProductCRUD(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
 
-	p := &domain.Product{ID: "p1", UPC: "012345678901", Name: "Cola"}
+	p := &domain.Product{ID: "p1", UPC: "012345678901", Name: "Cola", Description: "Classic cola"}
 	if err := s.CreateProduct(ctx, p); err != nil {
 		t.Fatalf("create: %v", err)
 	}

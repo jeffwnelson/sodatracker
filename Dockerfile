@@ -1,5 +1,5 @@
 # --- Build Go API ---
-FROM golang:1.24-alpine AS api-build
+FROM golang:1.25-alpine AS api-build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

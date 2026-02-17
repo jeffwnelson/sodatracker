@@ -3,11 +3,12 @@ package domain
 import "time"
 
 type Product struct {
-	ID         string  `json:"id"`
-	UPC        string  `json:"upc"`
-	Name       string  `json:"name"`
-	CostPerCan float64 `json:"costPerCan,omitempty"`
-	ImageURL   string  `json:"imageUrl,omitempty"`
+	ID          string  `json:"id"`
+	UPC         string  `json:"upc,omitempty"`
+	Name        string  `json:"name"`
+	Description string  `json:"description,omitempty"`
+	CostPerCan  float64 `json:"costPerCan,omitempty"`
+	ImageURL    string  `json:"imageUrl,omitempty"`
 }
 
 type Machine struct {

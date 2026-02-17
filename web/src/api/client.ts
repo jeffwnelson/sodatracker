@@ -93,8 +93,9 @@ export function listProducts(): Promise<Product[]> {
 }
 
 export function createProduct(product: {
-  upc: string;
   name: string;
+  upc?: string;
+  description?: string;
   costPerCan?: number;
 }): Promise<Product> {
   return postJSONAuth("/products", product);

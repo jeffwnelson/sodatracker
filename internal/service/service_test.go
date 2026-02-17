@@ -77,8 +77,8 @@ func TestGetDispenseStats(t *testing.T) {
 	ctx := context.Background()
 
 	// Create products
-	p1 := &domain.Product{ID: "p1", UPC: "111", Name: "Cola", CostPerCan: 0.50}
-	p2 := &domain.Product{ID: "p2", UPC: "222", Name: "Sprite", CostPerCan: 0.45}
+	p1 := &domain.Product{ID: "p1", UPC: "111", Name: "Cola", Description: "Classic cola", CostPerCan: 0.50}
+	p2 := &domain.Product{ID: "p2", UPC: "222", Name: "Sprite", Description: "Lemon-lime soda", CostPerCan: 0.45}
 	st.CreateProduct(ctx, p1)
 	st.CreateProduct(ctx, p2)
 
@@ -119,7 +119,7 @@ func TestGetMachineCost(t *testing.T) {
 	svc, st := setupService(t)
 	ctx := context.Background()
 
-	p := &domain.Product{ID: "p1", UPC: "111", Name: "Cola", CostPerCan: 0.50}
+	p := &domain.Product{ID: "p1", UPC: "111", Name: "Cola", Description: "Classic cola", CostPerCan: 0.50}
 	st.CreateProduct(ctx, p)
 
 	now := time.Now().UTC()
@@ -148,7 +148,7 @@ func TestEvaluateStockAlert(t *testing.T) {
 
 	// Setup: machine, product, slot, restock
 	st.CreateMachine(ctx, &domain.Machine{ID: "m1", Name: "Test", SlotCount: 2})
-	st.CreateProduct(ctx, &domain.Product{ID: "p1", UPC: "111", Name: "Cola"})
+	st.CreateProduct(ctx, &domain.Product{ID: "p1", UPC: "111", Name: "Cola", Description: "Classic cola"})
 	st.SetSlots(ctx, "m1", []domain.Slot{
 		{MachineID: "m1", Position: 1, ProductID: "p1", Capacity: 10, LowThreshold: 2},
 	})
@@ -242,7 +242,7 @@ func TestGetStockPredictions(t *testing.T) {
 	now := time.Now().UTC()
 
 	st.CreateMachine(ctx, &domain.Machine{ID: "m1", Name: "Test", SlotCount: 2})
-	st.CreateProduct(ctx, &domain.Product{ID: "p1", UPC: "111", Name: "Cola"})
+	st.CreateProduct(ctx, &domain.Product{ID: "p1", UPC: "111", Name: "Cola", Description: "Classic cola"})
 	st.SetSlots(ctx, "m1", []domain.Slot{
 		{MachineID: "m1", Position: 1, ProductID: "p1", Capacity: 10, LowThreshold: 2},
 	})

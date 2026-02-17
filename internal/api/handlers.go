@@ -228,10 +228,6 @@ func (h *handlers) createProduct(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}
-	if p.UPC == "" {
-		writeErr(w, http.StatusBadRequest, "upc is required")
-		return
-	}
 	if p.Name == "" {
 		writeErr(w, http.StatusBadRequest, "name is required")
 		return

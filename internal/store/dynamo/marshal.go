@@ -90,26 +90,28 @@ func getTimePtr(item map[string]types.AttributeValue, key string) *time.Time {
 
 func marshalProduct(p *domain.Product) map[string]types.AttributeValue {
 	return map[string]types.AttributeValue{
-		"PK":         s(productPK(p.ID)),
-		"SK":         s(productSK(p.ID)),
-		"GSI1PK":     s(productGSI1PK(p.UPC)),
-		"GSI1SK":     s(productGSI1SK(p.ID)),
-		"_type":      s("Product"),
-		"id":         s(p.ID),
-		"upc":        s(p.UPC),
-		"name":       s(p.Name),
-		"costPerCan": nf(p.CostPerCan),
-		"imageUrl":   s(p.ImageURL),
+		"PK":          s(productPK(p.ID)),
+		"SK":          s(productSK(p.ID)),
+		"GSI1PK":      s(productGSI1PK(p.UPC)),
+		"GSI1SK":      s(productGSI1SK(p.ID)),
+		"_type":       s("Product"),
+		"id":          s(p.ID),
+		"upc":         s(p.UPC),
+		"name":        s(p.Name),
+		"description": s(p.Description),
+		"costPerCan":  nf(p.CostPerCan),
+		"imageUrl":    s(p.ImageURL),
 	}
 }
 
 func unmarshalProduct(item map[string]types.AttributeValue) domain.Product {
 	return domain.Product{
-		ID:         getS(item, "id"),
-		UPC:        getS(item, "upc"),
-		Name:       getS(item, "name"),
-		CostPerCan: getNF(item, "costPerCan"),
-		ImageURL:   getS(item, "imageUrl"),
+		ID:          getS(item, "id"),
+		UPC:         getS(item, "upc"),
+		Name:        getS(item, "name"),
+		Description: getS(item, "description"),
+		CostPerCan:  getNF(item, "costPerCan"),
+		ImageURL:    getS(item, "imageUrl"),
 	}
 }
 

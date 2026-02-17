@@ -67,6 +67,20 @@ export function LoginPage() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              setUsername("admin");
+              setPassword("dev-admin-password");
+            }}
+            className="w-full text-xs text-gray-400 hover:text-gray-600 py-1 disabled:opacity-50"
+          >
+            Fill dev credentials
+          </button>
+        </div>
       </div>
     </div>
   );

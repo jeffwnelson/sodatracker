@@ -12,8 +12,8 @@ import (
 
 func testData() ([]domain.Dispense, map[string]domain.Product) {
 	products := map[string]domain.Product{
-		"p1": {ID: "p1", UPC: "111222333444", Name: "Cola", CostPerCan: 0.50},
-		"p2": {ID: "p2", UPC: "555666777888", Name: "Sprite", CostPerCan: 0.45},
+		"p1": {ID: "p1", UPC: "111222333444", Name: "Cola", Description: "Classic cola", CostPerCan: 0.50},
+		"p2": {ID: "p2", UPC: "555666777888", Name: "Sprite", Description: "Lemon-lime soda", CostPerCan: 0.45},
 	}
 	dispenses := []domain.Dispense{
 		{ID: "d1", MachineID: "m1", ProductID: "p1", SlotPosition: 1, SourceType: "gpio", Timestamp: time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)},
