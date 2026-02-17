@@ -1,0 +1,17 @@
+apiUrl: http://localhost:3000
+apiKey: dev-api-key
+machineId: machine-1
+pollMs: 100
+retryMs: 30000
+dbPath: piagent-cache.db
+pins:
+  - pin: 17
+    slot: 1
+  - pin: 27
+    slot: 2
+  - pin: 22
+    slot: 3
+  - pin: 5
+    slot: 4
+  - pin: 6
+    slot: 5

@@ -1,0 +1,16 @@
+services:
+  sodatracker:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DB_PATH=/data/sodatracker.db
+      - API_KEY=dev-api-key
+      - JWT_SECRET=dev-jwt-secret
+      - STATIC_DIR=/app/static
+    volumes:
+      - sodatracker-data:/data
+
+volumes:
+  sodatracker-data:

@@ -1,0 +1,18 @@
+bin/
+*.db
+*.sqlite
+.env
+node_modules/
+web/dist/
+web/node_modules/
+*.exe
+*.dll
+*.so
+*.dylib
+__debug_bin*
+.DS_Store
+
+# Legacy debris (from original prototype)
+sodaTracker.js
+npm-debug.log
+quick2wire-gpio-admin/

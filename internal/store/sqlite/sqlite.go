@@ -1,0 +1,353 @@
+package sqlite
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/jeffwnelson/sodatracker/internal/domain"
+	_ "modernc.org/sqlite"
+)
+
+type SQLiteStore struct {
+	db *sql.DB
+}
+
+func New(dbPath string) (*SQLiteStore, error) {
+	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
+	if err != nil {
+		return nil, fmt.Errorf("open sqlite: %w", err)
+	}
+	s := &SQLiteStore{db: db}
+	if err := s.migrate(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("migrate: %w", err)
+	}
+	return s, nil
+}
+
+func (s *SQLiteStore) Close() error {
+	return s.db.Close()
+}
+
+func (s *SQLiteStore) migrate() error {
+	migrations := []string{
+		`CREATE TABLE IF NOT EXISTS products (
+			id TEXT PRIMARY KEY,
+			upc TEXT UNIQUE NOT NULL,
+			name TEXT NOT NULL,
+			cost_per_can REAL DEFAULT 0,
+			image_url TEXT DEFAULT ''
+		)`,
+		`CREATE TABLE IF NOT EXISTS machines (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			location TEXT DEFAULT '',
+			slot_count INTEGER NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS slots (
+			machine_id TEXT NOT NULL,
+			position INTEGER NOT NULL,
+			product_id TEXT DEFAULT '',
+			gpio_pin INTEGER DEFAULT 0,
+			capacity INTEGER NOT NULL DEFAULT 10,
+			low_threshold INTEGER NOT NULL DEFAULT 2,
+			PRIMARY KEY (machine_id, position)
+		)`,
+		`CREATE TABLE IF NOT EXISTS dispenses (
+			id TEXT PRIMARY KEY,
+			machine_id TEXT NOT NULL,
+			product_id TEXT NOT NULL,
+			slot_position INTEGER NOT NULL,
+			source_type TEXT NOT NULL DEFAULT 'gpio',
+			timestamp DATETIME NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_dispenses_machine_ts ON dispenses(machine_id, timestamp)`,
+		`CREATE INDEX IF NOT EXISTS idx_dispenses_machine_slot_ts ON dispenses(machine_id, slot_position, timestamp)`,
+		`CREATE TABLE IF NOT EXISTS restocks (
+			id TEXT PRIMARY KEY,
+			machine_id TEXT NOT NULL,
+			user_id TEXT DEFAULT '',
+			slots_json TEXT NOT NULL,
+			timestamp DATETIME NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_restocks_machine_ts ON restocks(machine_id, timestamp)`,
+		`CREATE TABLE IF NOT EXISTS users (
+			id TEXT PRIMARY KEY,
+			username TEXT UNIQUE NOT NULL,
+			password_hash TEXT NOT NULL,
+			role TEXT NOT NULL DEFAULT 'admin'
+		)`,
+	}
+	for _, m := range migrations {
+		if _, err := s.db.Exec(m); err != nil {
+			return fmt.Errorf("exec migration: %w", err)
+		}
+	}
+	return nil
+}
+
+// --- Products ---
+
+func (s *SQLiteStore) CreateProduct(ctx context.Context, p *domain.Product) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO products (id, upc, name, cost_per_can, image_url) VALUES (?, ?, ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET upc=excluded.upc, name=excluded.name, cost_per_can=excluded.cost_per_can, image_url=excluded.image_url`,
+		p.ID, p.UPC, p.Name, p.CostPerCan, p.ImageURL)
+	return err
+}
+
+func (s *SQLiteStore) GetProduct(ctx context.Context, id string) (*domain.Product, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, upc, name, cost_per_can, image_url FROM products WHERE id = ?`, id)
+	return scanProduct(row)
+}
+
+func (s *SQLiteStore) GetProductByUPC(ctx context.Context, upc string) (*domain.Product, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, upc, name, cost_per_can, image_url FROM products WHERE upc = ?`, upc)
+	return scanProduct(row)
+}
+
+func (s *SQLiteStore) ListProducts(ctx context.Context) ([]domain.Product, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, upc, name, cost_per_can, image_url FROM products ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var products []domain.Product
+	for rows.Next() {
+		var p domain.Product
+		if err := rows.Scan(&p.ID, &p.UPC, &p.Name, &p.CostPerCan, &p.ImageURL); err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+	return products, rows.Err()
+}
+
+func scanProduct(row *sql.Row) (*domain.Product, error) {
+	var p domain.Product
+	if err := row.Scan(&p.ID, &p.UPC, &p.Name, &p.CostPerCan, &p.ImageURL); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &p, nil
+}
+
+// --- Machines ---
+
+func (s *SQLiteStore) CreateMachine(ctx context.Context, m *domain.Machine) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO machines (id, name, location, slot_count) VALUES (?, ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET name=excluded.name, location=excluded.location, slot_count=excluded.slot_count`,
+		m.ID, m.Name, m.Location, m.SlotCount)
+	return err
+}
+
+func (s *SQLiteStore) GetMachine(ctx context.Context, id string) (*domain.Machine, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, name, location, slot_count FROM machines WHERE id = ?`, id)
+	var m domain.Machine
+	if err := row.Scan(&m.ID, &m.Name, &m.Location, &m.SlotCount); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (s *SQLiteStore) ListMachines(ctx context.Context) ([]domain.Machine, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, name, location, slot_count FROM machines ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var machines []domain.Machine
+	for rows.Next() {
+		var m domain.Machine
+		if err := rows.Scan(&m.ID, &m.Name, &m.Location, &m.SlotCount); err != nil {
+			return nil, err
+		}
+		machines = append(machines, m)
+	}
+	return machines, rows.Err()
+}
+
+// --- Slots ---
+
+func (s *SQLiteStore) SetSlots(ctx context.Context, machineID string, slots []domain.Slot) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM slots WHERE machine_id = ?`, machineID); err != nil {
+		return err
+	}
+	for _, sl := range slots {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO slots (machine_id, position, product_id, gpio_pin, capacity, low_threshold) VALUES (?, ?, ?, ?, ?, ?)`,
+			machineID, sl.Position, sl.ProductID, sl.GPIOPin, sl.Capacity, sl.LowThreshold); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (s *SQLiteStore) GetSlots(ctx context.Context, machineID string) ([]domain.Slot, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT machine_id, position, product_id, gpio_pin, capacity, low_threshold FROM slots WHERE machine_id = ? ORDER BY position`,
+		machineID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var slots []domain.Slot
+	for rows.Next() {
+		var sl domain.Slot
+		if err := rows.Scan(&sl.MachineID, &sl.Position, &sl.ProductID, &sl.GPIOPin, &sl.Capacity, &sl.LowThreshold); err != nil {
+			return nil, err
+		}
+		slots = append(slots, sl)
+	}
+	return slots, rows.Err()
+}
+
+// --- Dispenses ---
+
+func (s *SQLiteStore) CreateDispense(ctx context.Context, d *domain.Dispense) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO dispenses (id, machine_id, product_id, slot_position, source_type, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
+		d.ID, d.MachineID, d.ProductID, d.SlotPosition, d.SourceType, d.Timestamp)
+	return err
+}
+
+func (s *SQLiteStore) ListDispenses(ctx context.Context, machineID string, since time.Time, limit int) ([]domain.Dispense, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, machine_id, product_id, slot_position, source_type, timestamp
+		 FROM dispenses WHERE machine_id = ? AND timestamp >= ? ORDER BY timestamp DESC LIMIT ?`,
+		machineID, since, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var dispenses []domain.Dispense
+	for rows.Next() {
+		var d domain.Dispense
+		if err := rows.Scan(&d.ID, &d.MachineID, &d.ProductID, &d.SlotPosition, &d.SourceType, &d.Timestamp); err != nil {
+			return nil, err
+		}
+		dispenses = append(dispenses, d)
+	}
+	return dispenses, rows.Err()
+}
+
+func (s *SQLiteStore) CountDispensesSince(ctx context.Context, machineID string, slotPosition int, since time.Time) (int, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM dispenses WHERE machine_id = ? AND slot_position = ? AND timestamp >= ?`,
+		machineID, slotPosition, since).Scan(&count)
+	return count, err
+}
+
+// --- Restocks ---
+
+func (s *SQLiteStore) CreateRestock(ctx context.Context, r *domain.Restock) error {
+	slotsJSON, err := json.Marshal(r.Slots)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx,
+		`INSERT INTO restocks (id, machine_id, user_id, slots_json, timestamp) VALUES (?, ?, ?, ?, ?)`,
+		r.ID, r.MachineID, r.UserID, string(slotsJSON), r.Timestamp)
+	return err
+}
+
+func (s *SQLiteStore) GetLastRestock(ctx context.Context, machineID string, slotPosition int) (*domain.Restock, *domain.RestockSlot, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, machine_id, user_id, slots_json, timestamp FROM restocks
+		 WHERE machine_id = ? ORDER BY timestamp DESC`,
+		machineID)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		r, err := scanRestock(rows)
+		if err != nil {
+			return nil, nil, err
+		}
+		for i := range r.Slots {
+			if r.Slots[i].Position == slotPosition {
+				return r, &r.Slots[i], nil
+			}
+		}
+	}
+	return nil, nil, rows.Err()
+}
+
+func (s *SQLiteStore) ListRestocks(ctx context.Context, machineID string, limit int) ([]domain.Restock, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, machine_id, user_id, slots_json, timestamp FROM restocks
+		 WHERE machine_id = ? ORDER BY timestamp DESC LIMIT ?`,
+		machineID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var restocks []domain.Restock
+	for rows.Next() {
+		r, err := scanRestock(rows)
+		if err != nil {
+			return nil, err
+		}
+		restocks = append(restocks, *r)
+	}
+	return restocks, rows.Err()
+}
+
+// --- Users ---
+
+func (s *SQLiteStore) CreateUser(ctx context.Context, u *domain.User) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET username=excluded.username, password_hash=excluded.password_hash, role=excluded.role`,
+		u.ID, u.Username, u.PasswordHash, u.Role)
+	return err
+}
+
+func (s *SQLiteStore) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, username, password_hash, role FROM users WHERE username = ?`, username)
+	var u domain.User
+	if err := row.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.Role); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &u, nil
+}
+
+type scanner interface {
+	Scan(dest ...any) error
+}
+
+func scanRestock(row scanner) (*domain.Restock, error) {
+	var r domain.Restock
+	var slotsJSON string
+	if err := row.Scan(&r.ID, &r.MachineID, &r.UserID, &slotsJSON, &r.Timestamp); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if err := json.Unmarshal([]byte(slotsJSON), &r.Slots); err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
