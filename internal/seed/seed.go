@@ -2,7 +2,7 @@ package seed
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -16,7 +16,7 @@ func AdminUser(st store.Store, password string) {
 	ctx := context.Background()
 	existing, err := st.GetUserByUsername(ctx, "admin")
 	if err != nil {
-		log.Printf("warning: failed to check admin user: %v", err)
+		slog.Warn("failed to check admin user", "error", err)
 		return
 	}
 	if existing != nil {
@@ -25,7 +25,7 @@ func AdminUser(st store.Store, password string) {
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("warning: failed to hash admin password: %v", err)
+		slog.Warn("failed to hash admin password", "error", err)
 		return
 	}
 
@@ -36,8 +36,8 @@ func AdminUser(st store.Store, password string) {
 		Role:         "admin",
 	}
 	if err := st.CreateUser(ctx, u); err != nil {
-		log.Printf("warning: failed to seed admin user: %v", err)
+		slog.Warn("failed to seed admin user", "error", err)
 		return
 	}
-	log.Println("seeded admin user")
+	slog.Info("seeded admin user")
 }

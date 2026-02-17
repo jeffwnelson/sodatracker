@@ -2,7 +2,7 @@ package local
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/jeffwnelson/sodatracker/internal/events"
@@ -36,7 +36,7 @@ func (b *LocalBus) Publish(ctx context.Context, evt events.Event) error {
 
 	for _, s := range copied {
 		if err := s.handler(ctx, evt); err != nil {
-			log.Printf("event handler error for %s: %v", evt.Type, err)
+			slog.Error("event handler error", "eventType", evt.Type, "error", err)
 		}
 	}
 	return nil

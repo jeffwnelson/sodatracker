@@ -50,7 +50,9 @@ sodaTracker/
 │   ├── seed/                  # Admin user seeding (shared between server and Lambda)
 │   ├── notify/                # Slack and Discord notification clients (Phase 3)
 │   ├── auth/                  # API key middleware + JWT middleware (auth.go, jwt.go)
-│   └── config/                # Env-based config loading
+│   ├── config/                # Env-based config loading
+│   ├── logging/               # slog setup (JSON/text handler, LOG_FORMAT env)
+│   └── export/                # Dispense report export (CSV, PDF)
 ├── pkg/
 │   ├── gpio/                  # GPIO interface + mock implementation (rpi build tag for real GPIO)
 │   └── piagent/               # Agent logic, local SQLite cache, YAML config
@@ -137,6 +139,7 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 - **Frontend dev server:** port 4000 with proxy to API at :3000
 - **DynamoDB table name:** (env `TABLE_NAME`) — only set for Lambda deployment
 - **SNS topic ARN:** (env `SNS_TOPIC_ARN`) — only set for Lambda deployment, enables SNS event fan-out
+- **Log format:** `text` for local dev, `json` for Docker/Lambda (env `LOG_FORMAT`, default `"text"`)
 - **Pi agent config:** YAML file only (no env var fallback) — see `piagent.yaml.example`
 - **Pi agent cache DB:** `piagent-cache.db` (default, configurable in YAML)
 
@@ -172,7 +175,7 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 | DELETE | `/api/v1/alerts/:id` | API Key or JWT | Delete alert config | Done |
 | GET | `/api/v1/machines/:id/alert-events` | API Key or JWT | List fired alerts | Done |
 | GET | `/api/v1/machines/:id/predictions` | API Key or JWT | Stock-out predictions | Done |
-| GET | `/api/v1/reports/dispenses` | JWT | Export CSV/PDF | Phase 5 |
+| GET | `/api/v1/reports/dispenses` | API Key or JWT | Export CSV/PDF (`?format=csv\|pdf`) | Done |
 | CRUD | `/api/v1/webhooks` | JWT | Webhook subscriptions | Phase 3 |
 
 **Auth:** API key middleware accepts both `X-API-Key: <key>` and `Authorization: Bearer <key>` headers. The `APIKeyOrJWT` middleware on admin CRUD routes accepts either an API key or a valid JWT token, so both the Pi agent and the admin dashboard can call them.
@@ -200,6 +203,8 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 - **Frontend token storage** — localStorage with key `soda_token`. AuthContext initializes from localStorage so page refresh preserves login state.
 - **Frontend refresh intervals:** machine list refreshes every 30s, individual machine status cards every 10s, admin stats staleTime is 30s, TanStack Query default staleTime is 5s.
 - **TypeScript strict mode** enabled with `verbatimModuleSyntax` — all type imports must use `import type`.
+- **Structured logging** — All Go code uses `log/slog` (no `log` package). `internal/logging/Setup()` configures JSON or text handler based on `LOG_FORMAT` env var (default `"text"`, Docker/Lambda set `"json"`). Custom request logging middleware replaces chi's `middleware.Logger`, logs method/path/status/duration/requestId via slog. `middleware.RequestID` generates unique request IDs for tracing.
+- **Dispense report export** — `GET /api/v1/reports/dispenses?machineId=X&format=csv|pdf` exports dispense history. CSV uses stdlib `encoding/csv`. PDF uses `go-pdf/fpdf` (pure Go, no CGO). Both enrich dispenses with product name/UPC/cost from a product lookup map. PDF includes title, date range, table, and summary footer.
 - **DynamoDB single-table design** — Table `SodaTracker-{env}`, PK/SK (both S), GSI1 (GSI1PK/GSI1SK, projection ALL). Entity types: Product, Machine, Slot, Dispense, Restock, User, AlertConfig, AlertEvent. Key patterns use `#`-delimited composite keys with RFC3339Nano timestamps for lexicographic sort. AlertEvent GSI1PK switches from `ACTIVEALERT#...` to `CLEARED#...` when cleared (enables efficient active alert queries).
 - **Lambda deployment** — Single Lambda (ARM64/Graviton, 256MB, provided.al2023) serving all routes via `aws-lambda-go-api-proxy/chi` V2 adapter. HTTP API v2 (API Gateway) routes `ANY /api/{proxy+}` to Lambda. CloudFront serves S3 frontend with `/api/*` behavior forwarding to API Gateway. Admin seeding (`internal/seed/`) runs on cold start.
 - **SNS publisher** — Optional SNS event fan-out registered as a subscriber on the local EventBus. Publishes all event types with `eventType` message attribute for filtering. Only active when `SNS_TOPIC_ARN` env var is set.
@@ -207,19 +212,20 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 
 ## Test Structure
 
-Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **32 tests total** across 5 packages. DynamoDB integration tests (6 tests, `//go:build integration` tag) require DynamoDB Local.
+Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **38 tests total** across 6 packages. DynamoDB integration tests (6 tests, `//go:build integration` tag) require DynamoDB Local.
 
 - `internal/events/local/local_test.go` — EventBus tests (5): `TestPublishSubscribe`, `TestMultipleSubscribers`, `TestUnsubscribe`, `TestPublishNoSubscribers`, `TestDifferentEventTypes`
 - `internal/store/sqlite/sqlite_test.go` — Store CRUD tests (6): `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestUserCRUD`, `TestAlertConfigCRUD`, `TestAlertEventCRUD`, `TestDispenseAndRestock`
 - `internal/auth/jwt_test.go` — JWT tests (4): `TestGenerateAndValidateToken`, `TestJWTMiddleware_MissingToken`, `TestJWTMiddleware_InvalidToken`, `TestJWTMiddleware_ValidToken`
 - `internal/service/service_test.go` — Service logic tests (6): `TestLogin` (success + bad password + non-existent user), `TestGetDispenseStats`, `TestGetMachineCost`, `TestEvaluateStockAlert`, `TestCreateRestockClearsAlerts`, `TestGetStockPredictions`
-- `internal/api/handlers_test.go` — API integration tests (11) using `httptest.NewRecorder()` against the real chi router with EventBus wired: `TestHealth`, `TestCreateAndListMachines`, `TestDispenseRequiresAPIKey`, `TestLoginSuccess`, `TestLoginBadPassword`, `TestAdminStatsRequiresAuth`, `TestFullWorkflow`, `TestFullWorkflowWithJWT`, `TestAlertConfigCRUD`, `TestPredictionsEndpoint`, `TestFullWorkflowWithAlerts`
+- `internal/api/handlers_test.go` — API integration tests (14) using `httptest.NewRecorder()` against the real chi router with EventBus wired: `TestHealth`, `TestCreateAndListMachines`, `TestDispenseRequiresAPIKey`, `TestLoginSuccess`, `TestLoginBadPassword`, `TestAdminStatsRequiresAuth`, `TestFullWorkflow`, `TestFullWorkflowWithJWT`, `TestAlertConfigCRUD`, `TestPredictionsEndpoint`, `TestFullWorkflowWithAlerts`, `TestExportDispensesCSV`, `TestExportDispensesPDF`, `TestExportRequiresAuth`
+- `internal/export/export_test.go` — Export unit tests (3): `TestWriteDispensesCSV`, `TestWriteDispensesPDF`, `TestEmptyExport`
 - `internal/store/dynamo/dynamo_test.go` — DynamoDB integration tests (6, `//go:build integration`): `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestDispenseAndRestock`, `TestUserCRUD`, `TestAlertConfigCRUD`, `TestAlertEventCRUD`. Requires DynamoDB Local (`docker run -p 8000:8000 amazon/dynamodb-local`), run with `go test -tags integration ./internal/store/dynamo/...`
 
 ## Key Business Logic
 
 - `internal/service/service.go` — `GetMachineStatus`: computes stock per slot (restock qty - dispenses since restock), assigns status (ok/low/empty), caps stock at 0. `Login`: bcrypt verify + JWT generation. `GetDispenseStats`: in-memory aggregation (hourly bucketing, product ranking, cost). `GetMachineCost`: sum of costPerCan for all dispenses. `RegisterDispense`: store + publish EventDispense. `CreateRestock`: store + clear alerts + publish EventStockCleared. `EvaluateStockAlert`: compute stock, resolve threshold from configs, deduplicate, create AlertEvent. `GetStockPredictions`: dispenses/day over lookback window, estimate days until stock-out.
-- `internal/api/handlers.go` — `createDispense`: auto-resolves productId from slot config if not provided. `login`: authenticates and returns JWT. `getAdminStats`, `getMachineCost`, `listRestocks`: admin analytics. Alert CRUD: `listAlertConfigs`, `createAlertConfig`, `updateAlertConfig`, `deleteAlertConfig`. `listAlertEvents`: fired alerts with `?active=true` filter. `getStockPredictions`: per-slot predictions with `?lookbackDays` param.
+- `internal/api/handlers.go` — `createDispense`: auto-resolves productId from slot config if not provided. `login`: authenticates and returns JWT. `getAdminStats`, `getMachineCost`, `listRestocks`: admin analytics. Alert CRUD: `listAlertConfigs`, `createAlertConfig`, `updateAlertConfig`, `deleteAlertConfig`. `listAlertEvents`: fired alerts with `?active=true` filter. `getStockPredictions`: per-slot predictions with `?lookbackDays` param. `exportDispenses`: CSV/PDF report with `?machineId&format=csv|pdf` params.
 - `pkg/piagent/agent.go` — polls GPIO pins every 100ms, detects button release (1→0 transition for active-low buttons), sends to API, caches failures in local SQLite for retry every 30s (max 50 pending events per retry cycle, stops on first failure)
 - `internal/store/sqlite/sqlite.go` — `GetLastRestock`: walks restocks in reverse chronological order to find the most recent one containing the target slot position
 
@@ -276,9 +282,11 @@ Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed.
 - [x] Build targets: `make build-lambda`, `make deploy-frontend`, `make tf-plan`, `make tf-apply`
 - [ ] CI/CD via GitHub Actions
 
-### Phase 5 — Polish
-- [ ] CSV/PDF export for dispense reports
+### Phase 5 — Polish [IN PROGRESS]
+- [x] Structured logging: `log/slog` replaces `log` across all Go code, `LOG_FORMAT` env var (`text`/`json`)
+- [x] Request ID middleware (`middleware.RequestID`) + custom structured request logging
+- [x] CSV/PDF export for dispense reports (`GET /api/v1/reports/dispenses?format=csv|pdf`)
 - [ ] Mobile responsive polish
 - [ ] Pi agent systemd service + watchdog
-- [ ] Observability: structured logging, CloudWatch metrics
+- [ ] CloudWatch custom metrics
 - [ ] E2E tests (Playwright)

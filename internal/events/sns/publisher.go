@@ -3,7 +3,7 @@ package sns
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awssns "github.com/aws/aws-sdk-go-v2/service/sns"
@@ -28,7 +28,7 @@ func (p *Publisher) PublishHandler() events.Handler {
 	return func(ctx context.Context, evt events.Event) error {
 		payload, err := json.Marshal(evt)
 		if err != nil {
-			log.Printf("sns: failed to marshal event: %v", err)
+			slog.Error("sns: failed to marshal event", "eventType", evt.Type, "error", err)
 			return err
 		}
 
@@ -43,7 +43,7 @@ func (p *Publisher) PublishHandler() events.Handler {
 			},
 		})
 		if err != nil {
-			log.Printf("sns: failed to publish %s event: %v", evt.Type, err)
+			slog.Error("sns: failed to publish event", "eventType", evt.Type, "topicARN", p.topicARN, "error", err)
 			return err
 		}
 		return nil

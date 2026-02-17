@@ -25,6 +25,7 @@ COPY --from=web-build /src/dist ./static
 ENV PORT=3000
 ENV STATIC_DIR=/app/static
 ENV DB_PATH=/data/sodatracker.db
+ENV LOG_FORMAT=json
 EXPOSE 3000
 VOLUME /data
 CMD ["./server"]

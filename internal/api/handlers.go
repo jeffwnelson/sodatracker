@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jeffwnelson/sodatracker/internal/domain"
+	"github.com/jeffwnelson/sodatracker/internal/export"
 	"github.com/jeffwnelson/sodatracker/internal/service"
 	"github.com/jeffwnelson/sodatracker/internal/store"
 )
@@ -425,6 +427,72 @@ func (h *handlers) getStockPredictions(w http.ResponseWriter, r *http.Request) {
 		predictions = []domain.StockPrediction{}
 	}
 	writeJSON(w, http.StatusOK, predictions)
+}
+
+// --- Reports ---
+
+func (h *handlers) exportDispenses(w http.ResponseWriter, r *http.Request) {
+	machineID := r.URL.Query().Get("machineId")
+	if machineID == "" {
+		writeErr(w, http.StatusBadRequest, "machineId is required")
+		return
+	}
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "csv"
+	}
+	if format != "csv" && format != "pdf" {
+		writeErr(w, http.StatusBadRequest, "format must be csv or pdf")
+		return
+	}
+
+	since := time.Time{}
+	if s := r.URL.Query().Get("since"); s != "" {
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			since = t
+		}
+	}
+
+	dispenses, err := h.svc.ListDispenses(r.Context(), machineID, since, 10000)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	products, err := h.store.ListProducts(r.Context())
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	productMap := make(map[string]domain.Product, len(products))
+	for _, p := range products {
+		productMap[p.ID] = p
+	}
+
+	machine, err := h.store.GetMachine(r.Context(), machineID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	machineName := machineID
+	if machine != nil {
+		machineName = machine.Name
+	}
+
+	switch format {
+	case "csv":
+		w.Header().Set("Content-Type", "text/csv")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="dispenses-%s.csv"`, machineID))
+		if err := export.WriteDispensesCSV(w, dispenses, productMap); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+		}
+	case "pdf":
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="dispenses-%s.pdf"`, machineID))
+		if err := export.WriteDispensesPDF(w, dispenses, productMap, machineName); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+		}
+	}
 }
 
 // --- Helpers ---

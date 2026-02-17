@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,7 +18,8 @@ func main() {
 
 	cfg, err := piagent.LoadConfig(*configPath)
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
 
 	// Use mock GPIO provider by default (real RPi GPIO requires build tag `rpi`)
@@ -26,7 +27,8 @@ func main() {
 
 	agent, err := piagent.New(cfg, provider)
 	if err != nil {
-		log.Fatalf("failed to create agent: %v", err)
+		slog.Error("failed to create agent", "error", err)
+		os.Exit(1)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -37,11 +39,12 @@ func main() {
 
 	go func() {
 		<-done
-		log.Println("shutting down pi agent...")
+		slog.Info("shutting down pi agent")
 		cancel()
 	}()
 
 	if err := agent.Run(ctx); err != nil {
-		log.Fatalf("agent error: %v", err)
+		slog.Error("agent error", "error", err)
+		os.Exit(1)
 	}
 }

@@ -1,7 +1,9 @@
 package api
 
 import (
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -13,7 +15,8 @@ import (
 
 func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret string, staticDir string) *chi.Mux {
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
+	r.Use(middleware.RequestID)
+	r.Use(structuredLogger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RealIP)
 	r.Use(cors.Handler(cors.Options{
@@ -67,6 +70,7 @@ func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret st
 			r.Use(auth.APIKeyOrJWTMiddleware(apiKey, jwtSecret))
 			r.Get("/admin/stats", h.getAdminStats)
 			r.Get("/admin/cost", h.getMachineCost)
+			r.Get("/reports/dispenses", h.exportDispenses)
 		})
 	})
 
@@ -84,4 +88,19 @@ func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret st
 	}
 
 	return r
+}
+
+func structuredLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		start := time.Now()
+		next.ServeHTTP(ww, r)
+		slog.Info("http request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", ww.Status(),
+			"duration", time.Since(start).String(),
+			"requestId", middleware.GetReqID(r.Context()),
+		)
+	})
 }

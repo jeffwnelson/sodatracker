@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
+	"os"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -15,6 +16,7 @@ import (
 	"github.com/jeffwnelson/sodatracker/internal/events"
 	"github.com/jeffwnelson/sodatracker/internal/events/local"
 	"github.com/jeffwnelson/sodatracker/internal/events/sns"
+	"github.com/jeffwnelson/sodatracker/internal/logging"
 	"github.com/jeffwnelson/sodatracker/internal/seed"
 	"github.com/jeffwnelson/sodatracker/internal/service"
 	"github.com/jeffwnelson/sodatracker/internal/store/dynamo"
@@ -22,10 +24,12 @@ import (
 
 func main() {
 	cfg := config.Load()
+	logging.Setup(cfg.LogFormat)
 
 	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background())
 	if err != nil {
-		log.Fatalf("failed to load AWS config: %v", err)
+		slog.Error("failed to load AWS config", "error", err)
+		os.Exit(1)
 	}
 
 	// DynamoDB store

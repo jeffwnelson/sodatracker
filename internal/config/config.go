@@ -14,6 +14,7 @@ type Config struct {
 	AdminPassword string
 	TableName     string
 	SNSTopicARN   string
+	LogFormat     string
 }
 
 func Load() Config {
@@ -26,6 +27,7 @@ func Load() Config {
 		AdminPassword: getEnv("ADMIN_PASSWORD", "dev-admin-password"),
 		TableName:     getEnv("TABLE_NAME", ""),
 		SNSTopicARN:   getEnv("SNS_TOPIC_ARN", ""),
+		LogFormat:     getEnv("LOG_FORMAT", "text"),
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -68,8 +68,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	retryTicker := time.NewTicker(retryInterval)
 	defer retryTicker.Stop()
 
-	log.Printf("Pi agent started: machine=%s, polling=%dms, %d pins",
-		a.cfg.MachineID, a.cfg.PollMs, len(a.pins))
+	slog.Info("Pi agent started", "machine", a.cfg.MachineID, "pollMs", a.cfg.PollMs, "pins", len(a.pins))
 
 	for {
 		select {
@@ -90,12 +89,12 @@ func (a *Agent) poll() {
 		mp := &a.pins[i]
 		high, err := mp.pin.Read()
 		if err != nil {
-			log.Printf("error reading pin %d: %v", mp.pin.Number(), err)
+			slog.Error("error reading pin", "pin", mp.pin.Number(), "error", err)
 			continue
 		}
 		// Detect button release: was low (pressed), now high (released)
 		if !mp.lastHigh && high {
-			log.Printf("dispense detected: slot=%d pin=%d", mp.slot, mp.pin.Number())
+			slog.Info("dispense detected", "slot", mp.slot, "pin", mp.pin.Number())
 			a.handleDispense(mp.slot)
 		}
 		mp.lastHigh = high
@@ -109,9 +108,9 @@ func (a *Agent) handleDispense(slot int) {
 		Timestamp: time.Now().UTC(),
 	}
 	if err := a.sendDispense(evt); err != nil {
-		log.Printf("failed to send dispense, caching: %v", err)
+		slog.Warn("failed to send dispense, caching", "slot", slot, "error", err)
 		if err := a.cache.Store(evt); err != nil {
-			log.Printf("failed to cache event: %v", err)
+			slog.Error("failed to cache event", "slot", slot, "error", err)
 		}
 	}
 }
@@ -147,18 +146,18 @@ func (a *Agent) sendDispense(evt CachedEvent) error {
 func (a *Agent) retryPending() {
 	events, err := a.cache.Pending()
 	if err != nil {
-		log.Printf("error reading pending events: %v", err)
+		slog.Error("error reading pending events", "error", err)
 		return
 	}
 	for _, evt := range events {
 		if err := a.sendDispense(evt); err != nil {
-			log.Printf("retry failed for event %d: %v", evt.ID, err)
+			slog.Warn("retry failed", "eventID", evt.ID, "error", err)
 			return // stop retrying on first failure
 		}
 		if err := a.cache.Remove(evt.ID); err != nil {
-			log.Printf("error removing cached event %d: %v", evt.ID, err)
+			slog.Error("error removing cached event", "eventID", evt.ID, "error", err)
 		} else {
-			log.Printf("retried event %d successfully", evt.ID)
+			slog.Info("retried event successfully", "eventID", evt.ID)
 		}
 	}
 }

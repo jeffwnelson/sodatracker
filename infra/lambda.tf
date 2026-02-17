@@ -17,6 +17,7 @@ resource "aws_lambda_function" "api" {
       JWT_SECRET     = var.jwt_secret
       ADMIN_PASSWORD = var.admin_password
       SNS_TOPIC_ARN  = aws_sns_topic.events.arn
+      LOG_FORMAT     = "json"
     }
   }
 }

@@ -3,9 +3,11 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
@@ -592,5 +594,131 @@ func TestFullWorkflowWithAlerts(t *testing.T) {
 	json.NewDecoder(w.Body).Decode(&alertEvents)
 	if len(alertEvents) != 0 {
 		t.Errorf("expected 0 active alerts after restock, got %d", len(alertEvents))
+	}
+}
+
+// setupExportData creates a machine, product, slot, restock, and dispenses for export tests.
+// Returns the machine ID.
+func setupExportData(t *testing.T, r http.Handler, st *sqlite.SQLiteStore) string {
+	t.Helper()
+
+	// Create product
+	body, _ := json.Marshal(domain.Product{ID: "p1", UPC: "111222333444", Name: "Cola", CostPerCan: 0.50})
+	req := httptest.NewRequest("POST", "/api/v1/products", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create product: %d %s", w.Code, w.Body.String())
+	}
+
+	// Create machine
+	body, _ = json.Marshal(domain.Machine{ID: "m1", Name: "Break Room", SlotCount: 5})
+	req = httptest.NewRequest("POST", "/api/v1/machines", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create machine: %d", w.Code)
+	}
+
+	// Set slots
+	body, _ = json.Marshal([]domain.Slot{{Position: 1, ProductID: "p1", Capacity: 10, LowThreshold: 2}})
+	req = httptest.NewRequest("POST", "/api/v1/machines/m1/slots", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// Restock
+	body, _ = json.Marshal(map[string]any{"slots": []map[string]any{{"position": 1, "quantity": 10}}})
+	req = httptest.NewRequest("POST", "/api/v1/machines/m1/restock", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// Dispense twice
+	for i := 0; i < 2; i++ {
+		body, _ = json.Marshal(map[string]any{"machineId": "m1", "slotPosition": 1})
+		req = httptest.NewRequest("POST", "/api/v1/dispenses", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-key")
+		w = httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusCreated {
+			t.Fatalf("dispense %d: %d", i, w.Code)
+		}
+	}
+
+	return "m1"
+}
+
+func TestExportDispensesCSV(t *testing.T) {
+	r, st := setupWithStore(t)
+	seedTestUser(t, st)
+	token := loginAndGetToken(t, r)
+	machineID := setupExportData(t, r, st)
+
+	req := httptest.NewRequest("GET", "/api/v1/reports/dispenses?machineId="+machineID+"&format=csv", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if ct := w.Header().Get("Content-Type"); ct != "text/csv" {
+		t.Errorf("expected Content-Type text/csv, got %s", ct)
+	}
+	if cd := w.Header().Get("Content-Disposition"); !strings.Contains(cd, "attachment") {
+		t.Errorf("expected Content-Disposition attachment, got %s", cd)
+	}
+
+	reader := csv.NewReader(strings.NewReader(w.Body.String()))
+	records, err := reader.ReadAll()
+	if err != nil {
+		t.Fatalf("parse CSV: %v", err)
+	}
+	// Header + 2 dispenses
+	if len(records) != 3 {
+		t.Fatalf("expected 3 CSV rows, got %d", len(records))
+	}
+	if records[1][3] != "Cola" {
+		t.Errorf("expected Cola, got %s", records[1][3])
+	}
+}
+
+func TestExportDispensesPDF(t *testing.T) {
+	r, st := setupWithStore(t)
+	seedTestUser(t, st)
+	token := loginAndGetToken(t, r)
+	machineID := setupExportData(t, r, st)
+
+	req := httptest.NewRequest("GET", "/api/v1/reports/dispenses?machineId="+machineID+"&format=pdf", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if ct := w.Header().Get("Content-Type"); ct != "application/pdf" {
+		t.Errorf("expected Content-Type application/pdf, got %s", ct)
+	}
+	if !strings.HasPrefix(w.Body.String(), "%PDF-") {
+		t.Error("expected PDF header in response body")
+	}
+}
+
+func TestExportRequiresAuth(t *testing.T) {
+	r := setup(t)
+	req := httptest.NewRequest("GET", "/api/v1/reports/dispenses?machineId=m1", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 without auth, got %d", w.Code)
 	}
 }

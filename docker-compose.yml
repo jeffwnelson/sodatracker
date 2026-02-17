@@ -9,6 +9,7 @@ services:
       - API_KEY=dev-api-key
       - JWT_SECRET=dev-jwt-secret
       - STATIC_DIR=/app/static
+      - LOG_FORMAT=json
     volumes:
       - sodatracker-data:/data
 
