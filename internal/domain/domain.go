@@ -68,3 +68,34 @@ type User struct {
 	PasswordHash string `json:"-"`
 	Role         string `json:"role"`
 }
+
+type AlertConfig struct {
+	ID           string `json:"id"`
+	MachineID    string `json:"machineId"`
+	SlotPosition int    `json:"slotPosition"`  // 0 = machine-wide default
+	LowThreshold int   `json:"lowThreshold"`   // -1 = use slot's own threshold
+	Enabled      bool   `json:"enabled"`
+}
+
+type AlertEvent struct {
+	ID           string     `json:"id"`
+	MachineID    string     `json:"machineId"`
+	SlotPosition int        `json:"slotPosition"`
+	ProductID    string     `json:"productId"`
+	AlertType    string     `json:"alertType"` // "low_stock" or "out_of_stock"
+	CurrentStock int        `json:"currentStock"`
+	Threshold    int        `json:"threshold"`
+	Cleared      bool       `json:"cleared"`
+	Timestamp    time.Time  `json:"timestamp"`
+	ClearedAt    *time.Time `json:"clearedAt,omitempty"`
+}
+
+type StockPrediction struct {
+	MachineID         string  `json:"machineId"`
+	SlotPosition      int     `json:"slotPosition"`
+	ProductName       string  `json:"productName,omitempty"`
+	CurrentStock      int     `json:"currentStock"`
+	DispensesPerDay   float64 `json:"dispensesPerDay"`
+	EstimatedDaysLeft float64 `json:"estimatedDaysLeft"` // -1 = no data
+	PredictedStockout *string `json:"predictedStockout,omitempty"`
+}

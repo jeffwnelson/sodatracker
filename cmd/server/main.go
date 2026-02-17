@@ -16,6 +16,8 @@ import (
 	"github.com/jeffwnelson/sodatracker/internal/api"
 	"github.com/jeffwnelson/sodatracker/internal/config"
 	"github.com/jeffwnelson/sodatracker/internal/domain"
+	"github.com/jeffwnelson/sodatracker/internal/events"
+	"github.com/jeffwnelson/sodatracker/internal/events/local"
 	"github.com/jeffwnelson/sodatracker/internal/service"
 	"github.com/jeffwnelson/sodatracker/internal/store/sqlite"
 )
@@ -32,7 +34,26 @@ func main() {
 	// Seed admin user if not exists
 	seedAdminUser(st, cfg.AdminPassword)
 
-	svc := service.New(st, cfg.JWTSecret)
+	bus := local.New()
+	defer bus.Close()
+
+	svc := service.New(st, cfg.JWTSecret, bus)
+
+	// Wire: dispense event → alert evaluation
+	bus.Subscribe(events.EventDispense, func(ctx context.Context, evt events.Event) error {
+		machineID, _ := evt.Data["machineId"].(string)
+		slotPos := 0
+		switch v := evt.Data["slotPosition"].(type) {
+		case int:
+			slotPos = v
+		case float64:
+			slotPos = int(v)
+		}
+		if machineID != "" && slotPos > 0 {
+			return svc.EvaluateStockAlert(ctx, machineID, slotPos)
+		}
+		return nil
+	})
 	router := api.NewRouter(st, svc, cfg.APIKey, cfg.JWTSecret, cfg.StaticDir)
 
 	srv := &http.Server{

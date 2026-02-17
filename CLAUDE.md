@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Goal
 
-Rebuild the existing soda machine tracking prototype (Node.js/AngularJS/MongoDB in `consumables/`) as a modern, production-ready system called **SodaTracker** (in `sodatracker/`). The new system must support dual deployment: self-hosted (Docker Compose for demos) and AWS serverless (Lambda + DynamoDB + SNS).
+Rebuild the existing soda machine tracking prototype (Node.js/AngularJS/MongoDB in `consumables/`) as a modern, production-ready system called **SodaTracker** (in `sodaTracker/`). The new system must support dual deployment: self-hosted (Docker Compose for demos) and AWS serverless (Lambda + DynamoDB + SNS).
 
 ## Legacy System (reference only)
 
@@ -17,7 +17,7 @@ The original prototype lives in `consumables/` and `sodaTracker/`:
 - `consumables/barcode-scanner/` — Placeholder for scanner input
 - `sodaTracker/` — Legacy soda tracker + quick2wire-gpio-admin (C GPIO utility)
 
-Note: Some legacy debris (`sodaTracker.js`, `npm-debug.log`, `quick2wire-gpio-admin/`, root-level `node_modules/`) still exists inside `sodatracker/` and should be cleaned up.
+Note: Some legacy debris (`sodaTracker.js`, `npm-debug.log`, `quick2wire-gpio-admin/`, root-level `node_modules/`) still exists inside `sodaTracker/` and should be cleaned up.
 
 ## SodaTracker Tech Stack
 
@@ -34,7 +34,7 @@ Note: Some legacy debris (`sodaTracker.js`, `npm-debug.log`, `quick2wire-gpio-ad
 ## SodaTracker Repository Structure
 
 ```
-sodatracker/
+sodaTracker/
 ├── cmd/
 │   ├── server/main.go        # Self-hosted HTTP server
 │   ├── lambda/                # AWS Lambda entry point (Phase 4, empty stub)
@@ -43,11 +43,11 @@ sodatracker/
 │   └── discordbot/            # Discord bot (Phase 3, empty stub)
 ├── internal/
 │   ├── api/                   # chi router, middleware, handlers
-│   ├── domain/                # Entity structs (Product, Machine, Slot, Dispense, Restock, User)
+│   ├── domain/                # Entity structs (Product, Machine, Slot, Dispense, Restock, User, AlertConfig, AlertEvent, StockPrediction)
 │   ├── store/                 # Store interface + sqlite/ implementation (dynamo/ in Phase 4)
-│   ├── events/                # EventBus interface (Phase 3) + sns/ and local/ implementations
-│   ├── service/               # Business logic (dispense, restock, stock calculation, login, stats)
-│   ├── notify/                # Slack and Discord notification clients (Phase 3)
+│   ├── events/                # EventBus interface + local/ in-process implementation (sns/ in Phase 4)
+│   ├── service/               # Business logic (dispense, restock, stock calculation, login, stats, alerts, predictions)
+│   ├── notify/                # Slack and Discord notification clients (Phase 3+)
 │   ├── auth/                  # API key middleware + JWT middleware (auth.go, jwt.go)
 │   └── config/                # Env-based config loading
 ├── pkg/
@@ -55,7 +55,7 @@ sodatracker/
 │   └── piagent/               # Agent logic, local SQLite cache, YAML config
 ├── web/                       # React frontend (Vite + Tailwind)
 │   └── src/
-│       ├── pages/             # CustomerDashboard, LoginPage, AdminDashboard, MachineDetailPage, RestockPage
+│       ├── pages/             # CustomerDashboard, LoginPage, AdminDashboard, MachineDetailPage, RestockPage, AlertsPage
 │       ├── components/        # StockGrid, AdminLayout, ProtectedRoute
 │       ├── context/           # AuthContext (JWT token + user state, localStorage persistence)
 │       └── api/               # API client + TypeScript types
@@ -69,7 +69,7 @@ sodatracker/
 
 ## Development Commands
 
-All commands run from `sodatracker/`.
+All commands run from `sodaTracker/`.
 
 ### API Server
 ```bash
@@ -96,7 +96,7 @@ go test ./internal/store/sqlite/... -run TestDispenseAndRestock
 go test -v ./internal/api/... -run TestHealth
 ```
 
-### Web Dashboard (`sodatracker/web/`)
+### Web Dashboard (`sodaTracker/web/`)
 ```bash
 make web-install    # npm install
 make web-dev        # Vite dev server on :4000, proxies /api to :3000
@@ -131,11 +131,15 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 
 ## Data Model
 
-**Domain entities:** Product (upc, name, costPerCan, imageUrl), Machine (name, location, slotCount), Slot (machineId, position, productId, gpioPin, capacity, lowThreshold), Dispense (machineId, productId, slotPosition, sourceType, timestamp), Restock (machineId, userId, slots[], timestamp), User (username, passwordHash `json:"-"`, role)
+**Domain entities:** Product (upc, name, costPerCan, imageUrl), Machine (name, location, slotCount), Slot (machineId, position, productId, gpioPin, capacity, lowThreshold), Dispense (machineId, productId, slotPosition, sourceType, timestamp), Restock (machineId, userId, slots[], timestamp), User (username, passwordHash `json:"-"`, role), AlertConfig (machineId, slotPosition, lowThreshold, enabled), AlertEvent (machineId, slotPosition, productId, alertType, currentStock, threshold, cleared, timestamp, clearedAt), StockPrediction (computed on read — not persisted)
 
 **Stock calculation:** Computed on read — last restock quantity minus dispenses since that restock. No stored counter (avoids write contention). Stock is capped at 0 minimum (never goes negative).
 
 **Slot status thresholds:** `currentStock > lowThreshold` = "ok" (green), `currentStock > 0 && <= lowThreshold` = "low" (yellow), `currentStock <= 0` = "empty" (red)
+
+**Alert deduplication:** `GetActiveAlert` checks for an existing uncleared alert of the same type for the same machine/slot before creating a new one. Alerts are cleared per-slot on restock via `ClearAlertEvents`.
+
+**Stock predictions:** `GetStockPredictions` computes `dispensesPerDay = count / lookbackDays` (default 14 days), then `estimatedDaysLeft = currentStock / dispensesPerDay`. Returns -1 for no data.
 
 ## API Routes
 
@@ -155,9 +159,14 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 | POST | `/api/v1/products` | API Key or JWT | Create product | Done |
 | GET | `/api/v1/admin/stats` | API Key or JWT | Dispense stats (aggregated) | Done |
 | GET | `/api/v1/admin/cost` | API Key or JWT | Machine cost (30d) | Done |
+| GET | `/api/v1/machines/:id/alerts` | API Key or JWT | List alert configs | Done |
+| POST | `/api/v1/machines/:id/alerts` | API Key or JWT | Create alert config | Done |
+| PUT | `/api/v1/alerts/:id` | API Key or JWT | Update alert config | Done |
+| DELETE | `/api/v1/alerts/:id` | API Key or JWT | Delete alert config | Done |
+| GET | `/api/v1/machines/:id/alert-events` | API Key or JWT | Alert events (`?active=true&limit=50`) | Done |
+| GET | `/api/v1/machines/:id/predictions` | API Key or JWT | Stock predictions (`?lookbackDays=14`) | Done |
 | GET | `/api/v1/reports/dispenses` | JWT | Export CSV/PDF | Phase 5 |
-| CRUD | `/api/v1/alerts` | JWT | Alert config | Phase 3 |
-| CRUD | `/api/v1/webhooks` | JWT | Webhook subscriptions | Phase 3 |
+| CRUD | `/api/v1/webhooks` | JWT | Webhook subscriptions | Phase 3+ |
 
 **Auth:** API key middleware accepts both `X-API-Key: <key>` and `Authorization: Bearer <key>` headers. The `APIKeyOrJWT` middleware on admin CRUD routes accepts either an API key or a valid JWT token, so both the Pi agent and the admin dashboard can call them.
 
@@ -180,20 +189,27 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 - **Frontend token storage** — localStorage with key `soda_token`. AuthContext initializes from localStorage so page refresh preserves login state.
 - **Frontend refresh intervals:** machine list refreshes every 30s, individual machine status cards every 10s, admin stats staleTime is 30s, TanStack Query default staleTime is 5s.
 - **TypeScript strict mode** enabled with `verbatimModuleSyntax` — all type imports must use `import type`.
+- **EventBus** — `events.EventBus` interface with `Publish`, `Subscribe` (returns unsubscribe func), `Close`. `local.LocalBus` is synchronous in-process dispatch; subscriber errors are logged but don't block other subscribers. Event `Data` is `map[string]any` for generic serialization.
+- **Event types:** `dispense`, `low_stock`, `out_of_stock`, `stock_cleared`. Published by `service.RegisterDispense` and `service.CreateRestock`.
+- **Alert evaluation wiring** — `cmd/server/main.go` subscribes to `EventDispense` and calls `svc.EvaluateStockAlert`. Alert config precedence: slot-specific (slotPosition > 0) overrides machine-wide (slotPosition = 0), which overrides slot's own `lowThreshold`. A `lowThreshold` of -1 means "use slot default".
+- **CreateAlertConfig** is an upsert (`ON CONFLICT(machine_id, slot_position) DO UPDATE`), matching the Product/Machine pattern.
+- **Service.CreateRestock** wraps `store.CreateRestock` + clears alerts per restocked slot + publishes `stock_cleared` events. The `createRestock` handler calls `svc.CreateRestock` (not `store.CreateRestock` directly).
+- **Service constructor** now requires an `events.EventBus` parameter (nil-safe — all bus operations are guarded by `if s.bus != nil`).
 
 ## Test Structure
 
-Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **15 tests total** across 4 packages.
+Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **26 tests total** across 5 packages.
 
-- `internal/store/sqlite/sqlite_test.go` — Store CRUD tests: `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestUserCRUD`, `TestDispenseAndRestock`
+- `internal/events/local/local_test.go` — EventBus tests: `TestPublishSubscribe`, `TestMultipleSubscribers`, `TestUnsubscribe`, `TestPublishNoSubscribers`, `TestDifferentEventTypes`
+- `internal/store/sqlite/sqlite_test.go` — Store CRUD tests: `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestUserCRUD`, `TestAlertConfigCRUD`, `TestAlertEventCRUD`, `TestDispenseAndRestock`
 - `internal/auth/jwt_test.go` — JWT tests: `TestGenerateAndValidateToken`, `TestJWTMiddleware_MissingToken`, `TestJWTMiddleware_InvalidToken`, `TestJWTMiddleware_ValidToken`
-- `internal/service/service_test.go` — Service logic tests: `TestLogin` (success + bad password + non-existent user), `TestGetDispenseStats` (verify counts/ranking/cost), `TestGetMachineCost`
-- `internal/api/handlers_test.go` — API integration tests using `httptest.NewRecorder()` against the real chi router: `TestHealth`, `TestCreateAndListMachines`, `TestDispenseRequiresAPIKey`, `TestLoginSuccess`, `TestLoginBadPassword`, `TestAdminStatsRequiresAuth`, `TestFullWorkflow` (API key auth), `TestFullWorkflowWithJWT` (JWT auth: login → create product → machine → slots → restock → admin stats → cost → list restocks)
+- `internal/service/service_test.go` — Service logic tests: `TestLogin` (success + bad password + non-existent user), `TestGetDispenseStats` (verify counts/ranking/cost), `TestGetMachineCost`, `TestEvaluateStockAlert` (low_stock + dedup + out_of_stock), `TestCreateRestockClearsAlerts`, `TestGetStockPredictions` (rate calc + days left)
+- `internal/api/handlers_test.go` — API integration tests using `httptest.NewRecorder()` against the real chi router with wired EventBus: `TestHealth`, `TestCreateAndListMachines`, `TestDispenseRequiresAPIKey`, `TestLoginSuccess`, `TestLoginBadPassword`, `TestAdminStatsRequiresAuth`, `TestFullWorkflow` (API key auth), `TestFullWorkflowWithJWT` (JWT auth), `TestAlertConfigCRUD` (create/list/update/delete via API), `TestPredictionsEndpoint`, `TestFullWorkflowWithAlerts` (dispense→low_stock alert→restock clears alerts)
 
 ## Key Business Logic
 
-- `internal/service/service.go` — `GetMachineStatus`: computes stock per slot (restock qty - dispenses since restock), assigns status (ok/low/empty), caps stock at 0. `Login`: bcrypt verify + JWT generation. `GetDispenseStats`: in-memory aggregation (hourly bucketing, product ranking, cost). `GetMachineCost`: sum of costPerCan for all dispenses. `ListRestocks`: delegates to store.
-- `internal/api/handlers.go` — `createDispense`: auto-resolves productId from slot config if not provided. `login`: authenticates and returns JWT. `getAdminStats`, `getMachineCost`, `listRestocks`: admin analytics endpoints.
+- `internal/service/service.go` — `GetMachineStatus`: computes stock per slot (restock qty - dispenses since restock), assigns status (ok/low/empty), caps stock at 0. `Login`: bcrypt verify + JWT generation. `GetDispenseStats`: in-memory aggregation (hourly bucketing, product ranking, cost). `GetMachineCost`: sum of costPerCan for all dispenses. `ListRestocks`: delegates to store. `RegisterDispense`: creates dispense + publishes event. `CreateRestock`: creates restock + clears alerts + publishes events. `EvaluateStockAlert`: computes stock, resolves threshold from alert configs (slot > machine-wide > slot default), deduplicates via `GetActiveAlert`, creates `low_stock` or `out_of_stock` AlertEvent. `GetStockPredictions`: computes dispensesPerDay and estimatedDaysLeft per slot.
+- `internal/api/handlers.go` — `createDispense`: auto-resolves productId from slot config if not provided. `login`: authenticates and returns JWT. `getAdminStats`, `getMachineCost`, `listRestocks`: admin analytics endpoints. `listAlertConfigs`, `createAlertConfig`, `updateAlertConfig`, `deleteAlertConfig`: alert config CRUD. `listAlertEvents`: filtered by active/all. `getStockPredictions`: computed predictions with configurable lookback.
 - `pkg/piagent/agent.go` — polls GPIO pins every 100ms, detects button release (1→0 transition for active-low buttons), sends to API, caches failures in local SQLite for retry every 30s (max 50 pending events per retry cycle, stops on first failure)
 - `internal/store/sqlite/sqlite.go` — `GetLastRestock`: walks restocks in reverse chronological order to find the most recent one containing the target slot position
 
@@ -228,14 +244,22 @@ Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed.
 - [x] Cost tracking (costPerCan * dispenses, aggregated in GetDispenseStats and GetMachineCost)
 - [x] Tests: 15 total — JWT auth (4), service logic (3), store CRUD (4), API integration (4 including TestFullWorkflowWithJWT)
 
-### Phase 3 — Events & Notifications [NEXT]
-- [ ] EventBus interface + local (in-process channel) implementation
-- [ ] Alert service: evaluates stock after each dispense, fires low_stock/out_of_stock events
+### Phase 3 — Events, Alerts & Predictions [COMPLETE]
+- [x] EventBus interface (`internal/events/events.go`) + local in-process implementation (`internal/events/local/`)
+- [x] Alert service: evaluates stock after each dispense via event subscriber, fires `low_stock`/`out_of_stock` events with deduplication
+- [x] AlertConfig CRUD: per-machine/slot threshold configuration (`alert_configs` table, upsert on create)
+- [x] AlertEvent tracking: append-only log, cleared per-slot on restock (`alert_events` table)
+- [x] Predictive stock-out: linear rate estimation (dispenses/day over configurable lookback window)
+- [x] Alert configuration UI (`/admin/alerts`): active alerts, stock predictions table, config management
+- [x] MachineDetailPage enhancement: prediction badges on stock gauges (< 1 day red, < 3 days orange)
+- [x] Restock handler updated to call `svc.CreateRestock` (clears alerts + publishes events)
+- [x] Server wiring: EventBus created in `cmd/server/main.go`, dispense→alert subscriber registered
+- [x] Tests: 26 total — EventBus (5), store alert CRUD (2), service alerts/predictions (3), API alerts (3), plus all existing tests updated
+
+**Deferred to Phase 3+:**
 - [ ] Slack bot: push notifications on events, pull commands (`/soda status`, `/soda top`)
 - [ ] Discord bot: `discordgo` persistent WebSocket, same push/pull features
-- [ ] Alert configuration UI (`/admin/alerts`)
 - [ ] Webhook system: CRUD + HMAC-signed delivery
-- [ ] Predictive stock-out: linear regression on dispense rate
 
 ### Phase 4 — AWS Deployment
 - [ ] DynamoDB store implementation (single-table design: PK/SK patterns, one GSI)

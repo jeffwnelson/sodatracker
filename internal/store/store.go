@@ -38,6 +38,18 @@ type Store interface {
 	CreateUser(ctx context.Context, u *domain.User) error
 	GetUserByUsername(ctx context.Context, username string) (*domain.User, error)
 
+	// Alert Configs
+	CreateAlertConfig(ctx context.Context, ac *domain.AlertConfig) error
+	ListAlertConfigs(ctx context.Context, machineID string) ([]domain.AlertConfig, error)
+	UpdateAlertConfig(ctx context.Context, ac *domain.AlertConfig) error
+	DeleteAlertConfig(ctx context.Context, id string) error
+
+	// Alert Events
+	CreateAlertEvent(ctx context.Context, ae *domain.AlertEvent) error
+	ListAlertEvents(ctx context.Context, machineID string, activeOnly bool, limit int) ([]domain.AlertEvent, error)
+	ClearAlertEvents(ctx context.Context, machineID string, slotPosition int) error
+	GetActiveAlert(ctx context.Context, machineID string, slotPosition int, alertType string) (*domain.AlertEvent, error)
+
 	// Lifecycle
 	Close() error
 }

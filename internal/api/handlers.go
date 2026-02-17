@@ -199,7 +199,7 @@ func (h *handlers) createRestock(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "slots are required")
 		return
 	}
-	if err := h.store.CreateRestock(r.Context(), &rs); err != nil {
+	if err := h.svc.CreateRestock(r.Context(), &rs); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -329,6 +329,102 @@ func (h *handlers) listRestocks(w http.ResponseWriter, r *http.Request) {
 		restocks = []domain.Restock{}
 	}
 	writeJSON(w, http.StatusOK, restocks)
+}
+
+// --- Alerts ---
+
+func (h *handlers) listAlertConfigs(w http.ResponseWriter, r *http.Request) {
+	machineID := chi.URLParam(r, "id")
+	configs, err := h.svc.ListAlertConfigs(r.Context(), machineID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if configs == nil {
+		configs = []domain.AlertConfig{}
+	}
+	writeJSON(w, http.StatusOK, configs)
+}
+
+func (h *handlers) createAlertConfig(w http.ResponseWriter, r *http.Request) {
+	machineID := chi.URLParam(r, "id")
+	var ac domain.AlertConfig
+	if err := json.NewDecoder(r.Body).Decode(&ac); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+	ac.MachineID = machineID
+	if ac.ID == "" {
+		ac.ID = uuid.NewString()
+	}
+	if err := h.svc.CreateAlertConfig(r.Context(), &ac); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, ac)
+}
+
+func (h *handlers) updateAlertConfig(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var ac domain.AlertConfig
+	if err := json.NewDecoder(r.Body).Decode(&ac); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+	ac.ID = id
+	if err := h.svc.UpdateAlertConfig(r.Context(), &ac); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, ac)
+}
+
+func (h *handlers) deleteAlertConfig(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := h.svc.DeleteAlertConfig(r.Context(), id); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"deleted": id})
+}
+
+func (h *handlers) listAlertEvents(w http.ResponseWriter, r *http.Request) {
+	machineID := chi.URLParam(r, "id")
+	activeOnly := r.URL.Query().Get("active") == "true"
+	limit := 50
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if v, err := strconv.Atoi(l); err == nil && v > 0 {
+			limit = v
+		}
+	}
+	events, err := h.svc.ListAlertEvents(r.Context(), machineID, activeOnly, limit)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if events == nil {
+		events = []domain.AlertEvent{}
+	}
+	writeJSON(w, http.StatusOK, events)
+}
+
+func (h *handlers) getStockPredictions(w http.ResponseWriter, r *http.Request) {
+	machineID := chi.URLParam(r, "id")
+	lookbackDays := 14
+	if l := r.URL.Query().Get("lookbackDays"); l != "" {
+		if v, err := strconv.Atoi(l); err == nil && v > 0 {
+			lookbackDays = v
+		}
+	}
+	predictions, err := h.svc.GetStockPredictions(r.Context(), machineID, lookbackDays)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if predictions == nil {
+		predictions = []domain.StockPrediction{}
+	}
+	writeJSON(w, http.StatusOK, predictions)
 }
 
 // --- Helpers ---

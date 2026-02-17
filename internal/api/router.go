@@ -52,6 +52,14 @@ func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret st
 			r.Get("/machines/{id}/restocks", h.listRestocks)
 			r.Get("/products", h.listProducts)
 			r.Post("/products", h.createProduct)
+
+			// Alerts
+			r.Get("/machines/{id}/alerts", h.listAlertConfigs)
+			r.Post("/machines/{id}/alerts", h.createAlertConfig)
+			r.Put("/alerts/{id}", h.updateAlertConfig)
+			r.Delete("/alerts/{id}", h.deleteAlertConfig)
+			r.Get("/machines/{id}/alert-events", h.listAlertEvents)
+			r.Get("/machines/{id}/predictions", h.getStockPredictions)
 		})
 
 		// JWT-only admin endpoints

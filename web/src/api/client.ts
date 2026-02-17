@@ -5,6 +5,9 @@ import type {
   DispenseStats,
   Restock,
   Dispense,
+  AlertConfig,
+  AlertEvent,
+  StockPrediction,
 } from "./types";
 
 const BASE = "/api/v1";
@@ -135,4 +138,85 @@ export function createRestock(
   slots: { position: number; quantity: number }[]
 ): Promise<Restock> {
   return postJSONAuth(`/machines/${machineId}/restock`, { slots });
+}
+
+// Helpers for PUT/DELETE
+
+async function putJSONAuth<T>(path: string, body: unknown): Promise<T> {
+  const token = getToken();
+  const res = await fetch(`${BASE}${path}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(err.error || `API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+async function deleteJSONAuth<T>(path: string): Promise<T> {
+  const token = getToken();
+  const res = await fetch(`${BASE}${path}`, {
+    method: "DELETE",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(err.error || `API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+// Alert Configs
+export function listAlertConfigs(machineId: string): Promise<AlertConfig[]> {
+  return fetchJSONAuth(`/machines/${machineId}/alerts`);
+}
+
+export function createAlertConfig(
+  machineId: string,
+  config: { slotPosition: number; lowThreshold: number; enabled: boolean }
+): Promise<AlertConfig> {
+  return postJSONAuth(`/machines/${machineId}/alerts`, config);
+}
+
+export function updateAlertConfig(
+  id: string,
+  config: { lowThreshold: number; enabled: boolean }
+): Promise<AlertConfig> {
+  return putJSONAuth(`/alerts/${id}`, config);
+}
+
+export function deleteAlertConfig(
+  id: string
+): Promise<{ deleted: string }> {
+  return deleteJSONAuth(`/alerts/${id}`);
+}
+
+// Alert Events
+export function listAlertEvents(
+  machineId: string,
+  activeOnly?: boolean,
+  limit?: number
+): Promise<AlertEvent[]> {
+  const params = new URLSearchParams();
+  if (activeOnly) params.set("active", "true");
+  if (limit) params.set("limit", String(limit));
+  return fetchJSONAuth(`/machines/${machineId}/alert-events?${params}`);
+}
+
+// Stock Predictions
+export function getStockPredictions(
+  machineId: string,
+  lookbackDays?: number
+): Promise<StockPrediction[]> {
+  const params = new URLSearchParams();
+  if (lookbackDays) params.set("lookbackDays", String(lookbackDays));
+  return fetchJSONAuth(`/machines/${machineId}/predictions?${params}`);
 }

@@ -80,6 +80,27 @@ func (s *SQLiteStore) migrate() error {
 			password_hash TEXT NOT NULL,
 			role TEXT NOT NULL DEFAULT 'admin'
 		)`,
+		`CREATE TABLE IF NOT EXISTS alert_configs (
+			id TEXT PRIMARY KEY,
+			machine_id TEXT NOT NULL,
+			slot_position INTEGER NOT NULL DEFAULT 0,
+			low_threshold INTEGER NOT NULL DEFAULT -1,
+			enabled INTEGER NOT NULL DEFAULT 1,
+			UNIQUE(machine_id, slot_position)
+		)`,
+		`CREATE TABLE IF NOT EXISTS alert_events (
+			id TEXT PRIMARY KEY,
+			machine_id TEXT NOT NULL,
+			slot_position INTEGER NOT NULL,
+			product_id TEXT NOT NULL DEFAULT '',
+			alert_type TEXT NOT NULL,
+			current_stock INTEGER NOT NULL DEFAULT 0,
+			threshold INTEGER NOT NULL DEFAULT 0,
+			cleared INTEGER NOT NULL DEFAULT 0,
+			timestamp DATETIME NOT NULL,
+			cleared_at DATETIME
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_alert_events_machine_cleared_ts ON alert_events(machine_id, cleared, timestamp)`,
 	}
 	for _, m := range migrations {
 		if _, err := s.db.Exec(m); err != nil {
@@ -331,6 +352,123 @@ func (s *SQLiteStore) GetUserByUsername(ctx context.Context, username string) (*
 		return nil, err
 	}
 	return &u, nil
+}
+
+// --- Alert Configs ---
+
+func (s *SQLiteStore) CreateAlertConfig(ctx context.Context, ac *domain.AlertConfig) error {
+	enabled := 0
+	if ac.Enabled {
+		enabled = 1
+	}
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO alert_configs (id, machine_id, slot_position, low_threshold, enabled) VALUES (?, ?, ?, ?, ?)
+		 ON CONFLICT(machine_id, slot_position) DO UPDATE SET low_threshold=excluded.low_threshold, enabled=excluded.enabled, id=excluded.id`,
+		ac.ID, ac.MachineID, ac.SlotPosition, ac.LowThreshold, enabled)
+	return err
+}
+
+func (s *SQLiteStore) ListAlertConfigs(ctx context.Context, machineID string) ([]domain.AlertConfig, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, machine_id, slot_position, low_threshold, enabled FROM alert_configs WHERE machine_id = ? ORDER BY slot_position`,
+		machineID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var configs []domain.AlertConfig
+	for rows.Next() {
+		var ac domain.AlertConfig
+		var enabled int
+		if err := rows.Scan(&ac.ID, &ac.MachineID, &ac.SlotPosition, &ac.LowThreshold, &enabled); err != nil {
+			return nil, err
+		}
+		ac.Enabled = enabled != 0
+		configs = append(configs, ac)
+	}
+	return configs, rows.Err()
+}
+
+func (s *SQLiteStore) UpdateAlertConfig(ctx context.Context, ac *domain.AlertConfig) error {
+	enabled := 0
+	if ac.Enabled {
+		enabled = 1
+	}
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE alert_configs SET low_threshold = ?, enabled = ? WHERE id = ?`,
+		ac.LowThreshold, enabled, ac.ID)
+	return err
+}
+
+func (s *SQLiteStore) DeleteAlertConfig(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM alert_configs WHERE id = ?`, id)
+	return err
+}
+
+// --- Alert Events ---
+
+func (s *SQLiteStore) CreateAlertEvent(ctx context.Context, ae *domain.AlertEvent) error {
+	cleared := 0
+	if ae.Cleared {
+		cleared = 1
+	}
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO alert_events (id, machine_id, slot_position, product_id, alert_type, current_stock, threshold, cleared, timestamp, cleared_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		ae.ID, ae.MachineID, ae.SlotPosition, ae.ProductID, ae.AlertType, ae.CurrentStock, ae.Threshold, cleared, ae.Timestamp, ae.ClearedAt)
+	return err
+}
+
+func (s *SQLiteStore) ListAlertEvents(ctx context.Context, machineID string, activeOnly bool, limit int) ([]domain.AlertEvent, error) {
+	query := `SELECT id, machine_id, slot_position, product_id, alert_type, current_stock, threshold, cleared, timestamp, cleared_at
+		 FROM alert_events WHERE machine_id = ?`
+	args := []any{machineID}
+	if activeOnly {
+		query += ` AND cleared = 0`
+	}
+	query += ` ORDER BY timestamp DESC LIMIT ?`
+	args = append(args, limit)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var events []domain.AlertEvent
+	for rows.Next() {
+		var ae domain.AlertEvent
+		var cleared int
+		if err := rows.Scan(&ae.ID, &ae.MachineID, &ae.SlotPosition, &ae.ProductID, &ae.AlertType, &ae.CurrentStock, &ae.Threshold, &cleared, &ae.Timestamp, &ae.ClearedAt); err != nil {
+			return nil, err
+		}
+		ae.Cleared = cleared != 0
+		events = append(events, ae)
+	}
+	return events, rows.Err()
+}
+
+func (s *SQLiteStore) ClearAlertEvents(ctx context.Context, machineID string, slotPosition int) error {
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE alert_events SET cleared = 1, cleared_at = datetime('now') WHERE machine_id = ? AND slot_position = ? AND cleared = 0`,
+		machineID, slotPosition)
+	return err
+}
+
+func (s *SQLiteStore) GetActiveAlert(ctx context.Context, machineID string, slotPosition int, alertType string) (*domain.AlertEvent, error) {
+	row := s.db.QueryRowContext(ctx,
+		`SELECT id, machine_id, slot_position, product_id, alert_type, current_stock, threshold, cleared, timestamp, cleared_at
+		 FROM alert_events WHERE machine_id = ? AND slot_position = ? AND alert_type = ? AND cleared = 0 LIMIT 1`,
+		machineID, slotPosition, alertType)
+	var ae domain.AlertEvent
+	var cleared int
+	if err := row.Scan(&ae.ID, &ae.MachineID, &ae.SlotPosition, &ae.ProductID, &ae.AlertType, &ae.CurrentStock, &ae.Threshold, &cleared, &ae.Timestamp, &ae.ClearedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	ae.Cleared = cleared != 0
+	return &ae, nil
 }
 
 type scanner interface {

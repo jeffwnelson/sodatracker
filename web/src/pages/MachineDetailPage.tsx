@@ -10,6 +10,7 @@ import {
   getMachineCost,
   listDispenses,
   listRestocks,
+  getStockPredictions,
 } from "../api/client";
 
 const statusColor: Record<string, string> = {
@@ -45,6 +46,17 @@ export function MachineDetailPage() {
     queryFn: () => listRestocks(machineId, 20),
     staleTime: 30_000,
   });
+
+  const { data: predictions } = useQuery({
+    queryKey: ["predictions", machineId],
+    queryFn: () => getStockPredictions(machineId),
+    staleTime: 30_000,
+  });
+
+  // Build prediction lookup by slot position
+  const predBySlot = new Map(
+    predictions?.map((p) => [p.slotPosition, p]) ?? []
+  );
 
   if (statusLoading) {
     return <div className="text-center py-12 text-gray-500">Loading...</div>;
@@ -100,6 +112,8 @@ export function MachineDetailPage() {
             const gaugeData = [
               { value: pct, fill: statusColor[ss.status] || "#6b7280" },
             ];
+            const pred = predBySlot.get(ss.slot.position);
+            const daysLeft = pred?.estimatedDaysLeft ?? -1;
             return (
               <div key={ss.slot.position} className="text-center">
                 <ResponsiveContainer width="100%" height={100}>
@@ -126,6 +140,19 @@ export function MachineDetailPage() {
                 <p className="text-xs text-gray-500 truncate mt-1">
                   {ss.product?.name || `Slot ${ss.slot.position}`}
                 </p>
+                {daysLeft >= 0 && daysLeft < 3 && (
+                  <span
+                    className={`inline-block mt-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                      daysLeft < 1
+                        ? "bg-red-100 text-red-700"
+                        : "bg-orange-100 text-orange-700"
+                    }`}
+                  >
+                    {daysLeft < 1
+                      ? "< 1 day"
+                      : `~${daysLeft} days`}
+                  </span>
+                )}
               </div>
             );
           })}

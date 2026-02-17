@@ -85,3 +85,34 @@ export interface DispenseStats {
   timeSeries: TimeSeriesPoint[];
   topProducts: ProductRanking[];
 }
+
+export interface AlertConfig {
+  id: string;
+  machineId: string;
+  slotPosition: number;
+  lowThreshold: number;
+  enabled: boolean;
+}
+
+export interface AlertEvent {
+  id: string;
+  machineId: string;
+  slotPosition: number;
+  productId: string;
+  alertType: "low_stock" | "out_of_stock";
+  currentStock: number;
+  threshold: number;
+  cleared: boolean;
+  timestamp: string;
+  clearedAt?: string;
+}
+
+export interface StockPrediction {
+  machineId: string;
+  slotPosition: number;
+  productName?: string;
+  currentStock: number;
+  dispensesPerDay: number;
+  estimatedDaysLeft: number;
+  predictedStockout?: string;
+}

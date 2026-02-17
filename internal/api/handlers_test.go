@@ -12,6 +12,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jeffwnelson/sodatracker/internal/domain"
+	"github.com/jeffwnelson/sodatracker/internal/events"
+	"github.com/jeffwnelson/sodatracker/internal/events/local"
 	"github.com/jeffwnelson/sodatracker/internal/service"
 	"github.com/jeffwnelson/sodatracker/internal/store/sqlite"
 )
@@ -25,7 +27,10 @@ func setup(t *testing.T) http.Handler {
 		t.Fatalf("store: %v", err)
 	}
 	t.Cleanup(func() { st.Close() })
-	svc := service.New(st, testJWTSecret)
+	bus := local.New()
+	t.Cleanup(func() { bus.Close() })
+	svc := service.New(st, testJWTSecret, bus)
+	wireDispenseSubscriber(bus, svc)
 	return NewRouter(st, svc, "test-key", testJWTSecret, "")
 }
 
@@ -36,8 +41,28 @@ func setupWithStore(t *testing.T) (http.Handler, *sqlite.SQLiteStore) {
 		t.Fatalf("store: %v", err)
 	}
 	t.Cleanup(func() { st.Close() })
-	svc := service.New(st, testJWTSecret)
+	bus := local.New()
+	t.Cleanup(func() { bus.Close() })
+	svc := service.New(st, testJWTSecret, bus)
+	wireDispenseSubscriber(bus, svc)
 	return NewRouter(st, svc, "test-key", testJWTSecret, ""), st
+}
+
+func wireDispenseSubscriber(bus *local.LocalBus, svc *service.Service) {
+	bus.Subscribe(events.EventDispense, func(ctx context.Context, evt events.Event) error {
+		machineID, _ := evt.Data["machineId"].(string)
+		slotPos := 0
+		switch v := evt.Data["slotPosition"].(type) {
+		case int:
+			slotPos = v
+		case float64:
+			slotPos = int(v)
+		}
+		if machineID != "" && slotPos > 0 {
+			return svc.EvaluateStockAlert(ctx, machineID, slotPos)
+		}
+		return nil
+	})
 }
 
 func seedTestUser(t *testing.T, st *sqlite.SQLiteStore) {
@@ -347,5 +372,225 @@ func TestFullWorkflowWithJWT(t *testing.T) {
 	json.NewDecoder(w.Body).Decode(&restocks)
 	if len(restocks) != 1 {
 		t.Errorf("expected 1 restock, got %d", len(restocks))
+	}
+}
+
+func TestAlertConfigCRUD(t *testing.T) {
+	r := setup(t)
+
+	// Create machine first
+	body, _ := json.Marshal(domain.Machine{ID: "m1", Name: "Test", SlotCount: 3})
+	req := httptest.NewRequest("POST", "/api/v1/machines", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create machine: %d", w.Code)
+	}
+
+	// Create alert config
+	acBody := map[string]any{"slotPosition": 1, "lowThreshold": 3, "enabled": true}
+	body, _ = json.Marshal(acBody)
+	req = httptest.NewRequest("POST", "/api/v1/machines/m1/alerts", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create alert config: %d %s", w.Code, w.Body.String())
+	}
+	var created domain.AlertConfig
+	json.NewDecoder(w.Body).Decode(&created)
+	if created.ID == "" {
+		t.Error("expected ID")
+	}
+
+	// List
+	req = httptest.NewRequest("GET", "/api/v1/machines/m1/alerts", nil)
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("list: %d", w.Code)
+	}
+	var configs []domain.AlertConfig
+	json.NewDecoder(w.Body).Decode(&configs)
+	if len(configs) != 1 {
+		t.Fatalf("expected 1, got %d", len(configs))
+	}
+
+	// Update
+	updateBody := map[string]any{"lowThreshold": 5, "enabled": false}
+	body, _ = json.Marshal(updateBody)
+	req = httptest.NewRequest("PUT", "/api/v1/alerts/"+created.ID, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("update: %d %s", w.Code, w.Body.String())
+	}
+
+	// Delete
+	req = httptest.NewRequest("DELETE", "/api/v1/alerts/"+created.ID, nil)
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("delete: %d", w.Code)
+	}
+
+	// Verify deleted
+	req = httptest.NewRequest("GET", "/api/v1/machines/m1/alerts", nil)
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	json.NewDecoder(w.Body).Decode(&configs)
+	if len(configs) != 0 {
+		t.Errorf("expected 0 after delete, got %d", len(configs))
+	}
+}
+
+func TestPredictionsEndpoint(t *testing.T) {
+	r := setup(t)
+
+	// Create product + machine + slots + restock
+	body, _ := json.Marshal(domain.Product{ID: "p1", UPC: "111", Name: "Cola"})
+	req := httptest.NewRequest("POST", "/api/v1/products", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	body, _ = json.Marshal(domain.Machine{ID: "m1", Name: "Test", SlotCount: 3})
+	req = httptest.NewRequest("POST", "/api/v1/machines", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	body, _ = json.Marshal([]domain.Slot{{Position: 1, ProductID: "p1", Capacity: 10, LowThreshold: 2}})
+	req = httptest.NewRequest("POST", "/api/v1/machines/m1/slots", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	body, _ = json.Marshal(map[string]any{"slots": []map[string]any{{"position": 1, "quantity": 10}}})
+	req = httptest.NewRequest("POST", "/api/v1/machines/m1/restock", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// Get predictions
+	req = httptest.NewRequest("GET", "/api/v1/machines/m1/predictions", nil)
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("predictions: %d %s", w.Code, w.Body.String())
+	}
+	var preds []domain.StockPrediction
+	json.NewDecoder(w.Body).Decode(&preds)
+	if len(preds) != 1 {
+		t.Fatalf("expected 1 prediction, got %d", len(preds))
+	}
+	if preds[0].CurrentStock != 10 {
+		t.Errorf("expected stock=10, got %d", preds[0].CurrentStock)
+	}
+}
+
+func TestFullWorkflowWithAlerts(t *testing.T) {
+	r := setup(t)
+
+	// 1. Create product
+	body, _ := json.Marshal(domain.Product{ID: "p1", UPC: "111", Name: "Cola"})
+	req := httptest.NewRequest("POST", "/api/v1/products", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("product: %d", w.Code)
+	}
+
+	// 2. Create machine
+	body, _ = json.Marshal(domain.Machine{ID: "m1", Name: "Test", SlotCount: 3})
+	req = httptest.NewRequest("POST", "/api/v1/machines", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// 3. Set slots (lowThreshold=2)
+	body, _ = json.Marshal([]domain.Slot{{Position: 1, ProductID: "p1", Capacity: 10, LowThreshold: 2}})
+	req = httptest.NewRequest("POST", "/api/v1/machines/m1/slots", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// 4. Restock with 5
+	body, _ = json.Marshal(map[string]any{"slots": []map[string]any{{"position": 1, "quantity": 5}}})
+	req = httptest.NewRequest("POST", "/api/v1/machines/m1/restock", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("restock: %d %s", w.Code, w.Body.String())
+	}
+
+	// 5. Dispense 3 times → stock=2 (at threshold) → triggers low_stock alert
+	for i := 0; i < 3; i++ {
+		body, _ = json.Marshal(map[string]any{"machineId": "m1", "slotPosition": 1})
+		req = httptest.NewRequest("POST", "/api/v1/dispenses", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-key")
+		w = httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusCreated {
+			t.Fatalf("dispense %d: %d %s", i, w.Code, w.Body.String())
+		}
+	}
+
+	// 6. Check alert events — should have low_stock
+	req = httptest.NewRequest("GET", "/api/v1/machines/m1/alert-events?active=true", nil)
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("alert events: %d", w.Code)
+	}
+	var alertEvents []domain.AlertEvent
+	json.NewDecoder(w.Body).Decode(&alertEvents)
+	if len(alertEvents) != 1 {
+		t.Fatalf("expected 1 active alert, got %d", len(alertEvents))
+	}
+	if alertEvents[0].AlertType != "low_stock" {
+		t.Errorf("expected low_stock, got %s", alertEvents[0].AlertType)
+	}
+
+	// 7. Restock clears alerts
+	body, _ = json.Marshal(map[string]any{"slots": []map[string]any{{"position": 1, "quantity": 10}}})
+	req = httptest.NewRequest("POST", "/api/v1/machines/m1/restock", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("restock2: %d", w.Code)
+	}
+
+	// 8. Verify alerts cleared
+	req = httptest.NewRequest("GET", "/api/v1/machines/m1/alert-events?active=true", nil)
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	json.NewDecoder(w.Body).Decode(&alertEvents)
+	if len(alertEvents) != 0 {
+		t.Errorf("expected 0 active alerts after restock, got %d", len(alertEvents))
 	}
 }

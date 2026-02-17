@@ -111,6 +111,115 @@ func TestUserCRUD(t *testing.T) {
 	}
 }
 
+func TestAlertConfigCRUD(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+
+	// Create
+	ac := &domain.AlertConfig{ID: "ac1", MachineID: "m1", SlotPosition: 1, LowThreshold: 3, Enabled: true}
+	if err := s.CreateAlertConfig(ctx, ac); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	// List
+	configs, err := s.ListAlertConfigs(ctx, "m1")
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(configs) != 1 {
+		t.Fatalf("expected 1 config, got %d", len(configs))
+	}
+	if configs[0].LowThreshold != 3 || !configs[0].Enabled {
+		t.Errorf("unexpected config: %+v", configs[0])
+	}
+
+	// Update
+	ac.LowThreshold = 5
+	ac.Enabled = false
+	if err := s.UpdateAlertConfig(ctx, ac); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	configs, _ = s.ListAlertConfigs(ctx, "m1")
+	if configs[0].LowThreshold != 5 || configs[0].Enabled {
+		t.Errorf("update failed: %+v", configs[0])
+	}
+
+	// Delete
+	if err := s.DeleteAlertConfig(ctx, "ac1"); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	configs, _ = s.ListAlertConfigs(ctx, "m1")
+	if len(configs) != 0 {
+		t.Errorf("expected 0 configs after delete, got %d", len(configs))
+	}
+}
+
+func TestAlertEventCRUD(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	// Create alert event
+	ae := &domain.AlertEvent{
+		ID: "ae1", MachineID: "m1", SlotPosition: 1, ProductID: "p1",
+		AlertType: "low_stock", CurrentStock: 2, Threshold: 3,
+		Cleared: false, Timestamp: now,
+	}
+	if err := s.CreateAlertEvent(ctx, ae); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	// Get active alert
+	got, err := s.GetActiveAlert(ctx, "m1", 1, "low_stock")
+	if err != nil {
+		t.Fatalf("get active: %v", err)
+	}
+	if got == nil {
+		t.Fatal("expected active alert")
+	}
+	if got.ID != "ae1" {
+		t.Errorf("expected ae1, got %s", got.ID)
+	}
+
+	// No active alert for different type
+	got, err = s.GetActiveAlert(ctx, "m1", 1, "out_of_stock")
+	if err != nil {
+		t.Fatalf("get active (other type): %v", err)
+	}
+	if got != nil {
+		t.Error("expected nil for different alert type")
+	}
+
+	// List active only
+	events, err := s.ListAlertEvents(ctx, "m1", true, 50)
+	if err != nil {
+		t.Fatalf("list active: %v", err)
+	}
+	if len(events) != 1 {
+		t.Errorf("expected 1 active event, got %d", len(events))
+	}
+
+	// Clear
+	if err := s.ClearAlertEvents(ctx, "m1", 1); err != nil {
+		t.Fatalf("clear: %v", err)
+	}
+
+	// Verify cleared
+	events, _ = s.ListAlertEvents(ctx, "m1", true, 50)
+	if len(events) != 0 {
+		t.Errorf("expected 0 active events after clear, got %d", len(events))
+	}
+
+	// All events still exist
+	events, _ = s.ListAlertEvents(ctx, "m1", false, 50)
+	if len(events) != 1 {
+		t.Errorf("expected 1 total event, got %d", len(events))
+	}
+	if !events[0].Cleared {
+		t.Error("expected event to be cleared")
+	}
+}
+
 func TestDispenseAndRestock(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
