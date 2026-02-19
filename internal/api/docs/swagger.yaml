@@ -1,0 +1,1049 @@
+basePath: /api/v1
+definitions:
+  github_com_jeffwnelson_sodatracker_internal_domain.AlertConfig:
+    properties:
+      enabled:
+        example: true
+        type: boolean
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440005
+        type: string
+      lowThreshold:
+        description: -1 = use slot's own threshold
+        example: 3
+        type: integer
+      machineId:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      slotPosition:
+        description: 0 = machine-wide default
+        example: 0
+        type: integer
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_domain.AlertEvent:
+    properties:
+      alertType:
+        description: '"low_stock" or "out_of_stock"'
+        example: low_stock
+        type: string
+      cleared:
+        example: false
+        type: boolean
+      clearedAt:
+        type: string
+      currentStock:
+        example: 2
+        type: integer
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440006
+        type: string
+      machineId:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      productId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      slotPosition:
+        example: 1
+        type: integer
+      threshold:
+        example: 3
+        type: integer
+      timestamp:
+        example: "2026-01-15T10:30:00Z"
+        type: string
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_domain.Dispense:
+    properties:
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440002
+        type: string
+      machineId:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      productId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      slotPosition:
+        example: 1
+        type: integer
+      sourceType:
+        example: gpio
+        type: string
+      timestamp:
+        example: "2026-01-15T10:30:00Z"
+        type: string
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_domain.Machine:
+    properties:
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      location:
+        example: Building A, Floor 2
+        type: string
+      name:
+        example: Break Room
+        type: string
+      slotCount:
+        example: 8
+        type: integer
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_domain.MachineStatus:
+    properties:
+      machine:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Machine'
+      slots:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.SlotStatus'
+        type: array
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_domain.Product:
+    properties:
+      costPerCan:
+        example: 0.35
+        type: number
+      description:
+        example: Classic cola
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      imageUrl:
+        example: https://example.com/coke.png
+        type: string
+      name:
+        example: Coca-Cola
+        type: string
+      upc:
+        example: "049000042566"
+        type: string
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_domain.Restock:
+    properties:
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440003
+        type: string
+      machineId:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      slots:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.RestockSlot'
+        type: array
+      timestamp:
+        example: "2026-01-15T12:00:00Z"
+        type: string
+      userId:
+        example: 550e8400-e29b-41d4-a716-446655440004
+        type: string
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_domain.RestockSlot:
+    properties:
+      position:
+        example: 1
+        type: integer
+      quantity:
+        example: 12
+        type: integer
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_domain.Slot:
+    properties:
+      capacity:
+        example: 12
+        type: integer
+      gpioPin:
+        example: 17
+        type: integer
+      lowThreshold:
+        example: 3
+        type: integer
+      machineId:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      position:
+        example: 1
+        type: integer
+      productId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_domain.SlotStatus:
+    properties:
+      currentStock:
+        example: 8
+        type: integer
+      product:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Product'
+      slot:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Slot'
+      status:
+        description: '"ok", "low", "empty"'
+        example: ok
+        type: string
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_domain.StockPrediction:
+    properties:
+      currentStock:
+        example: 8
+        type: integer
+      dispensesPerDay:
+        example: 2.5
+        type: number
+      estimatedDaysLeft:
+        description: -1 = no data
+        example: 3.2
+        type: number
+      machineId:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      predictedStockout:
+        type: string
+      productName:
+        example: Coca-Cola
+        type: string
+      slotPosition:
+        example: 1
+        type: integer
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_domain.User:
+    properties:
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440004
+        type: string
+      role:
+        example: admin
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.DispenseStats:
+    properties:
+      timeSeries:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.TimeSeriesPoint'
+        type: array
+      topProducts:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductRanking'
+        type: array
+      totalCost:
+        example: 52.5
+        type: number
+      totalCount:
+        example: 150
+        type: integer
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.ProductRanking:
+    properties:
+      count:
+        example: 42
+        type: integer
+      productId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      productName:
+        example: Coca-Cola
+        type: string
+      totalCost:
+        example: 14.7
+        type: number
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.TimeSeriesPoint:
+    properties:
+      count:
+        example: 5
+        type: integer
+      hour:
+        description: RFC3339 truncated to hour
+        example: "2026-01-15T10:00:00Z"
+        type: string
+    type: object
+  internal_api.CostResponse:
+    properties:
+      cost:
+        example: 42.5
+        type: number
+    type: object
+  internal_api.DeleteResponse:
+    properties:
+      deleted:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  internal_api.ErrorResponse:
+    properties:
+      error:
+        example: something went wrong
+        type: string
+    type: object
+  internal_api.HealthResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+    type: object
+  internal_api.LoginRequest:
+    properties:
+      password:
+        example: dev-admin-password
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  internal_api.LoginResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      user:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.User'
+    type: object
+host: localhost:3000
+info:
+  contact: {}
+  description: API for tracking soda machine inventory, dispenses, restocks, and alerts.
+  title: SodaTracker API
+  version: "1.0"
+paths:
+  /admin/cost:
+    get:
+      description: Returns the total cost of dispenses for a machine over a time period
+      parameters:
+      - description: Machine ID
+        in: query
+        name: machineId
+        required: true
+        type: string
+      - description: 'RFC3339 start time (default: 30 days ago)'
+        in: query
+        name: since
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.CostResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Get machine cost
+      tags:
+      - Admin
+  /admin/stats:
+    get:
+      description: Returns aggregated dispense stats including time series, top products,
+        and cost totals
+      parameters:
+      - description: Machine ID
+        in: query
+        name: machineId
+        required: true
+        type: string
+      - description: 'RFC3339 start time (default: 30 days ago)'
+        in: query
+        name: since
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.DispenseStats'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Get dispense statistics
+      tags:
+      - Admin
+  /alerts/{id}:
+    delete:
+      description: Deletes an alert configuration by ID
+      parameters:
+      - description: Alert config ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.DeleteResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Delete alert config
+      tags:
+      - Alerts
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing alert configuration
+      parameters:
+      - description: Alert config ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated alert configuration
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.AlertConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.AlertConfig'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Update alert config
+      tags:
+      - Alerts
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns a JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      summary: Login
+      tags:
+      - Auth
+  /dispenses:
+    post:
+      consumes:
+      - application/json
+      description: Records a soda dispense from the Pi agent. Auto-resolves productId
+        from slot config if not provided.
+      parameters:
+      - description: Dispense event
+        in: body
+        name: dispense
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Dispense'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Dispense'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Register a dispense event
+      tags:
+      - Dispenses
+  /health:
+    get:
+      description: Returns API health status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.HealthResponse'
+      summary: Health check
+      tags:
+      - System
+  /machines:
+    get:
+      description: Returns all registered soda machines
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Machine'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      summary: List all machines
+      tags:
+      - Machines
+    post:
+      consumes:
+      - application/json
+      description: Creates or updates a soda machine (upsert by ID)
+      parameters:
+      - description: Machine to create
+        in: body
+        name: machine
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Machine'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Machine'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Create a machine
+      tags:
+      - Machines
+  /machines/{id}:
+    delete:
+      description: Deletes a machine and all associated data (slots, dispenses, restocks,
+        alerts)
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.DeleteResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Delete a machine
+      tags:
+      - Machines
+  /machines/{id}/alert-events:
+    get:
+      description: Returns alert events for a machine with optional active-only filter
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Only return active (uncleared) alerts
+        in: query
+        name: active
+        type: boolean
+      - description: Max results (default 50)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.AlertEvent'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: List fired alert events
+      tags:
+      - Alerts
+  /machines/{id}/alerts:
+    get:
+      description: Returns all alert configurations for a machine
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.AlertConfig'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: List alert configs
+      tags:
+      - Alerts
+    post:
+      consumes:
+      - application/json
+      description: Creates an alert threshold config for a machine. SlotPosition 0
+        = machine-wide default. LowThreshold -1 = use slot's own threshold.
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Alert configuration
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.AlertConfig'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.AlertConfig'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Create alert config
+      tags:
+      - Alerts
+  /machines/{id}/dispenses:
+    get:
+      description: Returns recent dispenses for a machine with optional time and limit
+        filters
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Max results (default 100)
+        in: query
+        name: limit
+        type: integer
+      - description: RFC3339 timestamp filter
+        in: query
+        name: since
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Dispense'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: List dispense history
+      tags:
+      - Dispenses
+  /machines/{id}/predictions:
+    get:
+      description: Computes estimated days until stock-out for each slot based on
+        recent dispense rate
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Days of dispense history to analyze (default 14)
+        in: query
+        name: lookbackDays
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.StockPrediction'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Get stock-out predictions
+      tags:
+      - Predictions
+  /machines/{id}/restock:
+    post:
+      consumes:
+      - application/json
+      description: Records a restock event for a machine. Clears active alerts for
+        restocked slots.
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Restock data with slot quantities
+        in: body
+        name: restock
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Restock'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Restock'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Log a restock
+      tags:
+      - Restocks
+  /machines/{id}/restocks:
+    get:
+      description: Returns recent restocks for a machine
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Max results (default 50)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Restock'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: List restock history
+      tags:
+      - Restocks
+  /machines/{id}/slots:
+    post:
+      consumes:
+      - application/json
+      description: Destructive replace of all slots for a machine. Deletes existing
+        slots and inserts the new set.
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Slot configurations
+        in: body
+        name: slots
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Slot'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Slot'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Configure machine slots
+      tags:
+      - Machines
+  /machines/{id}/status:
+    get:
+      description: Returns computed stock status for every slot in a machine
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.MachineStatus'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      summary: Get machine stock status
+      tags:
+      - Machines
+  /products:
+    get:
+      description: Returns all registered products
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Product'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: List all products
+      tags:
+      - Products
+    post:
+      consumes:
+      - application/json
+      description: Creates or updates a product (upsert by ID)
+      parameters:
+      - description: Product to create
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Product'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Create a product
+      tags:
+      - Products
+  /products/{id}:
+    delete:
+      description: Deletes a product by ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.DeleteResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Delete a product
+      tags:
+      - Products
+  /reports/dispenses:
+    get:
+      description: Exports dispense history as CSV or PDF
+      parameters:
+      - description: Machine ID
+        in: query
+        name: machineId
+        required: true
+        type: string
+      - description: 'Export format: csv or pdf (default: csv)'
+        enum:
+        - csv
+        - pdf
+        in: query
+        name: format
+        type: string
+      - description: RFC3339 start time filter
+        in: query
+        name: since
+        type: string
+      produces:
+      - text/csv
+      - application/pdf
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Export dispense report
+      tags:
+      - Reports
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

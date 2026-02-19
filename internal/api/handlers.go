@@ -21,12 +21,27 @@ type handlers struct {
 	jwtSecret string
 }
 
+// health godoc
+// @Summary      Health check
+// @Description  Returns API health status
+// @Tags         System
+// @Produce      json
+// @Success      200  {object}  HealthResponse
+// @Router       /health [get]
 func (h *handlers) health(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // --- Machines ---
 
+// listMachines godoc
+// @Summary      List all machines
+// @Description  Returns all registered soda machines
+// @Tags         Machines
+// @Produce      json
+// @Success      200  {array}   domain.Machine
+// @Failure      500  {object}  ErrorResponse
+// @Router       /machines [get]
 func (h *handlers) listMachines(w http.ResponseWriter, r *http.Request) {
 	machines, err := h.store.ListMachines(r.Context())
 	if err != nil {
@@ -39,6 +54,18 @@ func (h *handlers) listMachines(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, machines)
 }
 
+// createMachine godoc
+// @Summary      Create a machine
+// @Description  Creates or updates a soda machine (upsert by ID)
+// @Tags         Machines
+// @Accept       json
+// @Produce      json
+// @Param        machine  body      domain.Machine  true  "Machine to create"
+// @Success      201      {object}  domain.Machine
+// @Failure      400      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /machines [post]
 func (h *handlers) createMachine(w http.ResponseWriter, r *http.Request) {
 	var m domain.Machine
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
@@ -63,6 +90,16 @@ func (h *handlers) createMachine(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, m)
 }
 
+// getMachineStatus godoc
+// @Summary      Get machine stock status
+// @Description  Returns computed stock status for every slot in a machine
+// @Tags         Machines
+// @Produce      json
+// @Param        id   path      string  true  "Machine ID"
+// @Success      200  {object}  domain.MachineStatus
+// @Failure      404  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Router       /machines/{id}/status [get]
 func (h *handlers) getMachineStatus(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	status, err := h.svc.GetMachineStatus(r.Context(), id)
@@ -79,6 +116,20 @@ func (h *handlers) getMachineStatus(w http.ResponseWriter, r *http.Request) {
 
 // --- Slots ---
 
+// setSlots godoc
+// @Summary      Configure machine slots
+// @Description  Destructive replace of all slots for a machine. Deletes existing slots and inserts the new set.
+// @Tags         Machines
+// @Accept       json
+// @Produce      json
+// @Param        id     path      string         true  "Machine ID"
+// @Param        slots  body      []domain.Slot  true  "Slot configurations"
+// @Success      200    {array}   domain.Slot
+// @Failure      400    {object}  ErrorResponse
+// @Failure      404    {object}  ErrorResponse
+// @Failure      500    {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /machines/{id}/slots [post]
 func (h *handlers) setSlots(w http.ResponseWriter, r *http.Request) {
 	machineID := chi.URLParam(r, "id")
 
@@ -109,6 +160,19 @@ func (h *handlers) setSlots(w http.ResponseWriter, r *http.Request) {
 
 // --- Dispenses ---
 
+// createDispense godoc
+// @Summary      Register a dispense event
+// @Description  Records a soda dispense from the Pi agent. Auto-resolves productId from slot config if not provided.
+// @Tags         Dispenses
+// @Accept       json
+// @Produce      json
+// @Param        dispense  body      domain.Dispense  true  "Dispense event"
+// @Success      201       {object}  domain.Dispense
+// @Failure      400       {object}  ErrorResponse
+// @Failure      401       {object}  ErrorResponse
+// @Failure      500       {object}  ErrorResponse
+// @Security     ApiKeyAuth
+// @Router       /dispenses [post]
 func (h *handlers) createDispense(w http.ResponseWriter, r *http.Request) {
 	var d domain.Dispense
 	if err := json.NewDecoder(r.Body).Decode(&d); err != nil {
@@ -155,6 +219,18 @@ func (h *handlers) createDispense(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, d)
 }
 
+// listDispenses godoc
+// @Summary      List dispense history
+// @Description  Returns recent dispenses for a machine with optional time and limit filters
+// @Tags         Dispenses
+// @Produce      json
+// @Param        id     path      string  true   "Machine ID"
+// @Param        limit  query     int     false  "Max results (default 100)"
+// @Param        since  query     string  false  "RFC3339 timestamp filter"
+// @Success      200    {array}   domain.Dispense
+// @Failure      500    {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /machines/{id}/dispenses [get]
 func (h *handlers) listDispenses(w http.ResponseWriter, r *http.Request) {
 	machineID := chi.URLParam(r, "id")
 	limit := 100
@@ -182,6 +258,19 @@ func (h *handlers) listDispenses(w http.ResponseWriter, r *http.Request) {
 
 // --- Restocks ---
 
+// createRestock godoc
+// @Summary      Log a restock
+// @Description  Records a restock event for a machine. Clears active alerts for restocked slots.
+// @Tags         Restocks
+// @Accept       json
+// @Produce      json
+// @Param        id       path      string          true  "Machine ID"
+// @Param        restock  body      domain.Restock  true  "Restock data with slot quantities"
+// @Success      201      {object}  domain.Restock
+// @Failure      400      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /machines/{id}/restock [post]
 func (h *handlers) createRestock(w http.ResponseWriter, r *http.Request) {
 	machineID := chi.URLParam(r, "id")
 
@@ -210,6 +299,15 @@ func (h *handlers) createRestock(w http.ResponseWriter, r *http.Request) {
 
 // --- Products ---
 
+// listProducts godoc
+// @Summary      List all products
+// @Description  Returns all registered products
+// @Tags         Products
+// @Produce      json
+// @Success      200  {array}   domain.Product
+// @Failure      500  {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /products [get]
 func (h *handlers) listProducts(w http.ResponseWriter, r *http.Request) {
 	products, err := h.store.ListProducts(r.Context())
 	if err != nil {
@@ -222,6 +320,18 @@ func (h *handlers) listProducts(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, products)
 }
 
+// createProduct godoc
+// @Summary      Create a product
+// @Description  Creates or updates a product (upsert by ID)
+// @Tags         Products
+// @Accept       json
+// @Produce      json
+// @Param        product  body      domain.Product  true  "Product to create"
+// @Success      201      {object}  domain.Product
+// @Failure      400      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /products [post]
 func (h *handlers) createProduct(w http.ResponseWriter, r *http.Request) {
 	var p domain.Product
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
@@ -242,8 +352,57 @@ func (h *handlers) createProduct(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, p)
 }
 
+// deleteProduct godoc
+// @Summary      Delete a product
+// @Description  Deletes a product by ID
+// @Tags         Products
+// @Produce      json
+// @Param        id   path      string  true  "Product ID"
+// @Success      200  {object}  DeleteResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /products/{id} [delete]
+func (h *handlers) deleteProduct(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := h.svc.DeleteProduct(r.Context(), id); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"deleted": id})
+}
+
+// deleteMachine godoc
+// @Summary      Delete a machine
+// @Description  Deletes a machine and all associated data (slots, dispenses, restocks, alerts)
+// @Tags         Machines
+// @Produce      json
+// @Param        id   path      string  true  "Machine ID"
+// @Success      200  {object}  DeleteResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /machines/{id} [delete]
+func (h *handlers) deleteMachine(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := h.svc.DeleteMachine(r.Context(), id); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"deleted": id})
+}
+
 // --- Auth ---
 
+// login godoc
+// @Summary      Login
+// @Description  Authenticates a user and returns a JWT token
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        credentials  body      LoginRequest   true  "Login credentials"
+// @Success      200          {object}  LoginResponse
+// @Failure      400          {object}  ErrorResponse
+// @Failure      401          {object}  ErrorResponse
+// @Router       /auth/login [post]
 func (h *handlers) login(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Username string `json:"username"`
@@ -270,6 +429,18 @@ func (h *handlers) login(w http.ResponseWriter, r *http.Request) {
 
 // --- Admin ---
 
+// getAdminStats godoc
+// @Summary      Get dispense statistics
+// @Description  Returns aggregated dispense stats including time series, top products, and cost totals
+// @Tags         Admin
+// @Produce      json
+// @Param        machineId  query     string  true   "Machine ID"
+// @Param        since      query     string  false  "RFC3339 start time (default: 30 days ago)"
+// @Success      200        {object}  service.DispenseStats
+// @Failure      400        {object}  ErrorResponse
+// @Failure      500        {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /admin/stats [get]
 func (h *handlers) getAdminStats(w http.ResponseWriter, r *http.Request) {
 	machineID := r.URL.Query().Get("machineId")
 	if machineID == "" {
@@ -290,6 +461,18 @@ func (h *handlers) getAdminStats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, stats)
 }
 
+// getMachineCost godoc
+// @Summary      Get machine cost
+// @Description  Returns the total cost of dispenses for a machine over a time period
+// @Tags         Admin
+// @Produce      json
+// @Param        machineId  query     string  true   "Machine ID"
+// @Param        since      query     string  false  "RFC3339 start time (default: 30 days ago)"
+// @Success      200        {object}  CostResponse
+// @Failure      400        {object}  ErrorResponse
+// @Failure      500        {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /admin/cost [get]
 func (h *handlers) getMachineCost(w http.ResponseWriter, r *http.Request) {
 	machineID := r.URL.Query().Get("machineId")
 	if machineID == "" {
@@ -310,6 +493,17 @@ func (h *handlers) getMachineCost(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]float64{"cost": cost})
 }
 
+// listRestocks godoc
+// @Summary      List restock history
+// @Description  Returns recent restocks for a machine
+// @Tags         Restocks
+// @Produce      json
+// @Param        id     path      string  true   "Machine ID"
+// @Param        limit  query     int     false  "Max results (default 50)"
+// @Success      200    {array}   domain.Restock
+// @Failure      500    {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /machines/{id}/restocks [get]
 func (h *handlers) listRestocks(w http.ResponseWriter, r *http.Request) {
 	machineID := chi.URLParam(r, "id")
 	limit := 50
@@ -331,6 +525,16 @@ func (h *handlers) listRestocks(w http.ResponseWriter, r *http.Request) {
 
 // --- Alerts ---
 
+// listAlertConfigs godoc
+// @Summary      List alert configs
+// @Description  Returns all alert configurations for a machine
+// @Tags         Alerts
+// @Produce      json
+// @Param        id   path      string  true  "Machine ID"
+// @Success      200  {array}   domain.AlertConfig
+// @Failure      500  {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /machines/{id}/alerts [get]
 func (h *handlers) listAlertConfigs(w http.ResponseWriter, r *http.Request) {
 	machineID := chi.URLParam(r, "id")
 	configs, err := h.svc.ListAlertConfigs(r.Context(), machineID)
@@ -344,6 +548,19 @@ func (h *handlers) listAlertConfigs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, configs)
 }
 
+// createAlertConfig godoc
+// @Summary      Create alert config
+// @Description  Creates an alert threshold config for a machine. SlotPosition 0 = machine-wide default. LowThreshold -1 = use slot's own threshold.
+// @Tags         Alerts
+// @Accept       json
+// @Produce      json
+// @Param        id      path      string              true  "Machine ID"
+// @Param        config  body      domain.AlertConfig  true  "Alert configuration"
+// @Success      201     {object}  domain.AlertConfig
+// @Failure      400     {object}  ErrorResponse
+// @Failure      500     {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /machines/{id}/alerts [post]
 func (h *handlers) createAlertConfig(w http.ResponseWriter, r *http.Request) {
 	machineID := chi.URLParam(r, "id")
 	var ac domain.AlertConfig
@@ -362,6 +579,19 @@ func (h *handlers) createAlertConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, ac)
 }
 
+// updateAlertConfig godoc
+// @Summary      Update alert config
+// @Description  Updates an existing alert configuration
+// @Tags         Alerts
+// @Accept       json
+// @Produce      json
+// @Param        id      path      string              true  "Alert config ID"
+// @Param        config  body      domain.AlertConfig  true  "Updated alert configuration"
+// @Success      200     {object}  domain.AlertConfig
+// @Failure      400     {object}  ErrorResponse
+// @Failure      500     {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /alerts/{id} [put]
 func (h *handlers) updateAlertConfig(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var ac domain.AlertConfig
@@ -377,6 +607,16 @@ func (h *handlers) updateAlertConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ac)
 }
 
+// deleteAlertConfig godoc
+// @Summary      Delete alert config
+// @Description  Deletes an alert configuration by ID
+// @Tags         Alerts
+// @Produce      json
+// @Param        id   path      string  true  "Alert config ID"
+// @Success      200  {object}  DeleteResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /alerts/{id} [delete]
 func (h *handlers) deleteAlertConfig(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if err := h.svc.DeleteAlertConfig(r.Context(), id); err != nil {
@@ -386,6 +626,18 @@ func (h *handlers) deleteAlertConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"deleted": id})
 }
 
+// listAlertEvents godoc
+// @Summary      List fired alert events
+// @Description  Returns alert events for a machine with optional active-only filter
+// @Tags         Alerts
+// @Produce      json
+// @Param        id      path      string  true   "Machine ID"
+// @Param        active  query     bool    false  "Only return active (uncleared) alerts"
+// @Param        limit   query     int     false  "Max results (default 50)"
+// @Success      200     {array}   domain.AlertEvent
+// @Failure      500     {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /machines/{id}/alert-events [get]
 func (h *handlers) listAlertEvents(w http.ResponseWriter, r *http.Request) {
 	machineID := chi.URLParam(r, "id")
 	activeOnly := r.URL.Query().Get("active") == "true"
@@ -406,6 +658,17 @@ func (h *handlers) listAlertEvents(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, events)
 }
 
+// getStockPredictions godoc
+// @Summary      Get stock-out predictions
+// @Description  Computes estimated days until stock-out for each slot based on recent dispense rate
+// @Tags         Predictions
+// @Produce      json
+// @Param        id            path      string  true   "Machine ID"
+// @Param        lookbackDays  query     int     false  "Days of dispense history to analyze (default 14)"
+// @Success      200           {array}   domain.StockPrediction
+// @Failure      500           {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /machines/{id}/predictions [get]
 func (h *handlers) getStockPredictions(w http.ResponseWriter, r *http.Request) {
 	machineID := chi.URLParam(r, "id")
 	lookbackDays := 14
@@ -427,6 +690,19 @@ func (h *handlers) getStockPredictions(w http.ResponseWriter, r *http.Request) {
 
 // --- Reports ---
 
+// exportDispenses godoc
+// @Summary      Export dispense report
+// @Description  Exports dispense history as CSV or PDF
+// @Tags         Reports
+// @Produce      text/csv,application/pdf
+// @Param        machineId  query     string  true   "Machine ID"
+// @Param        format     query     string  false  "Export format: csv or pdf (default: csv)"  Enums(csv, pdf)
+// @Param        since      query     string  false  "RFC3339 start time filter"
+// @Success      200        {file}    file
+// @Failure      400        {object}  ErrorResponse
+// @Failure      500        {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /reports/dispenses [get]
 func (h *handlers) exportDispenses(w http.ResponseWriter, r *http.Request) {
 	machineID := r.URL.Query().Get("machineId")
 	if machineID == "" {

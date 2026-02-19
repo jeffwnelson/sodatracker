@@ -3,58 +3,58 @@ package domain
 import "time"
 
 type Product struct {
-	ID          string  `json:"id"`
-	UPC         string  `json:"upc,omitempty"`
-	Name        string  `json:"name"`
-	Description string  `json:"description,omitempty"`
-	CostPerCan  float64 `json:"costPerCan,omitempty"`
-	ImageURL    string  `json:"imageUrl,omitempty"`
+	ID          string  `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	UPC         string  `json:"upc,omitempty" example:"049000042566"`
+	Name        string  `json:"name" example:"Coca-Cola"`
+	Description string  `json:"description,omitempty" example:"Classic cola"`
+	CostPerCan  float64 `json:"costPerCan,omitempty" example:"0.35"`
+	ImageURL    string  `json:"imageUrl,omitempty" example:"https://example.com/coke.png"`
 }
 
 type Machine struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Location  string `json:"location"`
-	SlotCount int    `json:"slotCount"`
+	ID        string `json:"id" example:"550e8400-e29b-41d4-a716-446655440001"`
+	Name      string `json:"name" example:"Break Room"`
+	Location  string `json:"location" example:"Building A, Floor 2"`
+	SlotCount int    `json:"slotCount" example:"8"`
 }
 
 type Slot struct {
-	MachineID    string `json:"machineId"`
-	Position     int    `json:"position"`
-	ProductID    string `json:"productId,omitempty"`
-	GPIOPin      int    `json:"gpioPin,omitempty"`
-	Capacity     int    `json:"capacity"`
-	LowThreshold int   `json:"lowThreshold"`
+	MachineID    string `json:"machineId" example:"550e8400-e29b-41d4-a716-446655440001"`
+	Position     int    `json:"position" example:"1"`
+	ProductID    string `json:"productId,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
+	GPIOPin      int    `json:"gpioPin,omitempty" example:"17"`
+	Capacity     int    `json:"capacity" example:"12"`
+	LowThreshold int   `json:"lowThreshold" example:"3"`
 }
 
 type Dispense struct {
-	ID           string    `json:"id"`
-	MachineID    string    `json:"machineId"`
-	ProductID    string    `json:"productId"`
-	SlotPosition int       `json:"slotPosition"`
-	SourceType   string    `json:"sourceType"`
-	Timestamp    time.Time `json:"timestamp"`
+	ID           string    `json:"id" example:"550e8400-e29b-41d4-a716-446655440002"`
+	MachineID    string    `json:"machineId" example:"550e8400-e29b-41d4-a716-446655440001"`
+	ProductID    string    `json:"productId" example:"550e8400-e29b-41d4-a716-446655440000"`
+	SlotPosition int       `json:"slotPosition" example:"1"`
+	SourceType   string    `json:"sourceType" example:"gpio"`
+	Timestamp    time.Time `json:"timestamp" example:"2026-01-15T10:30:00Z"`
 }
 
 type Restock struct {
-	ID        string        `json:"id"`
-	MachineID string        `json:"machineId"`
-	UserID    string        `json:"userId,omitempty"`
+	ID        string        `json:"id" example:"550e8400-e29b-41d4-a716-446655440003"`
+	MachineID string        `json:"machineId" example:"550e8400-e29b-41d4-a716-446655440001"`
+	UserID    string        `json:"userId,omitempty" example:"550e8400-e29b-41d4-a716-446655440004"`
 	Slots     []RestockSlot `json:"slots"`
-	Timestamp time.Time     `json:"timestamp"`
+	Timestamp time.Time     `json:"timestamp" example:"2026-01-15T12:00:00Z"`
 }
 
 type RestockSlot struct {
-	Position int `json:"position"`
-	Quantity int `json:"quantity"`
+	Position int `json:"position" example:"1"`
+	Quantity int `json:"quantity" example:"12"`
 }
 
 // SlotStatus represents the computed stock status of a slot.
 type SlotStatus struct {
 	Slot         Slot     `json:"slot"`
 	Product      *Product `json:"product,omitempty"`
-	CurrentStock int      `json:"currentStock"`
-	Status       string   `json:"status"` // "ok", "low", "empty"
+	CurrentStock int      `json:"currentStock" example:"8"`
+	Status       string   `json:"status" example:"ok"` // "ok", "low", "empty"
 }
 
 // MachineStatus represents the full status of a machine including all slot statuses.
@@ -64,39 +64,39 @@ type MachineStatus struct {
 }
 
 type User struct {
-	ID           string `json:"id"`
-	Username     string `json:"username"`
+	ID           string `json:"id" example:"550e8400-e29b-41d4-a716-446655440004"`
+	Username     string `json:"username" example:"admin"`
 	PasswordHash string `json:"-"`
-	Role         string `json:"role"`
+	Role         string `json:"role" example:"admin"`
 }
 
 type AlertConfig struct {
-	ID           string `json:"id"`
-	MachineID    string `json:"machineId"`
-	SlotPosition int    `json:"slotPosition"`  // 0 = machine-wide default
-	LowThreshold int   `json:"lowThreshold"`   // -1 = use slot's own threshold
-	Enabled      bool   `json:"enabled"`
+	ID           string `json:"id" example:"550e8400-e29b-41d4-a716-446655440005"`
+	MachineID    string `json:"machineId" example:"550e8400-e29b-41d4-a716-446655440001"`
+	SlotPosition int    `json:"slotPosition" example:"0"`  // 0 = machine-wide default
+	LowThreshold int   `json:"lowThreshold" example:"3"`   // -1 = use slot's own threshold
+	Enabled      bool   `json:"enabled" example:"true"`
 }
 
 type AlertEvent struct {
-	ID           string     `json:"id"`
-	MachineID    string     `json:"machineId"`
-	SlotPosition int        `json:"slotPosition"`
-	ProductID    string     `json:"productId"`
-	AlertType    string     `json:"alertType"` // "low_stock" or "out_of_stock"
-	CurrentStock int        `json:"currentStock"`
-	Threshold    int        `json:"threshold"`
-	Cleared      bool       `json:"cleared"`
-	Timestamp    time.Time  `json:"timestamp"`
+	ID           string     `json:"id" example:"550e8400-e29b-41d4-a716-446655440006"`
+	MachineID    string     `json:"machineId" example:"550e8400-e29b-41d4-a716-446655440001"`
+	SlotPosition int        `json:"slotPosition" example:"1"`
+	ProductID    string     `json:"productId" example:"550e8400-e29b-41d4-a716-446655440000"`
+	AlertType    string     `json:"alertType" example:"low_stock"` // "low_stock" or "out_of_stock"
+	CurrentStock int        `json:"currentStock" example:"2"`
+	Threshold    int        `json:"threshold" example:"3"`
+	Cleared      bool       `json:"cleared" example:"false"`
+	Timestamp    time.Time  `json:"timestamp" example:"2026-01-15T10:30:00Z"`
 	ClearedAt    *time.Time `json:"clearedAt,omitempty"`
 }
 
 type StockPrediction struct {
-	MachineID         string  `json:"machineId"`
-	SlotPosition      int     `json:"slotPosition"`
-	ProductName       string  `json:"productName,omitempty"`
-	CurrentStock      int     `json:"currentStock"`
-	DispensesPerDay   float64 `json:"dispensesPerDay"`
-	EstimatedDaysLeft float64 `json:"estimatedDaysLeft"` // -1 = no data
+	MachineID         string  `json:"machineId" example:"550e8400-e29b-41d4-a716-446655440001"`
+	SlotPosition      int     `json:"slotPosition" example:"1"`
+	ProductName       string  `json:"productName,omitempty" example:"Coca-Cola"`
+	CurrentStock      int     `json:"currentStock" example:"8"`
+	DispensesPerDay   float64 `json:"dispensesPerDay" example:"2.5"`
+	EstimatedDaysLeft float64 `json:"estimatedDaysLeft" example:"3.2"` // -1 = no data
 	PredictedStockout *string `json:"predictedStockout,omitempty"`
 }

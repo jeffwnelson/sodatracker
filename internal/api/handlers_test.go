@@ -713,6 +713,144 @@ func TestExportDispensesPDF(t *testing.T) {
 	}
 }
 
+func TestDeleteProduct(t *testing.T) {
+	r := setup(t)
+
+	// Create product
+	body, _ := json.Marshal(domain.Product{Name: "Cola", UPC: "111"})
+	req := httptest.NewRequest("POST", "/api/v1/products", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create: %d %s", w.Code, w.Body.String())
+	}
+	var product domain.Product
+	json.NewDecoder(w.Body).Decode(&product)
+
+	// Delete without auth should fail
+	req = httptest.NewRequest("DELETE", "/api/v1/products/"+product.ID, nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 without auth, got %d", w.Code)
+	}
+
+	// Delete with auth
+	req = httptest.NewRequest("DELETE", "/api/v1/products/"+product.ID, nil)
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("delete: %d %s", w.Code, w.Body.String())
+	}
+	var resp map[string]string
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp["deleted"] != product.ID {
+		t.Errorf("expected deleted=%s, got %s", product.ID, resp["deleted"])
+	}
+
+	// Verify gone
+	req = httptest.NewRequest("GET", "/api/v1/products", nil)
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	var products []domain.Product
+	json.NewDecoder(w.Body).Decode(&products)
+	if len(products) != 0 {
+		t.Errorf("expected 0 products after delete, got %d", len(products))
+	}
+}
+
+func TestDeleteMachine(t *testing.T) {
+	r := setup(t)
+
+	// Create product + machine + slots + restock + dispense
+	body, _ := json.Marshal(domain.Product{ID: "p1", Name: "Cola"})
+	req := httptest.NewRequest("POST", "/api/v1/products", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	body, _ = json.Marshal(domain.Machine{Name: "Test", SlotCount: 3})
+	req = httptest.NewRequest("POST", "/api/v1/machines", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create machine: %d", w.Code)
+	}
+	var machine domain.Machine
+	json.NewDecoder(w.Body).Decode(&machine)
+
+	// Set slots
+	body, _ = json.Marshal([]domain.Slot{{Position: 1, ProductID: "p1", Capacity: 10, LowThreshold: 2}})
+	req = httptest.NewRequest("POST", "/api/v1/machines/"+machine.ID+"/slots", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// Restock
+	body, _ = json.Marshal(map[string]any{"slots": []map[string]any{{"position": 1, "quantity": 10}}})
+	req = httptest.NewRequest("POST", "/api/v1/machines/"+machine.ID+"/restock", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// Dispense
+	body, _ = json.Marshal(map[string]any{"machineId": machine.ID, "slotPosition": 1})
+	req = httptest.NewRequest("POST", "/api/v1/dispenses", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// Delete without auth should fail
+	req = httptest.NewRequest("DELETE", "/api/v1/machines/"+machine.ID, nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 without auth, got %d", w.Code)
+	}
+
+	// Delete with auth
+	req = httptest.NewRequest("DELETE", "/api/v1/machines/"+machine.ID, nil)
+	req.Header.Set("X-API-Key", "test-key")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("delete: %d %s", w.Code, w.Body.String())
+	}
+	var resp map[string]string
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp["deleted"] != machine.ID {
+		t.Errorf("expected deleted=%s, got %s", machine.ID, resp["deleted"])
+	}
+
+	// Verify machine gone from list
+	req = httptest.NewRequest("GET", "/api/v1/machines", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	var machines []domain.Machine
+	json.NewDecoder(w.Body).Decode(&machines)
+	if len(machines) != 0 {
+		t.Errorf("expected 0 machines after delete, got %d", len(machines))
+	}
+
+	// Verify status returns 404
+	req = httptest.NewRequest("GET", "/api/v1/machines/"+machine.ID+"/status", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404 for deleted machine status, got %d", w.Code)
+	}
+}
+
 func TestExportRequiresAuth(t *testing.T) {
 	r := setup(t)
 	req := httptest.NewRequest("GET", "/api/v1/reports/dispenses?machineId=m1", nil)

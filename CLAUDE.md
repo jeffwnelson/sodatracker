@@ -43,6 +43,7 @@ sodaTracker/
 │   └── discordbot/            # Discord bot (Phase 3, empty stub)
 ├── internal/
 │   ├── api/                   # chi router, middleware, handlers
+│   │   └── docs/              # Generated Swagger/OpenAPI docs (swaggo/swag)
 │   ├── domain/                # Entity structs (Product, Machine, Slot, Dispense, Restock, User)
 │   ├── store/                 # Store interface + sqlite/ and dynamo/ implementations
 │   ├── events/                # EventBus interface + local/ and sns/ implementations
@@ -58,7 +59,7 @@ sodaTracker/
 │   └── piagent/               # Agent logic, local SQLite cache, YAML config
 ├── web/                       # React frontend (Vite + Tailwind)
 │   └── src/
-│       ├── pages/             # CustomerDashboard, LoginPage, AdminDashboard, MachineDetailPage, RestockPage
+│       ├── pages/             # CustomerDashboard, LoginPage, AdminDashboard, MachineDetailPage, RestockPage, AlertsPage, SetupPage
 │       ├── components/        # StockGrid, AdminLayout, ProtectedRoute
 │       ├── context/           # AuthContext (JWT token + user state, localStorage persistence)
 │       └── api/               # API client + TypeScript types
@@ -128,6 +129,43 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 ./bin/piagent -config piagent.yaml   # Run with config file
 ```
 
+### Swagger / OpenAPI Docs
+```bash
+make swagger          # Regenerate Swagger docs (requires swag CLI: go install github.com/swaggo/swag/v2/cmd/swag@latest)
+```
+
+Swagger UI is served at `/swagger/index.html` when the server is running. Docs are generated from Go comment annotations on handlers (`internal/api/handlers.go`) and the general API info block in `internal/api/router.go`. Generated files (`internal/api/docs/`) are committed to git so the Dockerfile works without installing `swag`.
+
+### Pi Deployment (GHCR → Raspberry Pi)
+
+The self-hosted demo runs on a Raspberry Pi (arm64) as a Docker container.
+
+- **SSH:** `ssh pi@sodatracker.example.com` (password: `<redacted>`)
+- **GHCR image:** `ghcr.io/jeffwnelson/sodatracker:latest` (linux/arm64)
+- **Container name:** `sodatracker`
+- **Data volume:** `sodatracker-data` mounted at `/data` (persists SQLite DB across restarts)
+- **Dashboard URL:** `http://sodatracker.example.com:3000`
+
+```bash
+# Build arm64, push to GHCR, pull on Pi, restart container:
+cd sodaTracker
+docker buildx build --platform linux/arm64 -t ghcr.io/jeffwnelson/sodatracker:latest --push .
+sshpass -p '<redacted>' ssh pi@sodatracker.example.com '\
+  docker pull ghcr.io/jeffwnelson/sodatracker:latest && \
+  docker stop sodatracker && docker rm sodatracker && \
+  docker run -d --name sodatracker -p 3000:3000 \
+    -e API_KEY=dev-api-key \
+    -e JWT_SECRET=dev-jwt-secret \
+    -e ADMIN_PASSWORD=dev-admin-password \
+    -v sodatracker-data:/data \
+    ghcr.io/jeffwnelson/sodatracker:latest'
+```
+
+GHCR auth on the Pi is already configured (`~pi/.docker/config.json`). If it expires, re-auth with:
+```bash
+gh auth token | sshpass -p '<redacted>' ssh pi@sodatracker.example.com 'cat | docker login ghcr.io -u jeffwnelson --password-stdin'
+```
+
 ## Key Configuration
 
 - **API port:** 3000 (env `PORT`)
@@ -167,6 +205,8 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 | GET | `/api/v1/machines/:id/restocks` | API Key or JWT | Restock history | Done |
 | GET | `/api/v1/products` | API Key or JWT | List products | Done |
 | POST | `/api/v1/products` | API Key or JWT | Create product | Done |
+| DELETE | `/api/v1/products/:id` | API Key or JWT | Delete product | Done |
+| DELETE | `/api/v1/machines/:id` | API Key or JWT | Delete machine (cascade) | Done |
 | GET | `/api/v1/admin/stats` | API Key or JWT | Dispense stats (aggregated) | Done |
 | GET | `/api/v1/admin/cost` | API Key or JWT | Machine cost (30d) | Done |
 | GET | `/api/v1/machines/:id/alerts` | API Key or JWT | List alert configs | Done |
@@ -208,17 +248,18 @@ make build-piagent-arm   # Cross-compile for Raspberry Pi (linux/arm7)
 - **DynamoDB single-table design** — Table `SodaTracker-{env}`, PK/SK (both S), GSI1 (GSI1PK/GSI1SK, projection ALL). Entity types: Product, Machine, Slot, Dispense, Restock, User, AlertConfig, AlertEvent. Key patterns use `#`-delimited composite keys with RFC3339Nano timestamps for lexicographic sort. AlertEvent GSI1PK switches from `ACTIVEALERT#...` to `CLEARED#...` when cleared (enables efficient active alert queries).
 - **Lambda deployment** — Single Lambda (ARM64/Graviton, 256MB, provided.al2023) serving all routes via `aws-lambda-go-api-proxy/chi` V2 adapter. HTTP API v2 (API Gateway) routes `ANY /api/{proxy+}` to Lambda. CloudFront serves S3 frontend with `/api/*` behavior forwarding to API Gateway. Admin seeding (`internal/seed/`) runs on cold start.
 - **SNS publisher** — Optional SNS event fan-out registered as a subscriber on the local EventBus. Publishes all event types with `eventType` message attribute for filtering. Only active when `SNS_TOPIC_ARN` env var is set.
+- **Swagger/OpenAPI** — Generated by `swaggo/swag` v2 from Go comment annotations. `internal/api/router.go` has the general API info block (title, version, security definitions). Each handler in `handlers.go` has `@Summary`, `@Description`, `@Tags`, `@Param`, `@Success`/`@Failure`, `@Security`, and `@Router` annotations. `internal/api/dto.go` defines named response types (`ErrorResponse`, `HealthResponse`, `LoginRequest`, `LoginResponse`, `DeleteResponse`, `CostResponse`) for swag reference. Domain and service types have `example` struct tags. Generated docs (`internal/api/docs/`) are committed. Swagger UI served at `/swagger/*` via `swaggo/http-swagger/v2`. Regenerate with `make swagger`.
 - **OpenTofu infrastructure** — `infra/` directory with S3 backend state, DynamoDB table, Lambda function, HTTP API v2, SNS topic, S3 + CloudFront frontend. AWS account 136532201934, region us-west-2, profile "personal". Sensitive vars: api_key, jwt_secret, admin_password.
 
 ## Test Structure
 
-Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **38 tests total** across 6 packages. DynamoDB integration tests (6 tests, `//go:build integration` tag) require DynamoDB Local.
+Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **40 tests total** across 6 packages. DynamoDB integration tests (6 tests, `//go:build integration` tag) require DynamoDB Local.
 
 - `internal/events/local/local_test.go` — EventBus tests (5): `TestPublishSubscribe`, `TestMultipleSubscribers`, `TestUnsubscribe`, `TestPublishNoSubscribers`, `TestDifferentEventTypes`
 - `internal/store/sqlite/sqlite_test.go` — Store CRUD tests (6): `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestUserCRUD`, `TestAlertConfigCRUD`, `TestAlertEventCRUD`, `TestDispenseAndRestock`
 - `internal/auth/jwt_test.go` — JWT tests (4): `TestGenerateAndValidateToken`, `TestJWTMiddleware_MissingToken`, `TestJWTMiddleware_InvalidToken`, `TestJWTMiddleware_ValidToken`
 - `internal/service/service_test.go` — Service logic tests (6): `TestLogin` (success + bad password + non-existent user), `TestGetDispenseStats`, `TestGetMachineCost`, `TestEvaluateStockAlert`, `TestCreateRestockClearsAlerts`, `TestGetStockPredictions`
-- `internal/api/handlers_test.go` — API integration tests (14) using `httptest.NewRecorder()` against the real chi router with EventBus wired: `TestHealth`, `TestCreateAndListMachines`, `TestDispenseRequiresAPIKey`, `TestLoginSuccess`, `TestLoginBadPassword`, `TestAdminStatsRequiresAuth`, `TestFullWorkflow`, `TestFullWorkflowWithJWT`, `TestAlertConfigCRUD`, `TestPredictionsEndpoint`, `TestFullWorkflowWithAlerts`, `TestExportDispensesCSV`, `TestExportDispensesPDF`, `TestExportRequiresAuth`
+- `internal/api/handlers_test.go` — API integration tests (16) using `httptest.NewRecorder()` against the real chi router with EventBus wired: `TestHealth`, `TestCreateAndListMachines`, `TestDispenseRequiresAPIKey`, `TestLoginSuccess`, `TestLoginBadPassword`, `TestAdminStatsRequiresAuth`, `TestFullWorkflow`, `TestFullWorkflowWithJWT`, `TestAlertConfigCRUD`, `TestPredictionsEndpoint`, `TestFullWorkflowWithAlerts`, `TestExportDispensesCSV`, `TestExportDispensesPDF`, `TestDeleteProduct`, `TestDeleteMachine`, `TestExportRequiresAuth`
 - `internal/export/export_test.go` — Export unit tests (3): `TestWriteDispensesCSV`, `TestWriteDispensesPDF`, `TestEmptyExport`
 - `internal/store/dynamo/dynamo_test.go` — DynamoDB integration tests (6, `//go:build integration`): `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestDispenseAndRestock`, `TestUserCRUD`, `TestAlertConfigCRUD`, `TestAlertEventCRUD`. Requires DynamoDB Local (`docker run -p 8000:8000 amazon/dynamodb-local`), run with `go test -tags integration ./internal/store/dynamo/...`
 
@@ -286,6 +327,7 @@ Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed.
 - [x] Structured logging: `log/slog` replaces `log` across all Go code, `LOG_FORMAT` env var (`text`/`json`)
 - [x] Request ID middleware (`middleware.RequestID`) + custom structured request logging
 - [x] CSV/PDF export for dispense reports (`GET /api/v1/reports/dispenses?format=csv|pdf`)
+- [x] Swagger/OpenAPI docs via `swaggo/swag` — interactive UI at `/swagger/index.html`, all 23 endpoints annotated
 - [ ] Mobile responsive polish
 - [ ] Pi agent systemd service + watchdog
 - [ ] CloudWatch custom metrics

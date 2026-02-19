@@ -349,6 +349,16 @@ func (s *Service) GetStockPredictions(ctx context.Context, machineID string, loo
 	return predictions, nil
 }
 
+// Delete pass-throughs
+
+func (s *Service) DeleteProduct(ctx context.Context, id string) error {
+	return s.store.DeleteProduct(ctx, id)
+}
+
+func (s *Service) DeleteMachine(ctx context.Context, id string) error {
+	return s.store.DeleteMachine(ctx, id)
+}
+
 // Alert config pass-throughs
 
 func (s *Service) CreateAlertConfig(ctx context.Context, ac *domain.AlertConfig) error {
@@ -373,22 +383,22 @@ func (s *Service) ListAlertEvents(ctx context.Context, machineID string, activeO
 
 // DispenseStats holds aggregated dispense analytics.
 type DispenseStats struct {
-	TotalCount  int               `json:"totalCount"`
-	TotalCost   float64           `json:"totalCost"`
+	TotalCount  int               `json:"totalCount" example:"150"`
+	TotalCost   float64           `json:"totalCost" example:"52.50"`
 	TimeSeries  []TimeSeriesPoint `json:"timeSeries"`
 	TopProducts []ProductRanking  `json:"topProducts"`
 }
 
 type TimeSeriesPoint struct {
-	Hour  string `json:"hour"` // RFC3339 truncated to hour
-	Count int    `json:"count"`
+	Hour  string `json:"hour" example:"2026-01-15T10:00:00Z"` // RFC3339 truncated to hour
+	Count int    `json:"count" example:"5"`
 }
 
 type ProductRanking struct {
-	ProductID   string  `json:"productId"`
-	ProductName string  `json:"productName"`
-	Count       int     `json:"count"`
-	TotalCost   float64 `json:"totalCost"`
+	ProductID   string  `json:"productId" example:"550e8400-e29b-41d4-a716-446655440000"`
+	ProductName string  `json:"productName" example:"Coca-Cola"`
+	Count       int     `json:"count" example:"42"`
+	TotalCost   float64 `json:"totalCost" example:"14.70"`
 }
 
 // GetDispenseStats aggregates dispense data for a machine since a given time.

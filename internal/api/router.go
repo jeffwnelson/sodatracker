@@ -1,3 +1,18 @@
+// @title           SodaTracker API
+// @version         1.0
+// @description     API for tracking soda machine inventory, dispenses, restocks, and alerts.
+
+// @host            localhost:3000
+// @BasePath        /api/v1
+
+// @securityDefinitions.apikey  ApiKeyAuth
+// @in                          header
+// @name                        X-API-Key
+
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
+
 package api
 
 import (
@@ -8,9 +23,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
+
 	"github.com/jeffwnelson/sodatracker/internal/auth"
 	"github.com/jeffwnelson/sodatracker/internal/service"
 	"github.com/jeffwnelson/sodatracker/internal/store"
+
+	_ "github.com/jeffwnelson/sodatracker/internal/api/docs"
 )
 
 func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret string, staticDir string) *chi.Mux {
@@ -55,6 +74,8 @@ func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret st
 			r.Get("/machines/{id}/restocks", h.listRestocks)
 			r.Get("/products", h.listProducts)
 			r.Post("/products", h.createProduct)
+			r.Delete("/products/{id}", h.deleteProduct)
+			r.Delete("/machines/{id}", h.deleteMachine)
 
 			// Alerts
 			r.Get("/machines/{id}/alerts", h.listAlertConfigs)
@@ -73,6 +94,9 @@ func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret st
 			r.Get("/reports/dispenses", h.exportDispenses)
 		})
 	})
+
+	// Swagger UI
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	// Serve frontend static files if configured
 	if staticDir != "" {

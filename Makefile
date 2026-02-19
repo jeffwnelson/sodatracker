@@ -1,5 +1,5 @@
 .PHONY: build build-server build-piagent build-lambda test lint run clean docker-up docker-down \
-	web-install web-dev web-build deploy-frontend tf-plan tf-apply
+	web-install web-dev web-build deploy-frontend tf-plan tf-apply swagger
 
 BINARY_DIR := bin
 SERVER_BIN := $(BINARY_DIR)/server
@@ -55,6 +55,9 @@ deploy-frontend: web-build
 	aws cloudfront create-invalidation \
 		--distribution-id $$(cd infra && tofu output -raw cloudfront_domain | xargs -I{} aws cloudfront list-distributions --query "DistributionList.Items[?DomainName=='{}'].Id" --output text --profile personal) \
 		--paths "/*" --profile personal
+
+swagger:
+	swag init --generalInfo internal/api/router.go --dir ./ --output internal/api/docs --parseDependency --parseInternal
 
 tf-plan:
 	cd infra && tofu plan

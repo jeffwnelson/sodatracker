@@ -54,6 +54,7 @@ docker run -d \
 
 Dashboard: `http://<pi-ip>:3000/`
 Admin login: `http://<pi-ip>:3000/admin/login` (user: `admin`, pass: value of `ADMIN_PASSWORD`)
+API docs: `http://<pi-ip>:3000/swagger/index.html`
 
 ### Run the Pi Agent (native)
 
@@ -84,6 +85,8 @@ make web-build      # Production frontend build
 
 make docker-up      # docker compose up --build -d
 make docker-down    # docker compose down
+
+make swagger        # Regenerate Swagger/OpenAPI docs
 ```
 
 ### Rebuilding & Deploying the Container
