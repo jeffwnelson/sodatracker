@@ -221,6 +221,10 @@ func unmarshalRestock(item map[string]types.AttributeValue) (domain.Restock, err
 }
 
 func marshalUser(u *domain.User) map[string]types.AttributeValue {
+	theme := u.Theme
+	if theme == "" {
+		theme = "system"
+	}
 	return map[string]types.AttributeValue{
 		"PK":           s(userPK(u.ID)),
 		"SK":           s(userSK(u.ID)),
@@ -231,15 +235,21 @@ func marshalUser(u *domain.User) map[string]types.AttributeValue {
 		"username":     s(u.Username),
 		"passwordHash": s(u.PasswordHash),
 		"role":         s(u.Role),
+		"theme":        s(theme),
 	}
 }
 
 func unmarshalUser(item map[string]types.AttributeValue) domain.User {
+	theme := getS(item, "theme")
+	if theme == "" {
+		theme = "system"
+	}
 	return domain.User{
 		ID:           getS(item, "id"),
 		Username:     getS(item, "username"),
 		PasswordHash: getS(item, "passwordHash"),
 		Role:         getS(item, "role"),
+		Theme:        theme,
 	}
 }
 

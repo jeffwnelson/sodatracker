@@ -1,22 +1,32 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  RadialBarChart,
-  RadialBar,
-  ResponsiveContainer,
-} from "recharts";
-import {
   getMachineStatus,
   getMachineCost,
   listDispenses,
   listRestocks,
   getStockPredictions,
 } from "../api/client";
+import { PageHeader } from "../components/PageHeader";
+import { Card } from "../components/Card";
+import { Badge } from "../components/Badge";
+import { Button } from "../components/Button";
+import { DataTable } from "../components/DataTable";
+import type { Column } from "../components/DataTable";
+import { SkeletonCard } from "../components/Skeleton";
+import { EmptyState } from "../components/EmptyState";
+import type { Dispense, Restock } from "../api/types";
 
-const statusColor: Record<string, string> = {
-  ok: "#22c55e",
-  low: "#eab308",
-  empty: "#ef4444",
+const statusBarColor: Record<string, string> = {
+  ok: "bg-status-ok",
+  low: "bg-status-low",
+  empty: "bg-status-empty",
+};
+
+const statusBadgeVariant: Record<string, "ok" | "low" | "empty"> = {
+  ok: "ok",
+  low: "low",
+  empty: "empty",
 };
 
 export function MachineDetailPage() {
@@ -53,170 +63,165 @@ export function MachineDetailPage() {
     staleTime: 30_000,
   });
 
-  // Build prediction lookup by slot position
   const predBySlot = new Map(
     predictions?.map((p) => [p.slotPosition, p]) ?? []
   );
 
   if (statusLoading) {
-    return <div className="text-center py-12 text-gray-500">Loading...</div>;
-  }
-
-  if (!status) {
     return (
-      <div className="text-center py-12 text-gray-400">Machine not found.</div>
+      <div className="space-y-6">
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
     );
   }
 
+  if (!status) {
+    return <EmptyState message="Machine not found." />;
+  }
+
+  const dispenseColumns: Column<Dispense>[] = [
+    {
+      header: "Slot",
+      accessor: (row) => (
+        <span className="font-medium text-text-primary">
+          #{row.slotPosition}
+        </span>
+      ),
+      className: "w-16",
+    },
+    {
+      header: "Source",
+      accessor: (row) => row.sourceType,
+    },
+    {
+      header: "Time",
+      accessor: (row) => (
+        <span className="text-text-tertiary text-xs">
+          {new Date(row.timestamp).toLocaleString()}
+        </span>
+      ),
+      headerClassName: "text-right",
+      className: "text-right",
+    },
+  ];
+
+  const restockColumns: Column<Restock>[] = [
+    {
+      header: "Date",
+      accessor: (row) => new Date(row.timestamp).toLocaleString(),
+    },
+    {
+      header: "Slots",
+      accessor: (row) =>
+        row.slots.map((s) => `#${s.position}: ${s.quantity}`).join(", "),
+    },
+    {
+      header: "User",
+      accessor: (row) => row.userId || "\u2014",
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            {status.machine.name}
-          </h2>
-          {status.machine.location && (
-            <p className="text-sm text-gray-500">{status.machine.location}</p>
-          )}
-        </div>
-        <Link
-          to={`/admin/machines/${machineId}/restock`}
-          className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800"
-        >
-          Restock Machine
-        </Link>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title={status.machine.name}
+        subtitle={status.machine.location || undefined}
+        actions={
+          <Link to={`/admin/machines/${machineId}/restock`}>
+            <Button>Restock Machine</Button>
+          </Link>
+        }
+      />
 
       {/* Cost card */}
       {costData && (
-        <div className="bg-white rounded-xl shadow p-6">
-          <p className="text-sm text-gray-500 mb-1">Total Cost (30d)</p>
-          <p className="text-3xl font-bold text-gray-900">
+        <Card>
+          <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-2">
+            Total Cost (30d)
+          </p>
+          <p className="text-3xl font-semibold tracking-tight text-text-primary">
             ${costData.cost.toFixed(2)}
           </p>
-        </div>
+        </Card>
       )}
 
-      {/* Stock gauges */}
-      <div className="bg-white rounded-xl shadow p-6">
-        <h3 className="text-sm font-medium text-gray-700 mb-4">
+      {/* Slot stock levels — progress bar cards */}
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-4">
           Slot Stock Levels
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {status.slots.map((ss) => {
             const pct =
               ss.slot.capacity > 0
-                ? (ss.currentStock / ss.slot.capacity) * 100
+                ? Math.round((ss.currentStock / ss.slot.capacity) * 100)
                 : 0;
-            const gaugeData = [
-              { value: pct, fill: statusColor[ss.status] || "#6b7280" },
-            ];
             const pred = predBySlot.get(ss.slot.position);
             const daysLeft = pred?.estimatedDaysLeft ?? -1;
             return (
-              <div key={ss.slot.position} className="text-center">
-                <ResponsiveContainer width="100%" height={100}>
-                  <RadialBarChart
-                    cx="50%"
-                    cy="50%"
-                    innerRadius="60%"
-                    outerRadius="90%"
-                    startAngle={180}
-                    endAngle={0}
-                    barSize={8}
-                    data={gaugeData}
-                  >
-                    <RadialBar
-                      dataKey="value"
-                      background={{ fill: "#f3f4f6" }}
-                      cornerRadius={4}
-                    />
-                  </RadialBarChart>
-                </ResponsiveContainer>
-                <p className="text-xs font-medium text-gray-900 -mt-4">
-                  {ss.currentStock}/{ss.slot.capacity}
-                </p>
-                <p className="text-xs text-gray-500 truncate mt-1">
-                  {ss.product?.name || `Slot ${ss.slot.position}`}
-                </p>
-                {daysLeft >= 0 && daysLeft < 3 && (
-                  <span
-                    className={`inline-block mt-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                      daysLeft < 1
-                        ? "bg-red-100 text-red-700"
-                        : "bg-orange-100 text-orange-700"
-                    }`}
-                  >
-                    {daysLeft < 1
-                      ? "< 1 day"
-                      : `~${daysLeft} days`}
+              <Card key={ss.slot.position} padding="sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-text-primary truncate">
+                    {ss.product?.name || `Slot ${ss.slot.position}`}
                   </span>
+                  <Badge variant={statusBadgeVariant[ss.status]}>
+                    {ss.status}
+                  </Badge>
+                </div>
+                <div className="flex items-baseline gap-1 mb-2">
+                  <span className="text-xl font-semibold tracking-tight text-text-primary">
+                    {ss.currentStock}
+                  </span>
+                  <span className="text-sm text-text-tertiary">
+                    / {ss.slot.capacity}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-surface-tertiary rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ease-out-custom ${statusBarColor[ss.status]}`}
+                    style={{ width: `${Math.max(pct, 0)}%` }}
+                  />
+                </div>
+                {daysLeft >= 0 && daysLeft < 3 && (
+                  <div className="mt-2">
+                    <Badge variant={daysLeft < 1 ? "empty" : "low"}>
+                      {daysLeft < 1 ? "< 1 day left" : `~${daysLeft} days left`}
+                    </Badge>
+                  </div>
                 )}
-              </div>
+              </Card>
             );
           })}
         </div>
       </div>
 
-      {/* Dispense timeline */}
+      {/* Recent dispenses */}
       {dispenses && dispenses.length > 0 && (
-        <div className="bg-white rounded-xl shadow p-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-4">
+        <Card>
+          <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-4">
             Recent Dispenses
-          </h3>
-          <div className="max-h-64 overflow-y-auto space-y-2">
-            {dispenses.map((d) => (
-              <div
-                key={d.id}
-                className="flex items-center justify-between text-sm border-b pb-2 last:border-0"
-              >
-                <div>
-                  <span className="text-gray-900 font-medium">
-                    Slot {d.slotPosition}
-                  </span>
-                  <span className="text-gray-400 ml-2">{d.sourceType}</span>
-                </div>
-                <span className="text-gray-500 text-xs">
-                  {new Date(d.timestamp).toLocaleString()}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+          </p>
+          <DataTable
+            columns={dispenseColumns}
+            data={dispenses}
+            keyFn={(d) => d.id}
+          />
+        </Card>
       )}
 
       {/* Restock history */}
       {restocks && restocks.length > 0 && (
-        <div className="bg-white rounded-xl shadow p-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-4">
+        <Card>
+          <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-4">
             Restock History
-          </h3>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-gray-500">
-                <th className="pb-2 font-medium">Date</th>
-                <th className="pb-2 font-medium">Slots</th>
-                <th className="pb-2 font-medium">User</th>
-              </tr>
-            </thead>
-            <tbody>
-              {restocks.map((r) => (
-                <tr key={r.id} className="border-b last:border-0">
-                  <td className="py-2 text-gray-700">
-                    {new Date(r.timestamp).toLocaleString()}
-                  </td>
-                  <td className="py-2 text-gray-700">
-                    {r.slots
-                      .map((s) => `#${s.position}: ${s.quantity}`)
-                      .join(", ")}
-                  </td>
-                  <td className="py-2 text-gray-500">{r.userId || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+          </p>
+          <DataTable
+            columns={restockColumns}
+            data={restocks}
+            keyFn={(r) => r.id}
+          />
+        </Card>
       )}
     </div>
   );

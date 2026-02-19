@@ -1,47 +1,62 @@
 import type { SlotStatus } from "../api/types";
+import { Badge } from "./Badge";
 
-const statusColors: Record<string, string> = {
-  ok: "bg-green-500",
-  low: "bg-yellow-500",
-  empty: "bg-red-500",
+const statusBarColor: Record<string, string> = {
+  ok: "bg-status-ok",
+  low: "bg-status-low",
+  empty: "bg-status-empty",
 };
 
-const statusBorders: Record<string, string> = {
-  ok: "border-green-600",
-  low: "border-yellow-600",
-  empty: "border-red-600",
+const statusBadgeVariant: Record<string, "ok" | "low" | "empty"> = {
+  ok: "ok",
+  low: "low",
+  empty: "empty",
 };
 
 export function StockGrid({ slots }: { slots: SlotStatus[] }) {
   if (slots.length === 0) {
     return (
-      <p className="text-gray-500 text-sm italic">No slots configured</p>
+      <p className="text-sm text-text-tertiary">No slots configured</p>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-      {slots.map((ss) => (
-        <div
-          key={ss.slot.position}
-          className={`rounded-lg border-2 p-3 text-center ${statusBorders[ss.status]} bg-white`}
-        >
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {slots.map((ss) => {
+        const pct =
+          ss.slot.capacity > 0
+            ? Math.round((ss.currentStock / ss.slot.capacity) * 100)
+            : 0;
+        return (
           <div
-            className={`${statusColors[ss.status]} text-white text-xs font-bold px-2 py-0.5 rounded-full inline-block mb-2`}
+            key={ss.slot.position}
+            className="rounded-xl border border-border-primary bg-surface-primary p-4 transition-colors duration-150 hover:border-border-secondary"
           >
-            {ss.status.toUpperCase()}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-text-primary truncate">
+                {ss.product?.name || `Slot ${ss.slot.position}`}
+              </span>
+              <Badge variant={statusBadgeVariant[ss.status]}>
+                {ss.status}
+              </Badge>
+            </div>
+            <div className="flex items-baseline gap-1 mb-2">
+              <span className="text-2xl font-semibold tracking-tight text-text-primary">
+                {ss.currentStock}
+              </span>
+              <span className="text-sm text-text-tertiary">
+                / {ss.slot.capacity}
+              </span>
+            </div>
+            <div className="h-1.5 w-full bg-surface-tertiary rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ease-out-custom ${statusBarColor[ss.status]}`}
+                style={{ width: `${Math.max(pct, 0)}%` }}
+              />
+            </div>
           </div>
-          <div className="font-semibold text-gray-900 text-sm truncate">
-            {ss.product?.name || `Slot ${ss.slot.position}`}
-          </div>
-          <div className="text-2xl font-bold text-gray-800 mt-1">
-            {ss.currentStock}
-            <span className="text-sm text-gray-500 font-normal">
-              /{ss.slot.capacity}
-            </span>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

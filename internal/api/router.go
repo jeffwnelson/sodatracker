@@ -93,6 +93,12 @@ func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret st
 			r.Get("/admin/cost", h.getMachineCost)
 			r.Get("/reports/dispenses", h.exportDispenses)
 		})
+
+		// JWT-only user endpoints
+		r.Group(func(r chi.Router) {
+			r.Use(auth.JWTMiddleware(jwtSecret))
+			r.Put("/users/me/theme", h.updateUserTheme)
+		})
 	})
 
 	// Swagger UI

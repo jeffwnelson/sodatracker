@@ -349,6 +349,14 @@ func (s *Service) GetStockPredictions(ctx context.Context, machineID string, loo
 	return predictions, nil
 }
 
+// UpdateUserTheme validates and persists the user's theme preference.
+func (s *Service) UpdateUserTheme(ctx context.Context, userID string, theme string) error {
+	if theme != "light" && theme != "dark" && theme != "system" {
+		return fmt.Errorf("invalid theme: must be light, dark, or system")
+	}
+	return s.store.UpdateUserTheme(ctx, userID, theme)
+}
+
 // Delete pass-throughs
 
 func (s *Service) DeleteProduct(ctx context.Context, id string) error {

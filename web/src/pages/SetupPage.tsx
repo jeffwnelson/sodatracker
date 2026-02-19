@@ -10,19 +10,238 @@ import {
   setSlots,
   getMachineStatus,
 } from "../api/client";
-import type { Product } from "../api/types";
+import type { Product, Machine } from "../api/types";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { PageHeader } from "../components/PageHeader";
+import { Card } from "../components/Card";
+import { Input } from "../components/Input";
+import { Select } from "../components/Select";
+import { Button } from "../components/Button";
+import { DataTable } from "../components/DataTable";
+import type { Column } from "../components/DataTable";
 
 export function SetupPage() {
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Setup</h2>
+    <div className="space-y-8">
+      <PageHeader title="Setup" />
       <ProductsSection />
       <MachinesSection />
       <SlotConfigSection />
     </div>
   );
 }
+
+/* ── Product Modal (add + edit) ─────────────────────────── */
+
+function ProductModal({
+  product,
+  onClose,
+  onSaved,
+  onDeleteClick,
+}: {
+  product?: Product;
+  onClose: () => void;
+  onSaved: () => void;
+  onDeleteClick?: () => void;
+}) {
+  const isEdit = !!product;
+  const [name, setName] = useState(product?.name ?? "");
+  const [description, setDescription] = useState(product?.description ?? "");
+  const [costPerCan, setCostPerCan] = useState(
+    product?.costPerCan != null ? String(product.costPerCan) : ""
+  );
+  const [error, setError] = useState("");
+  const queryClient = useQueryClient();
+
+  const saveMut = useMutation({
+    mutationFn: () =>
+      createProduct({
+        ...(product ? { id: product.id } : {}),
+        name,
+        ...(description ? { description } : {}),
+        ...(costPerCan ? { costPerCan: Number(costPerCan) } : {}),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      onSaved();
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    saveMut.mutate();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm animate-fade-in"
+        onClick={onClose}
+      />
+      <div className="relative bg-surface-primary border border-border-primary rounded-2xl p-8 max-w-md w-full mx-4 animate-scale-in shadow-subtle">
+        <h3 className="text-lg font-semibold text-text-primary mb-6">
+          {isEdit ? "Edit Product" : "Add Product"}
+        </h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Diet Coke"
+            autoFocus
+            required
+          />
+          <Input
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="12oz can"
+          />
+          <Input
+            label="Cost/Can"
+            type="number"
+            step="0.01"
+            min="0"
+            value={costPerCan}
+            onChange={(e) => setCostPerCan(e.target.value)}
+            placeholder="0.35"
+          />
+          {error && <p className="text-sm text-status-empty">{error}</p>}
+          <div className="flex items-center justify-between pt-4 border-t border-border-primary">
+            <div>
+              {isEdit && onDeleteClick && (
+                <button
+                  type="button"
+                  onClick={onDeleteClick}
+                  className="text-sm font-medium text-status-empty hover:text-red-700 transition-colors duration-150"
+                >
+                  Delete Product
+                </button>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <Button variant="secondary" type="button" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={saveMut.isPending}>
+                {isEdit ? "Save" : "Add Product"}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ── Machine Modal (add + edit) ─────────────────────────── */
+
+function MachineModal({
+  machine,
+  onClose,
+  onSaved,
+  onDeleteClick,
+}: {
+  machine?: Machine;
+  onClose: () => void;
+  onSaved: () => void;
+  onDeleteClick?: () => void;
+}) {
+  const isEdit = !!machine;
+  const [name, setName] = useState(machine?.name ?? "");
+  const [location, setLocation] = useState(machine?.location ?? "");
+  const [slotCount, setSlotCount] = useState(
+    machine ? String(machine.slotCount) : ""
+  );
+  const [error, setError] = useState("");
+  const queryClient = useQueryClient();
+
+  const saveMut = useMutation({
+    mutationFn: () =>
+      createMachine({
+        ...(machine ? { id: machine.id } : {}),
+        name,
+        ...(location ? { location } : {}),
+        slotCount: Number(slotCount),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["machines"] });
+      onSaved();
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !slotCount) return;
+    saveMut.mutate();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm animate-fade-in"
+        onClick={onClose}
+      />
+      <div className="relative bg-surface-primary border border-border-primary rounded-2xl p-8 max-w-md w-full mx-4 animate-scale-in shadow-subtle">
+        <h3 className="text-lg font-semibold text-text-primary mb-6">
+          {isEdit ? "Edit Machine" : "Add Machine"}
+        </h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Break Room"
+            autoFocus
+            required
+          />
+          <Input
+            label="Location"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="2nd Floor"
+          />
+          <Input
+            label="Slot Count"
+            type="number"
+            min="1"
+            value={slotCount}
+            onChange={(e) => setSlotCount(e.target.value)}
+            placeholder="6"
+            required
+          />
+          {error && <p className="text-sm text-status-empty">{error}</p>}
+          <div className="flex items-center justify-between pt-4 border-t border-border-primary">
+            <div>
+              {isEdit && onDeleteClick && (
+                <button
+                  type="button"
+                  onClick={onDeleteClick}
+                  className="text-sm font-medium text-status-empty hover:text-red-700 transition-colors duration-150"
+                >
+                  Delete Machine
+                </button>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <Button variant="secondary" type="button" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={saveMut.isPending}>
+                {isEdit ? "Save" : "Add Machine"}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ── Products Section ───────────────────────────────────── */
 
 function ProductsSection() {
   const queryClient = useQueryClient();
@@ -31,144 +250,89 @@ function ProductsSection() {
     queryFn: listProducts,
   });
 
-  const [name, setName] = useState("");
-  const [upc, setUpc] = useState("");
-  const [description, setDescription] = useState("");
-  const [costPerCan, setCostPerCan] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<Product | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [error, setError] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      createProduct({
-        name,
-        ...(upc ? { upc } : {}),
-        ...(description ? { description } : {}),
-        ...(costPerCan ? { costPerCan: Number(costPerCan) } : {}),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      setName("");
-      setUpc("");
-      setDescription("");
-      setCostPerCan("");
-      setError("");
-    },
-    onError: (err: Error) => setError(err.message),
-  });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteProduct(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       setDeleteTarget(null);
+      setEditTarget(null);
     },
     onError: (err: Error) => setError(err.message),
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    mutation.mutate();
-  };
+  const productColumns: Column<Product>[] = [
+    {
+      header: "Name",
+      accessor: (row) => (
+        <span className="font-medium text-text-primary">{row.name}</span>
+      ),
+    },
+    {
+      header: "Description",
+      accessor: (row) => (
+        <span className="text-xs">{row.description || "\u2014"}</span>
+      ),
+    },
+    {
+      header: "Cost/Can",
+      accessor: (row) =>
+        row.costPerCan != null ? `$${row.costPerCan.toFixed(2)}` : "\u2014",
+      headerClassName: "text-right",
+      className: "text-right",
+    },
+  ];
 
   return (
-    <div className="bg-white rounded-xl shadow p-6">
-      <h3 className="text-sm font-medium text-gray-700 mb-4">Products</h3>
+    <Card>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
+          Products
+        </p>
+        <Button onClick={() => setShowModal(true)} className="text-xs px-3 py-1.5">
+          Add Product
+        </Button>
+      </div>
 
-      {products && products.length > 0 && (
-        <div className="overflow-x-auto mb-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-gray-500">
-                <th className="pb-2 font-medium">Name</th>
-                <th className="pb-2 font-medium">Description</th>
-                <th className="pb-2 font-medium">UPC</th>
-                <th className="pb-2 font-medium">Cost/Can</th>
-                <th className="pb-2 font-medium w-16"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id} className="border-b last:border-0">
-                  <td className="py-2 text-gray-700">{p.name}</td>
-                  <td className="py-2 text-gray-500 text-xs">
-                    {p.description || "\u2014"}
-                  </td>
-                  <td className="py-2 text-gray-500 font-mono text-xs">
-                    {p.upc || "\u2014"}
-                  </td>
-                  <td className="py-2 text-gray-700">
-                    {p.costPerCan != null ? `$${p.costPerCan.toFixed(2)}` : "\u2014"}
-                  </td>
-                  <td className="py-2">
-                    <button
-                      onClick={() => setDeleteTarget({ id: p.id, name: p.name })}
-                      className="text-red-500 hover:text-red-700 text-xs font-medium"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {products && products.length > 0 ? (
+        <DataTable
+          columns={productColumns}
+          data={products}
+          keyFn={(p) => p.id}
+          onRowClick={(p) => setEditTarget(p)}
+        />
+      ) : (
+        <p className="text-sm text-text-tertiary text-center py-6">
+          No products yet.
+        </p>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-end gap-3 flex-wrap pt-2 border-t">
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Diet Coke"
-            className="border rounded px-2 py-1.5 text-sm w-36"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Description</label>
-          <input
-            type="text"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="12oz can"
-            className="border rounded px-2 py-1.5 text-sm w-36"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">UPC</label>
-          <input
-            type="text"
-            value={upc}
-            onChange={(e) => setUpc(e.target.value)}
-            placeholder="049000006346"
-            className="border rounded px-2 py-1.5 text-sm w-36"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Cost/Can</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={costPerCan}
-            onChange={(e) => setCostPerCan(e.target.value)}
-            placeholder="0.35"
-            className="border rounded px-2 py-1.5 text-sm w-24"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="bg-gray-900 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
-        >
-          Add Product
-        </button>
-      </form>
-      {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+      {error && <p className="text-sm text-status-empty mt-2">{error}</p>}
+
+      {showModal && (
+        <ProductModal
+          onClose={() => setShowModal(false)}
+          onSaved={() => setShowModal(false)}
+        />
+      )}
+
+      {editTarget && (
+        <ProductModal
+          product={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={() => setEditTarget(null)}
+          onDeleteClick={() =>
+            setDeleteTarget({ id: editTarget.id, name: editTarget.name })
+          }
+        />
+      )}
 
       <ConfirmDialog
         open={deleteTarget !== null}
@@ -178,9 +342,11 @@ function ProductsSection() {
         onCancel={() => setDeleteTarget(null)}
         isPending={deleteMut.isPending}
       />
-    </div>
+    </Card>
   );
 }
+
+/* ── Machines Section ───────────────────────────────────── */
 
 function MachinesSection() {
   const queryClient = useQueryClient();
@@ -189,123 +355,86 @@ function MachinesSection() {
     queryFn: listMachines,
   });
 
-  const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
-  const [slotCount, setSlotCount] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<Machine | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [error, setError] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      createMachine({
-        name,
-        ...(location ? { location } : {}),
-        slotCount: Number(slotCount),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["machines"] });
-      setName("");
-      setLocation("");
-      setSlotCount("");
-      setError("");
-    },
-    onError: (err: Error) => setError(err.message),
-  });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteMachine(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["machines"] });
       setDeleteTarget(null);
+      setEditTarget(null);
     },
     onError: (err: Error) => setError(err.message),
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !slotCount) return;
-    mutation.mutate();
-  };
+  const machineColumns: Column<Machine>[] = [
+    {
+      header: "Name",
+      accessor: (row) => (
+        <span className="font-medium text-text-primary">{row.name}</span>
+      ),
+    },
+    {
+      header: "Location",
+      accessor: (row) => row.location || "\u2014",
+    },
+    {
+      header: "Slots",
+      accessor: (row) => row.slotCount,
+      headerClassName: "text-right",
+      className: "text-right",
+    },
+  ];
 
   return (
-    <div className="bg-white rounded-xl shadow p-6">
-      <h3 className="text-sm font-medium text-gray-700 mb-4">Machines</h3>
+    <Card>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
+          Machines
+        </p>
+        <Button onClick={() => setShowModal(true)} className="text-xs px-3 py-1.5">
+          Add Machine
+        </Button>
+      </div>
 
-      {machines && machines.length > 0 && (
-        <div className="overflow-x-auto mb-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-gray-500">
-                <th className="pb-2 font-medium">Name</th>
-                <th className="pb-2 font-medium">Location</th>
-                <th className="pb-2 font-medium">Slots</th>
-                <th className="pb-2 font-medium w-16"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {machines.map((m) => (
-                <tr key={m.id} className="border-b last:border-0">
-                  <td className="py-2 text-gray-700">{m.name}</td>
-                  <td className="py-2 text-gray-500">{m.location || "\u2014"}</td>
-                  <td className="py-2 text-gray-700">{m.slotCount}</td>
-                  <td className="py-2">
-                    <button
-                      onClick={() => setDeleteTarget({ id: m.id, name: m.name })}
-                      className="text-red-500 hover:text-red-700 text-xs font-medium"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {machines && machines.length > 0 ? (
+        <DataTable
+          columns={machineColumns}
+          data={machines}
+          keyFn={(m) => m.id}
+          onRowClick={(m) => setEditTarget(m)}
+        />
+      ) : (
+        <p className="text-sm text-text-tertiary text-center py-6">
+          No machines yet.
+        </p>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-end gap-3 pt-2 border-t">
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Break Room"
-            className="border rounded px-2 py-1.5 text-sm w-36"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Location</label>
-          <input
-            type="text"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="2nd Floor"
-            className="border rounded px-2 py-1.5 text-sm w-36"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Slot Count</label>
-          <input
-            type="number"
-            min="1"
-            value={slotCount}
-            onChange={(e) => setSlotCount(e.target.value)}
-            placeholder="6"
-            className="border rounded px-2 py-1.5 text-sm w-24"
-            required
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="bg-gray-900 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
-        >
-          Add Machine
-        </button>
-      </form>
-      {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+      {error && <p className="text-sm text-status-empty mt-2">{error}</p>}
+
+      {showModal && (
+        <MachineModal
+          onClose={() => setShowModal(false)}
+          onSaved={() => setShowModal(false)}
+        />
+      )}
+
+      {editTarget && (
+        <MachineModal
+          machine={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={() => setEditTarget(null)}
+          onDeleteClick={() =>
+            setDeleteTarget({ id: editTarget.id, name: editTarget.name })
+          }
+        />
+      )}
 
       <ConfirmDialog
         open={deleteTarget !== null}
@@ -315,9 +444,11 @@ function MachinesSection() {
         onCancel={() => setDeleteTarget(null)}
         isPending={deleteMut.isPending}
       />
-    </div>
+    </Card>
   );
 }
+
+/* ── Slot Config Section ────────────────────────────────── */
 
 function SlotConfigSection() {
   const queryClient = useQueryClient();
@@ -340,24 +471,26 @@ function SlotConfigSection() {
     enabled: !!machineId,
   });
 
-  // Slot form state: array of slot configs indexed by position (1-based)
   const slotCount = machine?.slotCount ?? 0;
   const [slotConfigs, setSlotConfigs] = useState<
     Record<
       number,
-      { productId: string; capacity: string; lowThreshold: string; gpioPin: string }
+      {
+        productId: string;
+        capacity: string;
+        lowThreshold: string;
+        gpioPin: string;
+      }
     >
   >({});
   const [error, setError] = useState("");
 
-  // Initialize slot configs from current status when machine changes
   const initSlots = (id: string) => {
     setSelectedMachine(id);
     setSlotConfigs({});
     setError("");
   };
 
-  // Build config for a slot position, merging current status data as defaults
   const getSlotConfig = (pos: number) => {
     if (slotConfigs[pos]) return slotConfigs[pos];
     const existing = status?.slots.find((s) => s.slot.position === pos);
@@ -372,11 +505,7 @@ function SlotConfigSection() {
     return { productId: "", capacity: "12", lowThreshold: "3", gpioPin: "" };
   };
 
-  const updateSlot = (
-    pos: number,
-    field: string,
-    value: string
-  ) => {
+  const updateSlot = (pos: number, field: string, value: string) => {
     setSlotConfigs((prev) => ({
       ...prev,
       [pos]: { ...getSlotConfig(pos), [field]: value },
@@ -399,7 +528,9 @@ function SlotConfigSection() {
       return setSlots(machineId, slots);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["machineStatus", machineId] });
+      queryClient.invalidateQueries({
+        queryKey: ["machineStatus", machineId],
+      });
       queryClient.invalidateQueries({ queryKey: ["machines"] });
       setError("");
     },
@@ -407,26 +538,28 @@ function SlotConfigSection() {
   });
 
   return (
-    <div className="bg-white rounded-xl shadow p-6">
+    <Card>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-gray-700">Slot Configuration</h3>
+        <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
+          Slot Configuration
+        </p>
         {machines && machines.length > 0 && (
-          <select
+          <Select
             value={machineId}
             onChange={(e) => initSlots(e.target.value)}
-            className="border rounded-lg px-3 py-2 text-sm"
+            className="w-48"
           >
             {machines.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </div>
 
       {!machineId && (
-        <p className="text-gray-400 text-sm">
+        <p className="text-sm text-text-tertiary">
           Add a machine above to configure slots.
         </p>
       )}
@@ -436,30 +569,44 @@ function SlotConfigSection() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-left text-gray-500">
-                  <th className="pb-2 font-medium w-16">Slot</th>
-                  <th className="pb-2 font-medium">Product</th>
-                  <th className="pb-2 font-medium w-24">Capacity</th>
-                  <th className="pb-2 font-medium w-24">Low Threshold</th>
-                  <th className="pb-2 font-medium w-24">GPIO Pin</th>
+                <tr className="border-b border-border-primary">
+                  <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary w-16">
+                    Slot
+                  </th>
+                  <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary">
+                    Product
+                  </th>
+                  <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary w-24">
+                    Capacity
+                  </th>
+                  <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary w-24">
+                    Low Threshold
+                  </th>
+                  <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary w-24">
+                    GPIO Pin
+                  </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border-primary">
                 {Array.from({ length: slotCount }, (_, i) => {
                   const pos = i + 1;
                   const cfg = getSlotConfig(pos);
                   return (
-                    <tr key={pos} className="border-b last:border-0">
-                      <td className="py-2 text-gray-700 font-medium">#{pos}</td>
-                      <td className="py-2">
+                    <tr key={pos}>
+                      <td className="py-3 text-text-primary font-medium">
+                        #{pos}
+                      </td>
+                      <td className="py-3">
                         <select
                           value={cfg.productId}
                           onChange={(e) =>
                             updateSlot(pos, "productId", e.target.value)
                           }
-                          className="border rounded px-2 py-1.5 text-sm w-full"
+                          className="w-full rounded-xl border border-border-primary bg-surface-primary px-2 py-1.5 text-sm text-text-primary transition-all duration-150 ease-out-custom focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
                         >
-                          <option value="">— Select product —</option>
+                          <option value="">
+                            {"\u2014"} Select product {"\u2014"}
+                          </option>
                           {products?.map((p: Product) => (
                             <option key={p.id} value={p.id}>
                               {p.name}
@@ -467,7 +614,7 @@ function SlotConfigSection() {
                           ))}
                         </select>
                       </td>
-                      <td className="py-2">
+                      <td className="py-3">
                         <input
                           type="number"
                           min="1"
@@ -475,10 +622,10 @@ function SlotConfigSection() {
                           onChange={(e) =>
                             updateSlot(pos, "capacity", e.target.value)
                           }
-                          className="border rounded px-2 py-1.5 text-sm w-full"
+                          className="w-full rounded-xl border border-border-primary bg-surface-primary px-2 py-1.5 text-sm text-text-primary transition-all duration-150 ease-out-custom focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
                         />
                       </td>
-                      <td className="py-2">
+                      <td className="py-3">
                         <input
                           type="number"
                           min="0"
@@ -486,10 +633,10 @@ function SlotConfigSection() {
                           onChange={(e) =>
                             updateSlot(pos, "lowThreshold", e.target.value)
                           }
-                          className="border rounded px-2 py-1.5 text-sm w-full"
+                          className="w-full rounded-xl border border-border-primary bg-surface-primary px-2 py-1.5 text-sm text-text-primary transition-all duration-150 ease-out-custom focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
                         />
                       </td>
-                      <td className="py-2">
+                      <td className="py-3">
                         <input
                           type="number"
                           min="0"
@@ -497,8 +644,8 @@ function SlotConfigSection() {
                           onChange={(e) =>
                             updateSlot(pos, "gpioPin", e.target.value)
                           }
-                          placeholder="—"
-                          className="border rounded px-2 py-1.5 text-sm w-full"
+                          placeholder={"\u2014"}
+                          className="w-full rounded-xl border border-border-primary bg-surface-primary px-2 py-1.5 text-sm text-text-primary transition-all duration-150 ease-out-custom focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
                         />
                       </td>
                     </tr>
@@ -508,21 +655,22 @@ function SlotConfigSection() {
             </table>
           </div>
 
-          <div className="flex items-center gap-3 mt-4 pt-4 border-t">
-            <button
+          <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border-primary">
+            <Button
               onClick={() => mutation.mutate()}
-              disabled={mutation.isPending}
-              className="bg-gray-900 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+              loading={mutation.isPending}
             >
               {mutation.isPending ? "Saving..." : "Save Slots"}
-            </button>
+            </Button>
             {mutation.isSuccess && (
-              <span className="text-sm text-green-600">Saved.</span>
+              <span className="text-sm text-status-ok">Saved.</span>
             )}
           </div>
-          {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+          {error && (
+            <p className="text-sm text-status-empty mt-2">{error}</p>
+          )}
         </>
       )}
-    </div>
+    </Card>
   );
 }

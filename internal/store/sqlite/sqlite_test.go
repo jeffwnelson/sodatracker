@@ -163,6 +163,21 @@ func TestUserCRUD(t *testing.T) {
 	if got.PasswordHash != "hash123" {
 		t.Errorf("expected hash=hash123, got %s", got.PasswordHash)
 	}
+	if got.Theme != "system" {
+		t.Errorf("expected default theme=system, got %s", got.Theme)
+	}
+
+	// Update theme
+	if err := s.UpdateUserTheme(ctx, "u1", "dark"); err != nil {
+		t.Fatalf("update theme: %v", err)
+	}
+	got, err = s.GetUserByUsername(ctx, "admin")
+	if err != nil {
+		t.Fatalf("get user after theme update: %v", err)
+	}
+	if got.Theme != "dark" {
+		t.Errorf("expected theme=dark, got %s", got.Theme)
+	}
 
 	// Non-existent user
 	got, err = s.GetUserByUsername(ctx, "nobody")

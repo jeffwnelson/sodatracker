@@ -12,6 +12,14 @@ import {
 } from "recharts";
 import { listMachines, getAdminStats } from "../api/client";
 import type { DispenseStats } from "../api/types";
+import { PageHeader } from "../components/PageHeader";
+import { Card } from "../components/Card";
+import { Select } from "../components/Select";
+import { DataTable } from "../components/DataTable";
+import type { Column } from "../components/DataTable";
+import { SkeletonCard } from "../components/Skeleton";
+import { EmptyState } from "../components/EmptyState";
+import type { ProductRanking, Machine } from "../api/types";
 
 export function AdminDashboard() {
   const { data: machines, isLoading: machinesLoading } = useQuery({
@@ -20,8 +28,6 @@ export function AdminDashboard() {
   });
 
   const [selectedMachineId, setSelectedMachineId] = useState<string>("");
-
-  // Auto-select first machine
   const machineId = selectedMachineId || machines?.[0]?.id || "";
 
   const { data: stats, isLoading: statsLoading } = useQuery<DispenseStats>({
@@ -32,152 +38,190 @@ export function AdminDashboard() {
   });
 
   if (machinesLoading) {
-    return <div className="text-center py-12 text-gray-500">Loading...</div>;
-  }
-
-  if (!machines || machines.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-400">
-        No machines configured yet.
+      <div className="space-y-6">
+        <SkeletonCard />
+        <SkeletonCard />
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Machine selector */}
-      <div className="flex items-center gap-4">
-        <label className="text-sm font-medium text-gray-700">Machine:</label>
-        <select
-          value={machineId}
-          onChange={(e) => setSelectedMachineId(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+  if (!machines || machines.length === 0) {
+    return <EmptyState message="No machines configured yet." />;
+  }
+
+  const productColumns: Column<ProductRanking>[] = [
+    {
+      header: "#",
+      accessor: (_row, i) => (
+        <span className="text-text-tertiary">{i + 1}</span>
+      ),
+      className: "w-8",
+    },
+    {
+      header: "Product",
+      accessor: (row) => (
+        <span className="font-medium text-text-primary">
+          {row.productName || row.productId}
+        </span>
+      ),
+    },
+    {
+      header: "Dispenses",
+      accessor: (row) => row.count,
+      headerClassName: "text-right",
+      className: "text-right",
+    },
+    {
+      header: "Cost",
+      accessor: (row) => `$${row.totalCost.toFixed(2)}`,
+      headerClassName: "text-right",
+      className: "text-right",
+    },
+  ];
+
+  const machineColumns: Column<Machine>[] = [
+    {
+      header: "Name",
+      accessor: (row) => (
+        <Link
+          to={`/admin/machines/${row.id}`}
+          className="font-medium text-text-primary hover:text-accent transition-colors duration-150"
         >
-          {machines.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-              {m.location ? ` — ${m.location}` : ""}
-            </option>
-          ))}
-        </select>
-      </div>
+          {row.name}
+        </Link>
+      ),
+    },
+    {
+      header: "Location",
+      accessor: (row) => row.location || "\u2014",
+    },
+    {
+      header: "Slots",
+      accessor: (row) => row.slotCount,
+      headerClassName: "text-right",
+      className: "text-right",
+    },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <PageHeader
+        title="Dashboard"
+        actions={
+          <Select
+            value={machineId}
+            onChange={(e) => setSelectedMachineId(e.target.value)}
+            className="w-52"
+          >
+            {machines.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+                {m.location ? ` \u2014 ${m.location}` : ""}
+              </option>
+            ))}
+          </Select>
+        }
+      />
 
       {statsLoading ? (
-        <div className="text-center py-8 text-gray-500">
-          Loading stats...
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       ) : stats ? (
         <>
           {/* Summary cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl shadow p-6">
-              <p className="text-sm text-gray-500 mb-1">
+            <Card>
+              <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-2">
                 Total Dispenses (30d)
               </p>
-              <p className="text-3xl font-bold text-gray-900">
+              <p className="text-3xl font-semibold tracking-tight text-text-primary">
                 {stats.totalCount}
               </p>
-            </div>
-            <div className="bg-white rounded-xl shadow p-6">
-              <p className="text-sm text-gray-500 mb-1">Total Cost (30d)</p>
-              <p className="text-3xl font-bold text-gray-900">
+            </Card>
+            <Card>
+              <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-2">
+                Total Cost (30d)
+              </p>
+              <p className="text-3xl font-semibold tracking-tight text-text-primary">
                 ${stats.totalCost.toFixed(2)}
               </p>
-            </div>
+            </Card>
           </div>
 
           {/* Time series chart */}
           {stats.timeSeries.length > 0 && (
-            <div className="bg-white rounded-xl shadow p-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">
+            <Card>
+              <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-6">
                 Dispenses Over Time
-              </h3>
+              </p>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={stats.timeSeries}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid
+                    strokeDasharray="0"
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="hour"
                     tickFormatter={(v: string) => {
                       const d = new Date(v);
-                      return `${(d.getMonth() + 1)}/${d.getDate()} ${d.getHours()}:00`;
+                      return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:00`;
                     }}
-                    tick={{ fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
                     interval="preserveStartEnd"
                   />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <YAxis
+                    allowDecimals={false}
+                    axisLine={false}
+                    tickLine={false}
+                  />
                   <Tooltip
-                    labelFormatter={(v) => new Date(String(v)).toLocaleString()}
+                    labelFormatter={(v) =>
+                      new Date(String(v)).toLocaleString()
+                    }
                   />
                   <Line
                     type="monotone"
                     dataKey="count"
-                    stroke="#111827"
                     strokeWidth={2}
                     dot={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
-            </div>
+            </Card>
           )}
 
           {/* Top products */}
           {stats.topProducts.length > 0 && (
-            <div className="bg-white rounded-xl shadow p-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">
+            <Card>
+              <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-4">
                 Top Products
-              </h3>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-gray-500">
-                    <th className="pb-2 font-medium">#</th>
-                    <th className="pb-2 font-medium">Product</th>
-                    <th className="pb-2 font-medium text-right">Dispenses</th>
-                    <th className="pb-2 font-medium text-right">Cost</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.topProducts.map((p, i) => (
-                    <tr key={p.productId} className="border-b last:border-0">
-                      <td className="py-2 text-gray-400">{i + 1}</td>
-                      <td className="py-2 font-medium text-gray-900">
-                        {p.productName || p.productId}
-                      </td>
-                      <td className="py-2 text-right text-gray-700">
-                        {p.count}
-                      </td>
-                      <td className="py-2 text-right text-gray-700">
-                        ${p.totalCost.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              </p>
+              <DataTable
+                columns={productColumns}
+                data={stats.topProducts}
+                keyFn={(p) => p.productId}
+              />
+            </Card>
           )}
         </>
       ) : null}
 
       {/* Machine list */}
-      <div className="bg-white rounded-xl shadow p-6">
-        <h3 className="text-sm font-medium text-gray-700 mb-4">Machines</h3>
-        <div className="space-y-2">
-          {machines.map((m) => (
-            <Link
-              key={m.id}
-              to={`/admin/machines/${m.id}`}
-              className="block border rounded-lg p-3 hover:bg-gray-50 transition"
-            >
-              <div className="font-medium text-gray-900">{m.name}</div>
-              {m.location && (
-                <div className="text-sm text-gray-500">{m.location}</div>
-              )}
-              <div className="text-xs text-gray-400">
-                {m.slotCount} slots
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+      <Card>
+        <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-4">
+          Machines
+        </p>
+        <DataTable
+          columns={machineColumns}
+          data={machines}
+          keyFn={(m) => m.id}
+          emptyMessage="No machines configured."
+        />
+      </Card>
     </div>
   );
 }

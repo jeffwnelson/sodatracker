@@ -68,6 +68,7 @@ type User struct {
 	Username     string `json:"username" example:"admin"`
 	PasswordHash string `json:"-"`
 	Role         string `json:"role" example:"admin"`
+	Theme        string `json:"theme" example:"system"` // "light", "dark", or "system"
 }
 
 type AlertConfig struct {

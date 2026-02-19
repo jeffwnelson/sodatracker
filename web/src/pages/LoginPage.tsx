@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { Card } from "../components/Card";
+import { Input } from "../components/Input";
+import { Button } from "../components/Button";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -25,62 +28,51 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">SodaTracker</h1>
-        <p className="text-sm text-gray-500 mb-6">Admin Login</p>
+    <div className="min-h-screen bg-surface-secondary flex items-center justify-center px-4">
+      <div className="w-full max-w-sm animate-fade-up">
+        <Card padding="none" className="p-10">
+          <div className="text-center mb-8">
+            <h1 className="text-xl font-semibold tracking-tight text-text-primary">
+              SodaTracker
+            </h1>
+            <p className="text-sm text-text-tertiary mt-1">Sign in to admin</p>
+          </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Username
-            </label>
-            <input
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <Input
+              label="Username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               autoFocus
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
+            <Input
+              label="Password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              error={error}
             />
+
+            <Button type="submit" loading={loading} className="w-full">
+              Sign In
+            </Button>
+          </form>
+
+          <div className="mt-6 pt-6 border-t border-border-primary text-center">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                setUsername("admin");
+                setPassword("dev-admin-password");
+              }}
+              className="text-xs text-text-muted hover:text-text-tertiary transition-colors duration-150 disabled:opacity-50"
+            >
+              Fill dev credentials
+            </button>
           </div>
-
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gray-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
-        </form>
-
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => {
-              setUsername("admin");
-              setPassword("dev-admin-password");
-            }}
-            className="w-full text-xs text-gray-400 hover:text-gray-600 py-1 disabled:opacity-50"
-          >
-            Fill dev credentials
-          </button>
-        </div>
+        </Card>
       </div>
     </div>
   );

@@ -434,6 +434,21 @@ func (d *DynamoStore) GetUserByUsername(ctx context.Context, username string) (*
 	return &u, nil
 }
 
+func (d *DynamoStore) UpdateUserTheme(ctx context.Context, userID string, theme string) error {
+	_, err := d.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName: &d.tableName,
+		Key: map[string]types.AttributeValue{
+			"PK": s(userPK(userID)),
+			"SK": s(userSK(userID)),
+		},
+		UpdateExpression: aws.String("SET theme = :t"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":t": s(theme),
+		},
+	})
+	return err
+}
+
 // --- Alert Configs ---
 
 func (d *DynamoStore) CreateAlertConfig(ctx context.Context, ac *domain.AlertConfig) error {

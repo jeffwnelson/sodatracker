@@ -1,64 +1,73 @@
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useQuery } from "@tanstack/react-query";
-import { listMachines } from "../api/client";
+import { ThemeToggle } from "./ThemeToggle";
+
+const navLinks = [
+  { to: "/admin", label: "Dashboard", end: true },
+  { to: "/admin/alerts", label: "Alerts" },
+  { to: "/admin/setup", label: "Setup" },
+];
 
 export function AdminLayout() {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const { data: machines } = useQuery({
-    queryKey: ["machines"],
-    queryFn: listMachines,
-  });
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
     navigate("/admin/login");
   };
 
+  const isActive = (to: string, end?: boolean) => {
+    if (end) return location.pathname === to;
+    return location.pathname.startsWith(to);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-gray-900 text-white shadow">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="/admin" className="text-lg font-bold hover:text-gray-300">
-              SodaTracker Admin
+    <div className="min-h-screen bg-surface-secondary">
+      <header className="bg-surface-primary border-b border-border-primary">
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between h-14">
+          <div className="flex items-center gap-8">
+            <Link
+              to="/admin"
+              className="text-base font-semibold tracking-tight text-text-primary"
+            >
+              SodaTracker
             </Link>
-            <nav className="hidden sm:flex items-center gap-4 text-sm text-gray-300">
-              <Link to="/admin" className="hover:text-white">
-                Dashboard
-              </Link>
-              <Link to="/admin/alerts" className="hover:text-white">
-                Alerts
-              </Link>
-              <Link to="/admin/setup" className="hover:text-white">
-                Setup
-              </Link>
-              {machines?.map((m) => (
+            <nav className="hidden sm:flex items-center gap-1">
+              {navLinks.map((link) => (
                 <Link
-                  key={m.id}
-                  to={`/admin/machines/${m.id}`}
-                  className="hover:text-white"
+                  key={link.to}
+                  to={link.to}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
+                    isActive(link.to, link.end)
+                      ? "bg-accent-soft text-accent"
+                      : "text-text-tertiary hover:text-text-primary hover:bg-surface-secondary"
+                  }`}
                 >
-                  {m.name}
+                  {link.label}
                 </Link>
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-4">
-            <Link to="/" className="text-sm text-gray-400 hover:text-white">
+          <div className="flex items-center gap-1">
+            <Link
+              to="/"
+              className="px-3 py-1.5 rounded-lg text-sm text-text-tertiary hover:text-text-primary hover:bg-surface-secondary transition-colors duration-150"
+            >
               Customer View
             </Link>
+            <ThemeToggle />
             <button
               onClick={handleLogout}
-              className="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded"
+              className="px-3 py-1.5 rounded-lg text-sm text-text-tertiary hover:text-text-primary hover:bg-surface-secondary transition-colors duration-150"
             >
               Logout
             </button>
           </div>
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-6 py-10">
         <Outlet />
       </main>
     </div>

@@ -1,3 +1,5 @@
+import { Button } from "./Button";
+
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
@@ -21,24 +23,22 @@ export function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/40" onClick={onCancel} />
-      <div className="relative bg-white rounded-xl shadow-lg p-6 max-w-sm w-full mx-4">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        <p className="mt-2 text-sm text-gray-600">{message}</p>
-        <div className="mt-4 flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-          >
+      <div
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm animate-fade-in"
+        onClick={onCancel}
+      />
+      <div className="relative bg-surface-primary border border-border-primary rounded-2xl p-8 max-w-sm w-full mx-4 animate-scale-in shadow-subtle">
+        <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
+        <p className="mt-2 text-sm text-text-secondary leading-relaxed">
+          {message}
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="secondary" onClick={onCancel}>
             Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isPending}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
-          >
-            {isPending ? "Deleting..." : confirmLabel}
-          </button>
+          </Button>
+          <Button variant="danger" onClick={onConfirm} loading={isPending}>
+            {confirmLabel}
+          </Button>
         </div>
       </div>
     </div>

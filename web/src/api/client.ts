@@ -93,8 +93,8 @@ export function listProducts(): Promise<Product[]> {
 }
 
 export function createProduct(product: {
+  id?: string;
   name: string;
-  upc?: string;
   description?: string;
   costPerCan?: number;
 }): Promise<Product> {
@@ -102,6 +102,7 @@ export function createProduct(product: {
 }
 
 export function createMachine(machine: {
+  id?: string;
   name: string;
   location?: string;
   slotCount: number;
@@ -254,6 +255,13 @@ export function listAlertEvents(
   if (activeOnly) params.set("active", "true");
   if (limit) params.set("limit", String(limit));
   return fetchJSONAuth(`/machines/${machineId}/alert-events?${params}`);
+}
+
+// User Preferences
+export function updateTheme(
+  theme: "light" | "dark" | "system"
+): Promise<{ theme: string }> {
+  return putJSONAuth("/users/me/theme", { theme });
 }
 
 // Stock Predictions
