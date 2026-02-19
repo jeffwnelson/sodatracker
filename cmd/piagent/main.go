@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/jeffwnelson/sodatracker/pkg/gpio"
 	"github.com/jeffwnelson/sodatracker/pkg/piagent"
 )
 
@@ -22,8 +21,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Use mock GPIO provider by default (real RPi GPIO requires build tag `rpi`)
-	provider := gpio.NewMockProvider()
+	provider, err := newProvider()
+	if err != nil {
+		slog.Error("failed to init GPIO provider", "error", err)
+		os.Exit(1)
+	}
 
 	agent, err := piagent.New(cfg, provider)
 	if err != nil {

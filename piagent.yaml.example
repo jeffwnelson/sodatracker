@@ -5,7 +5,7 @@ pollMs: 100
 retryMs: 30000
 dbPath: piagent-cache.db
 pins:
-  - pin: 17
+  - pin: 14
     slot: 1
   - pin: 27
     slot: 2
