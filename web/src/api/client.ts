@@ -210,6 +210,15 @@ async function deleteJSONAuth<T>(path: string): Promise<T> {
   return res.json();
 }
 
+// Delete operations
+export function deleteProduct(id: string): Promise<{ deleted: string }> {
+  return deleteJSONAuth(`/products/${id}`);
+}
+
+export function deleteMachine(id: string): Promise<{ deleted: string }> {
+  return deleteJSONAuth(`/machines/${id}`);
+}
+
 // Alert Configs
 export function listAlertConfigs(machineId: string): Promise<AlertConfig[]> {
   return fetchJSONAuth(`/machines/${machineId}/alerts`);

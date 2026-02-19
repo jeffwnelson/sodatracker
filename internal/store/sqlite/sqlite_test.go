@@ -50,6 +50,18 @@ func TestProductCRUD(t *testing.T) {
 	if len(products) != 1 {
 		t.Errorf("expected 1 product, got %d", len(products))
 	}
+
+	// Delete
+	if err := s.DeleteProduct(ctx, "p1"); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	products, err = s.ListProducts(ctx)
+	if err != nil {
+		t.Fatalf("list after delete: %v", err)
+	}
+	if len(products) != 0 {
+		t.Errorf("expected 0 products after delete, got %d", len(products))
+	}
 }
 
 func TestMachineSlotsAndStatus(t *testing.T) {
@@ -75,6 +87,57 @@ func TestMachineSlotsAndStatus(t *testing.T) {
 	}
 	if len(got) != 2 {
 		t.Errorf("expected 2 slots, got %d", len(got))
+	}
+
+	// Add related data for cascade delete test
+	now := time.Now().UTC()
+	s.CreateRestock(ctx, &domain.Restock{
+		ID: "r1", MachineID: "m1",
+		Slots:     []domain.RestockSlot{{Position: 1, Quantity: 10}},
+		Timestamp: now,
+	})
+	s.CreateDispense(ctx, &domain.Dispense{
+		ID: "d1", MachineID: "m1", ProductID: "p1", SlotPosition: 1,
+		SourceType: "gpio", Timestamp: now,
+	})
+	s.CreateAlertConfig(ctx, &domain.AlertConfig{
+		ID: "ac1", MachineID: "m1", SlotPosition: 1, LowThreshold: 3, Enabled: true,
+	})
+	s.CreateAlertEvent(ctx, &domain.AlertEvent{
+		ID: "ae1", MachineID: "m1", SlotPosition: 1, AlertType: "low_stock",
+		CurrentStock: 2, Threshold: 3, Timestamp: now,
+	})
+
+	// Delete machine — should cascade
+	if err := s.DeleteMachine(ctx, "m1"); err != nil {
+		t.Fatalf("delete machine: %v", err)
+	}
+	machines, err := s.ListMachines(ctx)
+	if err != nil {
+		t.Fatalf("list machines after delete: %v", err)
+	}
+	if len(machines) != 0 {
+		t.Errorf("expected 0 machines after delete, got %d", len(machines))
+	}
+	slotsAfter, _ := s.GetSlots(ctx, "m1")
+	if len(slotsAfter) != 0 {
+		t.Errorf("expected 0 slots after delete, got %d", len(slotsAfter))
+	}
+	dispenses, _ := s.ListDispenses(ctx, "m1", time.Time{}, 100)
+	if len(dispenses) != 0 {
+		t.Errorf("expected 0 dispenses after delete, got %d", len(dispenses))
+	}
+	restocks, _ := s.ListRestocks(ctx, "m1", 100)
+	if len(restocks) != 0 {
+		t.Errorf("expected 0 restocks after delete, got %d", len(restocks))
+	}
+	alertConfigs, _ := s.ListAlertConfigs(ctx, "m1")
+	if len(alertConfigs) != 0 {
+		t.Errorf("expected 0 alert configs after delete, got %d", len(alertConfigs))
+	}
+	alertEvents, _ := s.ListAlertEvents(ctx, "m1", false, 100)
+	if len(alertEvents) != 0 {
+		t.Errorf("expected 0 alert events after delete, got %d", len(alertEvents))
 	}
 }
 

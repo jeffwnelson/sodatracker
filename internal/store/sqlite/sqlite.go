@@ -198,6 +198,11 @@ func (s *SQLiteStore) ListProducts(ctx context.Context) ([]domain.Product, error
 	return products, rows.Err()
 }
 
+func (s *SQLiteStore) DeleteProduct(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM products WHERE id = ?`, id)
+	return err
+}
+
 func scanProduct(row *sql.Row) (*domain.Product, error) {
 	var p domain.Product
 	if err := row.Scan(&p.ID, &p.UPC, &p.Name, &p.CostPerCan, &p.ImageURL, &p.Description); err != nil {
@@ -246,6 +251,29 @@ func (s *SQLiteStore) ListMachines(ctx context.Context) ([]domain.Machine, error
 		machines = append(machines, m)
 	}
 	return machines, rows.Err()
+}
+
+func (s *SQLiteStore) DeleteMachine(ctx context.Context, id string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	tables := []string{
+		`DELETE FROM alert_events WHERE machine_id = ?`,
+		`DELETE FROM alert_configs WHERE machine_id = ?`,
+		`DELETE FROM restocks WHERE machine_id = ?`,
+		`DELETE FROM dispenses WHERE machine_id = ?`,
+		`DELETE FROM slots WHERE machine_id = ?`,
+		`DELETE FROM machines WHERE id = ?`,
+	}
+	for _, stmt := range tables {
+		if _, err := tx.ExecContext(ctx, stmt, id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 // --- Slots ---

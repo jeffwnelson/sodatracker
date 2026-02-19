@@ -5,10 +5,13 @@ import {
   listProducts,
   createProduct,
   createMachine,
+  deleteProduct,
+  deleteMachine,
   setSlots,
   getMachineStatus,
 } from "../api/client";
 import type { Product } from "../api/types";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 export function SetupPage() {
   return (
@@ -33,6 +36,7 @@ function ProductsSection() {
   const [description, setDescription] = useState("");
   const [costPerCan, setCostPerCan] = useState("");
   const [error, setError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -49,6 +53,15 @@ function ProductsSection() {
       setDescription("");
       setCostPerCan("");
       setError("");
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      setDeleteTarget(null);
     },
     onError: (err: Error) => setError(err.message),
   });
@@ -72,6 +85,7 @@ function ProductsSection() {
                 <th className="pb-2 font-medium">Description</th>
                 <th className="pb-2 font-medium">UPC</th>
                 <th className="pb-2 font-medium">Cost/Can</th>
+                <th className="pb-2 font-medium w-16"></th>
               </tr>
             </thead>
             <tbody>
@@ -79,13 +93,21 @@ function ProductsSection() {
                 <tr key={p.id} className="border-b last:border-0">
                   <td className="py-2 text-gray-700">{p.name}</td>
                   <td className="py-2 text-gray-500 text-xs">
-                    {p.description || "—"}
+                    {p.description || "\u2014"}
                   </td>
                   <td className="py-2 text-gray-500 font-mono text-xs">
-                    {p.upc || "—"}
+                    {p.upc || "\u2014"}
                   </td>
                   <td className="py-2 text-gray-700">
-                    {p.costPerCan != null ? `$${p.costPerCan.toFixed(2)}` : "—"}
+                    {p.costPerCan != null ? `$${p.costPerCan.toFixed(2)}` : "\u2014"}
+                  </td>
+                  <td className="py-2">
+                    <button
+                      onClick={() => setDeleteTarget({ id: p.id, name: p.name })}
+                      className="text-red-500 hover:text-red-700 text-xs font-medium"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -147,6 +169,15 @@ function ProductsSection() {
         </button>
       </form>
       {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete Product"
+        message={`Are you sure you want to delete "${deleteTarget?.name}"? This cannot be undone.`}
+        onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}
+        onCancel={() => setDeleteTarget(null)}
+        isPending={deleteMut.isPending}
+      />
     </div>
   );
 }
@@ -162,6 +193,7 @@ function MachinesSection() {
   const [location, setLocation] = useState("");
   const [slotCount, setSlotCount] = useState("");
   const [error, setError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -176,6 +208,15 @@ function MachinesSection() {
       setLocation("");
       setSlotCount("");
       setError("");
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteMachine(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["machines"] });
+      setDeleteTarget(null);
     },
     onError: (err: Error) => setError(err.message),
   });
@@ -198,14 +239,23 @@ function MachinesSection() {
                 <th className="pb-2 font-medium">Name</th>
                 <th className="pb-2 font-medium">Location</th>
                 <th className="pb-2 font-medium">Slots</th>
+                <th className="pb-2 font-medium w-16"></th>
               </tr>
             </thead>
             <tbody>
               {machines.map((m) => (
                 <tr key={m.id} className="border-b last:border-0">
                   <td className="py-2 text-gray-700">{m.name}</td>
-                  <td className="py-2 text-gray-500">{m.location || "—"}</td>
+                  <td className="py-2 text-gray-500">{m.location || "\u2014"}</td>
                   <td className="py-2 text-gray-700">{m.slotCount}</td>
+                  <td className="py-2">
+                    <button
+                      onClick={() => setDeleteTarget({ id: m.id, name: m.name })}
+                      className="text-red-500 hover:text-red-700 text-xs font-medium"
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -256,6 +306,15 @@ function MachinesSection() {
         </button>
       </form>
       {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete Machine"
+        message={`Are you sure you want to delete "${deleteTarget?.name}"? All slots, dispenses, restocks, and alerts for this machine will be permanently deleted.`}
+        onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}
+        onCancel={() => setDeleteTarget(null)}
+        isPending={deleteMut.isPending}
+      />
     </div>
   );
 }

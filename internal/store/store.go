@@ -14,11 +14,13 @@ type Store interface {
 	GetProduct(ctx context.Context, id string) (*domain.Product, error)
 	GetProductByUPC(ctx context.Context, upc string) (*domain.Product, error)
 	ListProducts(ctx context.Context) ([]domain.Product, error)
+	DeleteProduct(ctx context.Context, id string) error
 
 	// Machines
 	CreateMachine(ctx context.Context, m *domain.Machine) error
 	GetMachine(ctx context.Context, id string) (*domain.Machine, error)
 	ListMachines(ctx context.Context) ([]domain.Machine, error)
+	DeleteMachine(ctx context.Context, id string) error
 
 	// Slots
 	SetSlots(ctx context.Context, machineID string, slots []domain.Slot) error

@@ -100,6 +100,17 @@ func (d *DynamoStore) ListProducts(ctx context.Context) ([]domain.Product, error
 	return products, nil
 }
 
+func (d *DynamoStore) DeleteProduct(ctx context.Context, id string) error {
+	_, err := d.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+		TableName: &d.tableName,
+		Key: map[string]types.AttributeValue{
+			"PK": s(productPK(id)),
+			"SK": s(productSK(id)),
+		},
+	})
+	return err
+}
+
 // --- Machines ---
 
 func (d *DynamoStore) CreateMachine(ctx context.Context, m *domain.Machine) error {
@@ -146,6 +157,62 @@ func (d *DynamoStore) ListMachines(ctx context.Context) ([]domain.Machine, error
 		machines = append(machines, unmarshalMachine(item))
 	}
 	return machines, nil
+}
+
+func (d *DynamoStore) DeleteMachine(ctx context.Context, id string) error {
+	// Query all items under MACHINE#{id} PK and delete them in batches
+	pk := machinePK(id)
+	var lastKey map[string]types.AttributeValue
+	for {
+		input := &dynamodb.QueryInput{
+			TableName:              &d.tableName,
+			KeyConditionExpression: aws.String("PK = :pk"),
+			ExpressionAttributeValues: map[string]types.AttributeValue{
+				":pk": s(pk),
+			},
+			ProjectionExpression: aws.String("PK, SK"),
+		}
+		if lastKey != nil {
+			input.ExclusiveStartKey = lastKey
+		}
+		out, err := d.client.Query(ctx, input)
+		if err != nil {
+			return err
+		}
+
+		// Batch delete in groups of 25
+		for i := 0; i < len(out.Items); i += 25 {
+			end := i + 25
+			if end > len(out.Items) {
+				end = len(out.Items)
+			}
+			var requests []types.WriteRequest
+			for _, item := range out.Items[i:end] {
+				requests = append(requests, types.WriteRequest{
+					DeleteRequest: &types.DeleteRequest{
+						Key: map[string]types.AttributeValue{
+							"PK": item["PK"],
+							"SK": item["SK"],
+						},
+					},
+				})
+			}
+			_, err := d.client.BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
+				RequestItems: map[string][]types.WriteRequest{
+					d.tableName: requests,
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		lastKey = out.LastEvaluatedKey
+		if lastKey == nil {
+			break
+		}
+	}
+	return nil
 }
 
 // --- Slots ---
