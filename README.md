@@ -24,47 +24,17 @@ A soda machine tracking system that monitors dispenses via GPIO-connected contac
 
 Each contact switch connects a GPIO signal pin to a ground pin. The Pi's internal pull-up resistor holds the pin HIGH when the switch is open. Closing the switch pulls it LOW; the piagent registers a dispense on the release (LOW → HIGH transition).
 
-### Pin Map
+### Pin Assignments
 
-```
-                    Raspberry Pi GPIO Header
-                    ┌─────────────────────┐
-              3.3V  │  1             2     │  5V
-              SDA   │  3             4     │  5V
-              SCL   │  5          ┌──6──┐  │  GND ◄── Diet Coke GND
-  Mt Dew  ►  BCM4  │  7     ┌──8──┤  sw │  │  BCM14 ◄── Diet Coke
-  Mt Dew  ►  GND   │  9──┐  │     └─────┘  │
-  GND ──────────┘  │     │  │              │
-                    │ 10  │  │          11  │
- Coca-Cola► BCM18  │ 12  │  │          13  │
- Coca-Cola► GND    │ 14──┘  │          15  │
-                    │ 16     │          17  │
-                    │ 18     │          19  │
-                    │ 20     │          21  │
-                    │ 22     │              │
-  DMD #1  ► BCM11  │ 23     │          24  │
-  DMD #1  ► GND    │ 25─────┘          26  │
-                    │ 27               28  │
-                    │ 29               30  │
-                    │ 31               32  │
-                    │ 33               34  │
-                    │ 35               36  │
-  DMD #2  ► BCM26  │ 37               38  │
-  DMD #2  ► GND    │ 39               40  │
-                    └─────────────────────┘
-```
+| Slot | Product              | Physical Signal | Physical GND | BCM Pin |
+|------|----------------------|-----------------|--------------|---------|
+| 1    | Diet Coke            | 8               | 6            | 14      |
+| 2    | Coca-Cola            | 12              | 14           | 18      |
+| 3    | Mountain Dew         | 7               | 9            | 4       |
+| 4    | Diet Mountain Dew #1 | 23              | 25           | 11      |
+| 5    | Diet Mountain Dew #2 | 37              | 39           | 26      |
 
-### Slot Assignments
-
-| Slot | Product              | BCM Pin | Physical Pins (signal + GND) |
-|------|----------------------|---------|------------------------------|
-| 1    | Diet Coke            | 14      | 8 + 6                        |
-| 2    | Coca-Cola            | 18      | 12 + 14                      |
-| 3    | Mountain Dew         | 4       | 7 + 9                        |
-| 4    | Diet Mountain Dew #1 | 11      | 23 + 25                      |
-| 5    | Diet Mountain Dew #2 | 26      | 37 + 39                      |
-
-Each switch is normally-open, wired between its signal pin and a ground pin. No external resistors needed — the Pi's internal pull-ups are enabled by the piagent via periph.io.
+Each switch is normally-open, wired between its signal pin and an adjacent ground pin. No external resistors needed — the Pi's internal pull-ups are enabled by the piagent via periph.io.
 
 ## Quick Start
 
