@@ -28,11 +28,11 @@ Each contact switch connects a GPIO signal pin to a ground pin. The Pi's interna
 
 | Slot | Product              | Physical Signal | Physical GND | BCM Pin |
 |------|----------------------|-----------------|--------------|---------|
-| 1    | Diet Coke            | 8               | 6            | 14      |
-| 2    | Coca-Cola            | 12              | 14           | 18      |
-| 3    | Mountain Dew         | 7               | 9            | 4       |
-| 4    | Diet Mountain Dew #1 | 23              | 25           | 11      |
-| 5    | Diet Mountain Dew #2 | 37              | 39           | 26      |
+| 1    | Diet Coke            | 13              | 14           | 27      |
+| 2    | Coca-Cola            | 29              | 30           | 5       |
+| 3    | Mountain Dew         | 33              | 34           | 13      |
+| 4    | Diet Mountain Dew #1 | 37              | 39           | 26      |
+| 5    | Diet Mountain Dew #2 | 11              | 9            | 17      |
 
 Each switch is normally-open, wired between its signal pin and an adjacent ground pin. No external resistors needed — the Pi's internal pull-ups are enabled by the piagent via periph.io.
 

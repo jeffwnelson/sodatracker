@@ -5,13 +5,13 @@ pollMs: 100
 retryMs: 30000
 dbPath: piagent-cache.db
 pins:
-  - pin: 14
-    slot: 1   # Physical 8+6  — Diet Coke
-  - pin: 18
-    slot: 2   # Physical 12+14 — Coca-Cola
-  - pin: 4
-    slot: 3   # Physical 7+9  — Mountain Dew
-  - pin: 11
-    slot: 4   # Physical 23+25 — Diet Mountain Dew #1
+  - pin: 27
+    slot: 1   # Physical 13+14 — Diet Coke
+  - pin: 5
+    slot: 2   # Physical 29+30 — Coca-Cola
+  - pin: 13
+    slot: 3   # Physical 33+34 — Mountain Dew
   - pin: 26
-    slot: 5   # Physical 37+39 — Diet Mountain Dew #2
+    slot: 4   # Physical 37+39 — Diet Mountain Dew #1
+  - pin: 17
+    slot: 5   # Physical 11+9  — Diet Mountain Dew #2
