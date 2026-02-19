@@ -426,6 +426,15 @@ func (s *Service) GetDispenseStats(ctx context.Context, machineID string, since 
 		productMap[p.ID] = p
 	}
 
+	// Build slot→product fallback for orphaned product IDs (e.g. products recreated with new UUIDs)
+	slots, _ := s.store.GetSlots(ctx, machineID)
+	slotProductMap := make(map[int]domain.Product)
+	for _, sl := range slots {
+		if p, ok := productMap[sl.ProductID]; ok {
+			slotProductMap[sl.Position] = p
+		}
+	}
+
 	stats := &DispenseStats{
 		TimeSeries:  []TimeSeriesPoint{},
 		TopProducts: []ProductRanking{},
@@ -438,20 +447,30 @@ func (s *Service) GetDispenseStats(ctx context.Context, machineID string, since 
 		stats.TotalCount++
 
 		p := productMap[d.ProductID]
+		// Fallback: if product was deleted/recreated, use the slot's current product
+		if p.Name == "" {
+			if sp, ok := slotProductMap[d.SlotPosition]; ok {
+				p = sp
+			}
+		}
 		stats.TotalCost += p.CostPerCan
 
 		// Hourly bucketing
 		hourKey := d.Timestamp.UTC().Truncate(time.Hour).Format(time.RFC3339)
 		hourCounts[hourKey]++
 
-		// Product ranking
-		pr, ok := productCounts[d.ProductID]
+		// Product ranking — group by resolved product name to merge old+new IDs
+		groupKey := d.ProductID
+		if p.ID != "" && p.ID != d.ProductID {
+			groupKey = p.ID // merge under the current product ID
+		}
+		pr, ok := productCounts[groupKey]
 		if !ok {
 			pr = &ProductRanking{
-				ProductID:   d.ProductID,
+				ProductID:   groupKey,
 				ProductName: p.Name,
 			}
-			productCounts[d.ProductID] = pr
+			productCounts[groupKey] = pr
 		}
 		pr.Count++
 		pr.TotalCost += p.CostPerCan
@@ -487,14 +506,29 @@ func (s *Service) GetMachineCost(ctx context.Context, machineID string, since ti
 	if err != nil {
 		return 0, err
 	}
-	productMap := make(map[string]float64)
+	productCostMap := make(map[string]float64)
+	productMap := make(map[string]domain.Product)
 	for _, p := range products {
-		productMap[p.ID] = p.CostPerCan
+		productCostMap[p.ID] = p.CostPerCan
+		productMap[p.ID] = p
+	}
+
+	// Slot→cost fallback for orphaned product IDs
+	slots, _ := s.store.GetSlots(ctx, machineID)
+	slotCostMap := make(map[int]float64)
+	for _, sl := range slots {
+		if p, ok := productMap[sl.ProductID]; ok {
+			slotCostMap[sl.Position] = p.CostPerCan
+		}
 	}
 
 	var total float64
 	for _, d := range dispenses {
-		total += productMap[d.ProductID]
+		if cost, ok := productCostMap[d.ProductID]; ok {
+			total += cost
+		} else if cost, ok := slotCostMap[d.SlotPosition]; ok {
+			total += cost
+		}
 	}
 	return total, nil
 }

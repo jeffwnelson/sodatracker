@@ -9,6 +9,7 @@ import {
   deleteMachine,
   setSlots,
   getMachineStatus,
+  resetAllData,
 } from "../api/client";
 import type { Product, Machine } from "../api/types";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -27,6 +28,7 @@ export function SetupPage() {
       <ProductsSection />
       <MachinesSection />
       <SlotConfigSection />
+      <DangerZoneSection />
     </div>
   );
 }
@@ -671,6 +673,51 @@ function SlotConfigSection() {
           )}
         </>
       )}
+    </Card>
+  );
+}
+
+/* ── Danger Zone ─────────────────────────────────────────── */
+
+function DangerZoneSection() {
+  const queryClient = useQueryClient();
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const resetMut = useMutation({
+    mutationFn: () => resetAllData(),
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      setShowConfirm(false);
+    },
+  });
+
+  return (
+    <Card>
+      <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-4">
+        Danger Zone
+      </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-text-primary">
+            Reset All Data
+          </p>
+          <p className="text-xs text-text-tertiary mt-0.5">
+            Permanently delete all machines, products, dispenses, restocks, and
+            alerts. You will need to log in again.
+          </p>
+        </div>
+        <Button variant="danger" onClick={() => setShowConfirm(true)}>
+          Reset Data
+        </Button>
+      </div>
+      <ConfirmDialog
+        open={showConfirm}
+        title="Reset All Data"
+        message="This will permanently delete ALL data including machines, products, dispenses, restocks, alerts, and user accounts. This action cannot be undone. Are you sure?"
+        onConfirm={() => resetMut.mutate()}
+        onCancel={() => setShowConfirm(false)}
+        isPending={resetMut.isPending}
+      />
     </Card>
   );
 }

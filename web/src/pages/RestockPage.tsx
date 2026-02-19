@@ -78,6 +78,22 @@ export function RestockPage() {
 
       <form onSubmit={handleSubmit}>
         <Card>
+          <div className="flex justify-end mb-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                const all: Record<number, string> = {};
+                for (const ss of status.slots) {
+                  all[ss.slot.position] = String(ss.slot.capacity);
+                }
+                setQuantities(all);
+              }}
+              className="!py-1 !px-3 !text-xs"
+            >
+              Max All
+            </Button>
+          </div>
           <div className="divide-y divide-border-primary">
             {status.slots.map((ss) => (
               <div
@@ -107,6 +123,19 @@ export function RestockPage() {
                   }
                   className="w-20 rounded-xl border border-border-primary bg-surface-primary px-2 py-2 text-sm text-center text-text-primary transition-all duration-150 ease-out-custom focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
                 />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    setQuantities((prev) => ({
+                      ...prev,
+                      [ss.slot.position]: String(ss.slot.capacity),
+                    }))
+                  }
+                  className="!py-1 !px-3 !text-xs"
+                >
+                  Max
+                </Button>
               </div>
             ))}
           </div>

@@ -449,6 +449,55 @@ func (d *DynamoStore) UpdateUserTheme(ctx context.Context, userID string, theme 
 	return err
 }
 
+// --- Admin ---
+
+func (d *DynamoStore) ResetAllData(ctx context.Context) error {
+	var lastKey map[string]types.AttributeValue
+	for {
+		input := &dynamodb.ScanInput{
+			TableName:            &d.tableName,
+			ProjectionExpression: aws.String("PK, SK"),
+		}
+		if lastKey != nil {
+			input.ExclusiveStartKey = lastKey
+		}
+		out, err := d.client.Scan(ctx, input)
+		if err != nil {
+			return err
+		}
+		for i := 0; i < len(out.Items); i += 25 {
+			end := i + 25
+			if end > len(out.Items) {
+				end = len(out.Items)
+			}
+			var requests []types.WriteRequest
+			for _, item := range out.Items[i:end] {
+				requests = append(requests, types.WriteRequest{
+					DeleteRequest: &types.DeleteRequest{
+						Key: map[string]types.AttributeValue{
+							"PK": item["PK"],
+							"SK": item["SK"],
+						},
+					},
+				})
+			}
+			_, err := d.client.BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
+				RequestItems: map[string][]types.WriteRequest{
+					d.tableName: requests,
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+		lastKey = out.LastEvaluatedKey
+		if lastKey == nil {
+			break
+		}
+	}
+	return nil
+}
+
 // --- Alert Configs ---
 
 func (d *DynamoStore) CreateAlertConfig(ctx context.Context, ac *domain.AlertConfig) error {

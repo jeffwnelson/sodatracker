@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -22,6 +22,7 @@ import { EmptyState } from "../components/EmptyState";
 import type { ProductRanking, Machine } from "../api/types";
 
 export function AdminDashboard() {
+  const navigate = useNavigate();
   const { data: machines, isLoading: machinesLoading } = useQuery({
     queryKey: ["machines"],
     queryFn: listMachines,
@@ -84,12 +85,9 @@ export function AdminDashboard() {
     {
       header: "Name",
       accessor: (row) => (
-        <Link
-          to={`/admin/machines/${row.id}`}
-          className="font-medium text-text-primary hover:text-accent transition-colors duration-150"
-        >
+        <span className="font-medium text-text-primary">
           {row.name}
-        </Link>
+        </span>
       ),
     },
     {
@@ -220,6 +218,7 @@ export function AdminDashboard() {
           data={machines}
           keyFn={(m) => m.id}
           emptyMessage="No machines configured."
+          onRowClick={(m) => navigate(`/admin/machines/${m.id}`)}
         />
       </Card>
     </div>

@@ -53,6 +53,9 @@ type Store interface {
 	ClearAlertEvents(ctx context.Context, machineID string, slotPosition int) error
 	GetActiveAlert(ctx context.Context, machineID string, slotPosition int, alertType string) (*domain.AlertEvent, error)
 
+	// Admin
+	ResetAllData(ctx context.Context) error
+
 	// Lifecycle
 	Close() error
 }

@@ -257,6 +257,11 @@ export function listAlertEvents(
   return fetchJSONAuth(`/machines/${machineId}/alert-events?${params}`);
 }
 
+// Admin
+export function resetAllData(): Promise<{ status: string }> {
+  return deleteJSONAuth("/admin/reset");
+}
+
 // User Preferences
 export function updateTheme(
   theme: "light" | "dark" | "system"

@@ -769,6 +769,26 @@ func (h *handlers) exportDispenses(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// --- Admin Data Management ---
+
+// resetAllData godoc
+// @Summary      Reset all data
+// @Description  Deletes all data from the database and re-seeds the admin user
+// @Tags         Admin
+// @Produce      json
+// @Success      200  {object}  object{status=string}
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/reset [delete]
+func (h *handlers) resetAllData(w http.ResponseWriter, r *http.Request) {
+	if err := h.store.ResetAllData(r.Context()); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
 // --- User Preferences ---
 
 // updateUserTheme godoc

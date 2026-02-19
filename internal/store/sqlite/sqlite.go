@@ -562,6 +562,20 @@ func (s *SQLiteStore) GetActiveAlert(ctx context.Context, machineID string, slot
 	return &ae, nil
 }
 
+// --- Admin ---
+
+func (s *SQLiteStore) ResetAllData(ctx context.Context) error {
+	tables := []string{
+		"alert_events", "alert_configs", "restocks", "dispenses", "slots", "machines", "products", "users",
+	}
+	for _, table := range tables {
+		if _, err := s.db.ExecContext(ctx, "DELETE FROM "+table); err != nil {
+			return fmt.Errorf("clear %s: %w", table, err)
+		}
+	}
+	return nil
+}
+
 type scanner interface {
 	Scan(dest ...any) error
 }
