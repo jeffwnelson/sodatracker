@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { listMachines, getMachineStatus } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import type { MachineStatus } from "../api/types";
 import { StockGrid } from "../components/StockGrid";
 import { Card } from "../components/Card";
@@ -45,6 +47,7 @@ function MachineCard({ machineId }: { machineId: string }) {
 }
 
 export function CustomerDashboard() {
+  const { isAuthenticated } = useAuth();
   const {
     data: machines,
     isLoading,
@@ -67,6 +70,12 @@ export function CustomerDashboard() {
               Live inventory status
             </p>
           </div>
+          <Link
+            to={isAuthenticated ? "/admin" : "/admin/login"}
+            className="inline-flex items-center rounded-xl border border-border-primary bg-surface-primary px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-150 ease-out-custom hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          >
+            {isAuthenticated ? "Admin" : "Log in"}
+          </Link>
         </div>
       </header>
 
