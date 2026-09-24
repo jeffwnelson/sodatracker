@@ -147,5 +147,5 @@ make docker-push TAG=test PLATFORMS=linux/arm64
 - **Backend:** Go, chi router, SQLite (pure Go via modernc.org/sqlite)
 - **Frontend:** React 19, TypeScript, Vite, TanStack Query, Recharts, Tailwind CSS v4
 - **Pi Agent:** Go, periph.io (GPIO), local SQLite cache for offline resilience
-- **Deployment:** Docker (self-hosted), also supports AWS Lambda + DynamoDB
+- **Deployment:** Docker, self-hosted on a Raspberry Pi; image published to GHCR by CI
 - **Auth:** JWT (admin dashboard), API key (Pi agent)

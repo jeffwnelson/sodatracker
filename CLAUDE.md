@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Goal
 
-Rebuild the existing soda machine tracking prototype (Node.js/AngularJS/MongoDB in `consumables/`) as a modern, production-ready system called **SodaTracker** (in `sodaTracker/`). The new system must support dual deployment: self-hosted (Docker Compose for demos) and AWS serverless (Lambda + DynamoDB + SNS).
+Rebuild the existing soda machine tracking prototype (Node.js/AngularJS/MongoDB in `consumables/`) as a modern, production-ready system called **SodaTracker** (in `sodaTracker/`).
+
+**Deployment is self-hosted only.** The system runs as a single Docker container on a
+Raspberry Pi. AWS is explicitly out of scope — the Lambda/DynamoDB/SNS implementation
+that existed through Phase 4 was removed on 2026-09-24 at the owner's direction,
+having never been deployed. Do not reintroduce cloud dependencies.
 
 ## Legacy System (reference only)
 
@@ -22,12 +27,10 @@ Note: Some legacy debris (`sodaTracker.js`, `npm-debug.log`, `quick2wire-gpio-ad
 ## SodaTracker Tech Stack
 
 - **Backend:** Go with `go-chi/chi` router + `go-chi/cors` middleware
-- **Dual deployment:** Same chi router runs as standalone HTTP server (self-hosted) OR as Lambda via `aws-lambda-go-api-proxy/chi` (Phase 4)
-- **Database:** DynamoDB (AWS, Phase 4) / SQLite via `modernc.org/sqlite` (self-hosted, pure Go, no CGO) — behind a `Store` interface
-- **Events:** SNS (AWS) / in-process channel-based pub/sub (self-hosted) — behind an `EventBus` interface (Phase 3)
+- **Database:** SQLite via `modernc.org/sqlite` (pure Go, no CGO) — behind a `Store` interface
+- **Events:** In-process channel-based pub/sub — behind an `EventBus` interface
 - **Frontend:** React 19 + TypeScript + Vite + TanStack Query + Recharts + Tailwind CSS v4 (Vite plugin, no `tailwind.config.js`) + react-router-dom v7
 - **Pi agent:** Go binary cross-compiled for ARM; real `periph.io` GPIO behind the `rpi` build tag (mock otherwise), SQLite local cache. Ships inside the same container image as the server.
-- **IaC:** OpenTofu (Terraform-compatible) for AWS infrastructure (DynamoDB, Lambda, API Gateway, S3, CloudFront, SNS)
 - **Auth:** JWT (HS256, 24h expiry) for admin dashboard, API key for Pi agent, `APIKeyOrJWT` middleware on shared admin routes
 - **IDs:** Server-generated UUIDs via `google/uuid`
 
@@ -37,7 +40,6 @@ Note: Some legacy debris (`sodaTracker.js`, `npm-debug.log`, `quick2wire-gpio-ad
 sodaTracker/
 ├── cmd/
 │   ├── server/main.go        # Self-hosted HTTP server
-│   ├── lambda/main.go        # AWS Lambda entry point (chi adapter v2)
 │   ├── piagent/main.go        # Raspberry Pi GPIO agent
 │   ├── slackbot/              # Slack bot (Phase 3, empty stub)
 │   └── discordbot/            # Discord bot (Phase 3, empty stub)
@@ -45,10 +47,10 @@ sodaTracker/
 │   ├── api/                   # chi router, middleware, handlers
 │   │   └── docs/              # Generated Swagger/OpenAPI docs (swaggo/swag)
 │   ├── domain/                # Entity structs (Product, Machine, Slot, Dispense, Restock, User)
-│   ├── store/                 # Store interface + sqlite/ and dynamo/ implementations
-│   ├── events/                # EventBus interface + local/ and sns/ implementations
+│   ├── store/                 # Store interface + sqlite/ implementation
+│   ├── events/                # EventBus interface + local/ implementation
 │   ├── service/               # Business logic (dispense, restock, stock calculation, login, stats)
-│   ├── seed/                  # Admin user seeding (shared between server and Lambda)
+│   ├── seed/                  # Admin user seeding
 │   ├── notify/                # Slack and Discord notification clients (Phase 3)
 │   ├── auth/                  # API key middleware + JWT middleware (auth.go, jwt.go)
 │   ├── config/                # Env-based config loading
@@ -63,7 +65,6 @@ sodaTracker/
 │       ├── components/        # StockGrid, AdminLayout, ProtectedRoute
 │       ├── context/           # AuthContext (JWT token + user state, localStorage persistence)
 │       └── api/               # API client + TypeScript types
-├── infra/                     # OpenTofu infrastructure (DynamoDB, Lambda, API GW, S3, CloudFront, SNS)
 ├── .github/workflows/         # CI: test + multi-arch image build/push to GHCR
 ├── docker-compose.yml         # Self-hosted: single container, SQLite volume, GPIO devices
 ├── docker-entrypoint.sh       # Mode dispatch: all | server | piagent
@@ -115,14 +116,6 @@ Note: `make web-build` runs TypeScript type checking first — TS errors will fa
 ```bash
 make docker-up      # docker compose up --build -d
 make docker-down    # docker compose down
-```
-
-### Lambda (AWS)
-```bash
-make build-lambda        # Cross-compile for Lambda (linux/arm64), creates bin/lambda.zip
-make tf-plan             # OpenTofu plan (cd infra && tofu plan)
-make tf-apply            # OpenTofu apply (cd infra && tofu apply)
-make deploy-frontend     # Build frontend, sync to S3, invalidate CloudFront
 ```
 
 ### Pi Agent
@@ -206,9 +199,7 @@ Pin mappings are YAML-only. Deployment-specific fields have env overrides
 - **Admin password:** `dev-admin-password` (env `ADMIN_PASSWORD`) — bcrypt-hashed on first startup to seed the `admin` user
 - **Static file dir:** empty in dev, `/app/static` in Docker (env `STATIC_DIR`) — serves SPA with index.html fallback
 - **Frontend dev server:** port 4000 with proxy to API at :3000
-- **DynamoDB table name:** (env `TABLE_NAME`) — only set for Lambda deployment
-- **SNS topic ARN:** (env `SNS_TOPIC_ARN`) — only set for Lambda deployment, enables SNS event fan-out
-- **Log format:** `text` for local dev, `json` for Docker/Lambda (env `LOG_FORMAT`, default `"text"`)
+- **Log format:** `text` for local dev, `json` for Docker (env `LOG_FORMAT`, default `"text"`)
 - **Pi agent config:** YAML at `/config/piagent.yaml` (env `PIAGENT_CONFIG`) — see `piagent.yaml.example`. Pin mappings are YAML-only; other fields accept `PIAGENT_*` env overrides
 - **Pi agent cache DB:** `piagent-cache.db` (default, configurable in YAML)
 
@@ -254,7 +245,7 @@ Pin mappings are YAML-only. Deployment-specific fields have env overrides
 ## Architecture Details
 
 - **JWT auth** uses HS256 signing with 24h token expiry. Claims include `userId`, `username`, `role`. Tokens are generated by `auth.GenerateToken()`, validated by `JWTMiddleware`. The `APIKeyOrJWTMiddleware` tries API key first (X-API-Key header), then JWT from Authorization Bearer header (`internal/auth/jwt.go`).
-- **Admin user seeding** — On startup, if no "admin" user exists, one is created with bcrypt-hashed password from `ADMIN_PASSWORD` env var (`cmd/server/main.go`).
+- **Admin user seeding** — On startup, if no "admin" user exists, one is created with bcrypt-hashed password from `ADMIN_PASSWORD` env var (`internal/seed/`, called by `cmd/server/main.go`).
 - **API key auth** checks `X-API-Key` header first, falls back to `Authorization: Bearer` prefix stripping (`internal/auth/auth.go`)
 - **SetSlots** (`POST /machines/:id/slots`) is a **destructive replace** — deletes all existing slots for the machine, then inserts the new set in a transaction. Not a merge/patch.
 - **CreateProduct and CreateMachine** are upserts (`ON CONFLICT DO UPDATE`). CreateDispense is a plain INSERT.
@@ -267,24 +258,20 @@ Pin mappings are YAML-only. Deployment-specific fields have env overrides
 - **Dockerfile** builds with `CGO_ENABLED=0` — this is why `modernc.org/sqlite` (pure Go) is used instead of `mattn/go-sqlite3`.
 - **In-memory aggregation** — `GetDispenseStats` fetches dispenses via `ListDispenses` and aggregates in Go (hourly bucketing, product ranking by count). No SQL GROUP BY queries — acceptable for current scale.
 - **Service owns JWT signing** — `service.Login()` calls `auth.GenerateToken()` internally. JWT secret is passed to the Service constructor.
-- **EventBus** — `events.EventBus` interface (`internal/events/events.go`) with `Publish`, `Subscribe`, `Close`. Local implementation (`internal/events/local/`) uses synchronous in-process dispatch with `sync.RWMutex`. Event data uses `map[string]any` to stay generic for future SNS/webhook delivery. Bus is nil-safe — service skips publish if bus is nil.
+- **EventBus** — `events.EventBus` interface (`internal/events/events.go`) with `Publish`, `Subscribe`, `Close`. Local implementation (`internal/events/local/`) uses synchronous in-process dispatch with `sync.RWMutex`. Event data uses `map[string]any` to stay generic for future webhook delivery. Bus is nil-safe — service skips publish if bus is nil.
 - **Alert evaluation flow** — `RegisterDispense` → publishes `EventDispense` → subscriber calls `EvaluateStockAlert` → computes stock → checks alert configs (slot-specific > machine-wide `slotPosition=0` > slot's own `lowThreshold`) → creates `AlertEvent` if threshold breached and no active alert exists (deduplication via `GetActiveAlert`). `CreateRestock` clears active alerts for restocked slots.
 - **AlertConfig `slotPosition=0`** means machine-wide default. `LowThreshold=-1` means use the slot's own threshold. Stored with `UNIQUE(machine_id, slot_position)` constraint (upsert on create).
 - **Predictive stock-out** — `GetStockPredictions` computes `dispensesPerDay = count / lookbackDays` (default 14 days) per slot, then `estimatedDaysLeft = currentStock / dispensesPerDay`. Returns -1 if no dispense data.
 - **Frontend token storage** — localStorage with key `soda_token`. AuthContext initializes from localStorage so page refresh preserves login state.
 - **Frontend refresh intervals:** machine list refreshes every 30s, individual machine status cards every 10s, admin stats staleTime is 30s, TanStack Query default staleTime is 5s.
 - **TypeScript strict mode** enabled with `verbatimModuleSyntax` — all type imports must use `import type`.
-- **Structured logging** — All Go code uses `log/slog` (no `log` package). `internal/logging/Setup()` configures JSON or text handler based on `LOG_FORMAT` env var (default `"text"`, Docker/Lambda set `"json"`). Custom request logging middleware replaces chi's `middleware.Logger`, logs method/path/status/duration/requestId via slog. `middleware.RequestID` generates unique request IDs for tracing.
+- **Structured logging** — All Go code uses `log/slog` (no `log` package). `internal/logging/Setup()` configures JSON or text handler based on `LOG_FORMAT` env var (default `"text"`, Docker sets `"json"`). Custom request logging middleware replaces chi's `middleware.Logger`, logs method/path/status/duration/requestId via slog. `middleware.RequestID` generates unique request IDs for tracing.
 - **Dispense report export** — `GET /api/v1/reports/dispenses?machineId=X&format=csv|pdf` exports dispense history. CSV uses stdlib `encoding/csv`. PDF uses `go-pdf/fpdf` (pure Go, no CGO). Both enrich dispenses with product name/UPC/cost from a product lookup map. PDF includes title, date range, table, and summary footer.
-- **DynamoDB single-table design** — Table `SodaTracker-{env}`, PK/SK (both S), GSI1 (GSI1PK/GSI1SK, projection ALL). Entity types: Product, Machine, Slot, Dispense, Restock, User, AlertConfig, AlertEvent. Key patterns use `#`-delimited composite keys with RFC3339Nano timestamps for lexicographic sort. AlertEvent GSI1PK switches from `ACTIVEALERT#...` to `CLEARED#...` when cleared (enables efficient active alert queries).
-- **Lambda deployment** — Single Lambda (ARM64/Graviton, 256MB, provided.al2023) serving all routes via `aws-lambda-go-api-proxy/chi` V2 adapter. HTTP API v2 (API Gateway) routes `ANY /api/{proxy+}` to Lambda. CloudFront serves S3 frontend with `/api/*` behavior forwarding to API Gateway. Admin seeding (`internal/seed/`) runs on cold start.
-- **SNS publisher** — Optional SNS event fan-out registered as a subscriber on the local EventBus. Publishes all event types with `eventType` message attribute for filtering. Only active when `SNS_TOPIC_ARN` env var is set.
 - **Swagger/OpenAPI** — Generated by `swaggo/swag` v2 from Go comment annotations. `internal/api/router.go` has the general API info block (title, version, security definitions). Each handler in `handlers.go` has `@Summary`, `@Description`, `@Tags`, `@Param`, `@Success`/`@Failure`, `@Security`, and `@Router` annotations. `internal/api/dto.go` defines named response types (`ErrorResponse`, `HealthResponse`, `LoginRequest`, `LoginResponse`, `DeleteResponse`, `CostResponse`) for swag reference. Domain and service types have `example` struct tags. Generated docs (`internal/api/docs/`) are committed. Swagger UI served at `/swagger/*` via `swaggo/http-swagger/v2`. Regenerate with `make swagger`.
-- **OpenTofu infrastructure** — `infra/` directory with S3 backend state, DynamoDB table, Lambda function, HTTP API v2, SNS topic, S3 + CloudFront frontend. AWS account 136532201934, region us-west-2, profile "personal". Sensitive vars: api_key, jwt_secret, admin_password.
 
 ## Test Structure
 
-Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **40 tests total** across 6 packages. DynamoDB integration tests (6 tests, `//go:build integration` tag) require DynamoDB Local.
+Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **40 tests total** across 6 packages, all run by `go test ./...` with no build tags or external services.
 
 - `internal/events/local/local_test.go` — EventBus tests (5): `TestPublishSubscribe`, `TestMultipleSubscribers`, `TestUnsubscribe`, `TestPublishNoSubscribers`, `TestDifferentEventTypes`
 - `internal/store/sqlite/sqlite_test.go` — Store CRUD tests (6): `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestUserCRUD`, `TestAlertConfigCRUD`, `TestAlertEventCRUD`, `TestDispenseAndRestock`
@@ -292,7 +279,6 @@ Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed.
 - `internal/service/service_test.go` — Service logic tests (6): `TestLogin` (success + bad password + non-existent user), `TestGetDispenseStats`, `TestGetMachineCost`, `TestEvaluateStockAlert`, `TestCreateRestockClearsAlerts`, `TestGetStockPredictions`
 - `internal/api/handlers_test.go` — API integration tests (16) using `httptest.NewRecorder()` against the real chi router with EventBus wired: `TestHealth`, `TestCreateAndListMachines`, `TestDispenseRequiresAPIKey`, `TestLoginSuccess`, `TestLoginBadPassword`, `TestAdminStatsRequiresAuth`, `TestFullWorkflow`, `TestFullWorkflowWithJWT`, `TestAlertConfigCRUD`, `TestPredictionsEndpoint`, `TestFullWorkflowWithAlerts`, `TestExportDispensesCSV`, `TestExportDispensesPDF`, `TestDeleteProduct`, `TestDeleteMachine`, `TestExportRequiresAuth`
 - `internal/export/export_test.go` — Export unit tests (3): `TestWriteDispensesCSV`, `TestWriteDispensesPDF`, `TestEmptyExport`
-- `internal/store/dynamo/dynamo_test.go` — DynamoDB integration tests (6, `//go:build integration`): `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestDispenseAndRestock`, `TestUserCRUD`, `TestAlertConfigCRUD`, `TestAlertEventCRUD`. Requires DynamoDB Local (`docker run -p 8000:8000 amazon/dynamodb-local`), run with `go test -tags integration ./internal/store/dynamo/...`
 
 ## Key Business Logic
 
@@ -343,16 +329,11 @@ Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed.
 - [ ] Discord bot: `discordgo` persistent WebSocket, same push/pull features
 - [ ] Webhook system: CRUD + HMAC-signed delivery
 
-### Phase 4 — AWS Deployment [COMPLETE]
-- [x] Config updates: `TABLE_NAME`, `SNS_TOPIC_ARN` env vars (`internal/config/`)
-- [x] Admin seeding extracted to shared package (`internal/seed/`) for server + Lambda reuse
-- [x] DynamoDB store implementation: single-table design, PK/SK/GSI1 patterns, all 35 Store methods (`internal/store/dynamo/`)
-- [x] DynamoDB integration tests (6 tests, `//go:build integration` tag)
-- [x] SNS event publisher: forwards events from local bus to SNS topic (`internal/events/sns/`)
-- [x] Lambda entry point: chi V2 adapter, DynamoDB store, local bus + optional SNS fan-out (`cmd/lambda/`)
-- [x] OpenTofu infrastructure: DynamoDB, Lambda (ARM64), HTTP API v2, SNS, S3, CloudFront, IAM (`infra/`)
-- [x] Build targets: `make build-lambda`, `make deploy-frontend`, `make tf-plan`, `make tf-apply`
-- [x] CI/CD via GitHub Actions (test + multi-arch GHCR publish)
+### Phase 4 — AWS Deployment [REMOVED]
+Built in commit `943e9b5`, never deployed, and deleted on 2026-09-24 at the owner's
+direction: DynamoDB store, SNS publisher, Lambda entry point, OpenTofu infrastructure,
+and the AWS SDK dependencies. SodaTracker is self-hosted only. See the Project Goal
+section — do not reintroduce this.
 
 ### Phase 5 — Polish [IN PROGRESS]
 - [x] Structured logging: `log/slog` replaces `log` across all Go code, `LOG_FORMAT` env var (`text`/`json`)
