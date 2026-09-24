@@ -136,14 +136,24 @@ Swagger UI is served at `/swagger/index.html` when the server is running. Docs a
 The self-hosted demo runs on a Raspberry Pi 3 Model B (arm64) as a **single Docker
 container running both the API server and the GPIO pi agent**.
 
-- **SSH:** `ssh pi@<office-ip>` (password: `<redacted>`)
+- **SSH:** `ssh pi@sodatracker` (Tailscale, works from any network) or
+  `ssh pi@<office-ip>` (office ethernet). Password: `<redacted>`
 - **GHCR image:** `ghcr.io/jeffwnelson/sodatracker:latest` (linux/amd64 + linux/arm64)
 - **Container name:** `sodatracker`
 - **Compose dir on Pi:** `/home/pi/sodatracker` (git clone of this repo)
 - **Data volume:** `sodatracker-data` at `/data` (SQLite DB + piagent cache)
-- **Dashboard URL:** `http://<office-ip>:3000`
+- **Dashboard URL:** `http://sodatracker:3000` (Tailscale) or `http://<office-ip>:3000` (office ethernet)
 
-Note: `sodatracker.example.com` no longer resolves — use the IP.
+**Networking.** The Pi joined the owner's tailnet as `sodatracker`
+(`sodatracker`) on 2026-09-24, and `tailscaled` is enabled at boot. Prefer the
+Tailscale address: it works from any network, whereas `<office-ip>` only works
+from the office ethernet segment. `sodatracker.example.com` no longer resolves.
+
+The office guest WiFi (`office-guest-wifi`, the Pi's fallback link) enforces client
+isolation in both directions, so the Pi is unreachable over it by LAN address —
+Tailscale is what makes the Pi usable without the ethernet cable. Tailscale was
+brought up with `--accept-dns=false` to avoid resolver conflicts with the
+corporate network, so there is no MagicDNS name; use the IP.
 
 **CI publishes the image.** `.github/workflows/docker-publish.yml` runs
 `go build`/`go vet`/`go test` plus a `-tags rpi` compile check, then builds and

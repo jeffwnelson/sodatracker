@@ -10,7 +10,7 @@ PIAGENT_ARM_BIN := $(BINARY_DIR)/piagent-arm
 IMAGE ?= ghcr.io/jeffwnelson/sodatracker
 TAG ?= latest
 PLATFORMS ?= linux/arm64
-PI_HOST ?= pi@<office-ip>
+PI_HOST ?= pi@sodatracker
 PI_DIR ?= /home/pi/sodatracker
 
 build: build-server build-piagent
