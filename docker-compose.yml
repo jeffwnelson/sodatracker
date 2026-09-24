@@ -17,6 +17,8 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-dev-admin-password}
       - STATIC_DIR=/app/static
       - LOG_FORMAT=json
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET:-}
       # The agent talks to the server inside this same container.
       - PIAGENT_API_URL=http://127.0.0.1:3000
       - PIAGENT_API_KEY=${API_KEY:-dev-api-key}

@@ -16,9 +16,10 @@ import (
 )
 
 type handlers struct {
-	store     store.Store
-	svc       *service.Service
-	jwtSecret string
+	store              store.Store
+	svc                *service.Service
+	jwtSecret          string
+	slackSigningSecret string
 }
 
 // health godoc

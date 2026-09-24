@@ -13,6 +13,10 @@ type Config struct {
 	StaticDir     string
 	AdminPassword string
 	LogFormat     string
+
+	// Slack integration. Both are optional; each half turns on independently.
+	SlackWebhookURL    string
+	SlackSigningSecret string
 }
 
 func Load() Config {
@@ -24,6 +28,9 @@ func Load() Config {
 		StaticDir:     getEnv("STATIC_DIR", ""),
 		AdminPassword: getEnv("ADMIN_PASSWORD", "dev-admin-password"),
 		LogFormat:     getEnv("LOG_FORMAT", "text"),
+
+		SlackWebhookURL:    getEnv("SLACK_WEBHOOK_URL", ""),
+		SlackSigningSecret: getEnv("SLACK_SIGNING_SECRET", ""),
 	}
 }
 

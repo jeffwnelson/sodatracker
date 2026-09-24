@@ -15,6 +15,7 @@ import (
 	"github.com/jeffwnelson/sodatracker/internal/events"
 	"github.com/jeffwnelson/sodatracker/internal/events/local"
 	"github.com/jeffwnelson/sodatracker/internal/logging"
+	"github.com/jeffwnelson/sodatracker/internal/notify"
 	"github.com/jeffwnelson/sodatracker/internal/seed"
 	"github.com/jeffwnelson/sodatracker/internal/service"
 	"github.com/jeffwnelson/sodatracker/internal/store/sqlite"
@@ -54,7 +55,18 @@ func main() {
 		}
 		return nil
 	})
-	router := api.NewRouter(st, svc, cfg.APIKey, cfg.JWTSecret, cfg.StaticDir)
+	// Wire: stock alerts → Slack. No-op unless SLACK_WEBHOOK_URL is set.
+	notify.RegisterSlack(bus, st, notify.NewSlack(cfg.SlackWebhookURL))
+	if cfg.SlackWebhookURL != "" {
+		slog.Info("Slack notifications enabled")
+	}
+
+	router := api.NewRouter(st, svc, api.RouterConfig{
+		APIKey:             cfg.APIKey,
+		JWTSecret:          cfg.JWTSecret,
+		StaticDir:          cfg.StaticDir,
+		SlackSigningSecret: cfg.SlackSigningSecret,
+	})
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),

@@ -32,7 +32,17 @@ import (
 	_ "github.com/jeffwnelson/sodatracker/internal/api/docs"
 )
 
-func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret string, staticDir string) *chi.Mux {
+// RouterConfig carries the router's settings. It is a struct rather than
+// positional arguments because these are all strings and transposing two of
+// them would compile cleanly while breaking auth.
+type RouterConfig struct {
+	APIKey             string
+	JWTSecret          string
+	StaticDir          string
+	SlackSigningSecret string
+}
+
+func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(structuredLogger)
@@ -46,7 +56,7 @@ func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret st
 		MaxAge:           300,
 	}))
 
-	h := &handlers{store: st, svc: svc, jwtSecret: jwtSecret}
+	h := &handlers{store: st, svc: svc, jwtSecret: cfg.JWTSecret, slackSigningSecret: cfg.SlackSigningSecret}
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", h.health)
@@ -58,15 +68,22 @@ func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret st
 		// Auth
 		r.Post("/auth/login", h.login)
 
+		// Slack slash commands. Registered only when a signing secret is set,
+		// since the handler authenticates by Slack's signature alone — an
+		// unsigned route here would be an unauthenticated read of the machine.
+		if cfg.SlackSigningSecret != "" {
+			r.Post("/integrations/slack/commands", h.slackCommand)
+		}
+
 		// Pi agent (API key only)
 		r.Group(func(r chi.Router) {
-			r.Use(auth.APIKeyMiddleware(apiKey))
+			r.Use(auth.APIKeyMiddleware(cfg.APIKey))
 			r.Post("/dispenses", h.createDispense)
 		})
 
 		// Admin (API key or JWT)
 		r.Group(func(r chi.Router) {
-			r.Use(auth.APIKeyOrJWTMiddleware(apiKey, jwtSecret))
+			r.Use(auth.APIKeyOrJWTMiddleware(cfg.APIKey, cfg.JWTSecret))
 			r.Post("/machines", h.createMachine)
 			r.Post("/machines/{id}/slots", h.setSlots)
 			r.Post("/machines/{id}/restock", h.createRestock)
@@ -88,7 +105,7 @@ func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret st
 
 		// JWT-only admin endpoints
 		r.Group(func(r chi.Router) {
-			r.Use(auth.APIKeyOrJWTMiddleware(apiKey, jwtSecret))
+			r.Use(auth.APIKeyOrJWTMiddleware(cfg.APIKey, cfg.JWTSecret))
 			r.Get("/admin/stats", h.getAdminStats)
 			r.Get("/admin/cost", h.getMachineCost)
 			r.Get("/reports/dispenses", h.exportDispenses)
@@ -96,7 +113,7 @@ func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret st
 
 		// JWT-only user endpoints
 		r.Group(func(r chi.Router) {
-			r.Use(auth.JWTMiddleware(jwtSecret))
+			r.Use(auth.JWTMiddleware(cfg.JWTSecret))
 			r.Delete("/admin/reset", h.resetAllData)
 		})
 	})
@@ -105,12 +122,12 @@ func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret st
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	// Serve frontend static files if configured
-	if staticDir != "" {
-		fileServer := http.FileServer(http.Dir(staticDir))
+	if cfg.StaticDir != "" {
+		fileServer := http.FileServer(http.Dir(cfg.StaticDir))
 		r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 			// Try the file first; fall back to index.html for SPA routing
-			if _, err := http.Dir(staticDir).Open(r.URL.Path); err != nil {
-				http.ServeFile(w, r, staticDir+"/index.html")
+			if _, err := http.Dir(cfg.StaticDir).Open(r.URL.Path); err != nil {
+				http.ServeFile(w, r, cfg.StaticDir+"/index.html")
 				return
 			}
 			fileServer.ServeHTTP(w, r)

@@ -33,7 +33,7 @@ func setup(t *testing.T) http.Handler {
 	t.Cleanup(func() { bus.Close() })
 	svc := service.New(st, testJWTSecret, bus)
 	wireDispenseSubscriber(bus, svc)
-	return NewRouter(st, svc, "test-key", testJWTSecret, "")
+	return NewRouter(st, svc, RouterConfig{APIKey: "test-key", JWTSecret: testJWTSecret})
 }
 
 func setupWithStore(t *testing.T) (http.Handler, *sqlite.SQLiteStore) {
@@ -47,7 +47,7 @@ func setupWithStore(t *testing.T) (http.Handler, *sqlite.SQLiteStore) {
 	t.Cleanup(func() { bus.Close() })
 	svc := service.New(st, testJWTSecret, bus)
 	wireDispenseSubscriber(bus, svc)
-	return NewRouter(st, svc, "test-key", testJWTSecret, ""), st
+	return NewRouter(st, svc, RouterConfig{APIKey: "test-key", JWTSecret: testJWTSecret}), st
 }
 
 func wireDispenseSubscriber(bus *local.LocalBus, svc *service.Service) {
