@@ -23,6 +23,11 @@ RUN npm run build
 
 # --- Final image ---
 FROM alpine:3.21
+# Links the GHCR package to this repo, which is what lets the repo's Actions
+# token push to it.
+LABEL org.opencontainers.image.source="https://github.com/jeffwnelson/sodatracker"
+LABEL org.opencontainers.image.description="SodaTracker API, dashboard, and GPIO pi agent"
+LABEL org.opencontainers.image.licenses="MIT"
 RUN apk add --no-cache ca-certificates tini
 WORKDIR /app
 COPY --from=api-build /out/server /out/piagent ./

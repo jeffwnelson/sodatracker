@@ -33,3 +33,6 @@ services:
 
 volumes:
   sodatracker-data:
+    # Pinned so compose reuses the existing volume instead of creating a
+    # project-prefixed one and orphaning the SQLite database.
+    name: sodatracker-data
