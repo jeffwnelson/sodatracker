@@ -22,3 +22,7 @@ infra/.terraform.lock.hcl
 sodaTracker.js
 npm-debug.log
 quick2wire-gpio-admin/
+
+# Local pi agent config (holds machineId + apiKey); see piagent.yaml.example
+piagent.yaml
+piagent-cache.db
