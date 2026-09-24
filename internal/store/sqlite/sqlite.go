@@ -114,7 +114,7 @@ func (s *SQLiteStore) migrate() error {
 	s.db.Exec(`ALTER TABLE products ADD COLUMN description TEXT DEFAULT ''`)
 
 	// Schema evolution: add theme column to users if missing.
-	s.db.Exec(`ALTER TABLE users ADD COLUMN theme TEXT NOT NULL DEFAULT 'system'`)
+	s.db.Exec(`ALTER TABLE users ADD COLUMN theme TEXT NOT NULL DEFAULT 'light'`)
 
 	// Schema evolution: remove UNIQUE constraint on upc for existing databases.
 	if err := s.migrateProductsDropUPCUnique(); err != nil {
@@ -419,7 +419,7 @@ func (s *SQLiteStore) ListRestocks(ctx context.Context, machineID string, limit 
 func (s *SQLiteStore) CreateUser(ctx context.Context, u *domain.User) error {
 	theme := u.Theme
 	if theme == "" {
-		theme = "system"
+		theme = "light"
 	}
 	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO users (id, username, password_hash, role, theme) VALUES (?, ?, ?, ?, ?)

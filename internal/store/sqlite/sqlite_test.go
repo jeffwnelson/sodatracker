@@ -163,8 +163,8 @@ func TestUserCRUD(t *testing.T) {
 	if got.PasswordHash != "hash123" {
 		t.Errorf("expected hash=hash123, got %s", got.PasswordHash)
 	}
-	if got.Theme != "system" {
-		t.Errorf("expected default theme=system, got %s", got.Theme)
+	if got.Theme != "light" {
+		t.Errorf("expected default theme=light, got %s", got.Theme)
 	}
 
 	// Update theme
