@@ -5,20 +5,23 @@ A soda machine tracking system that monitors dispenses via GPIO-connected contac
 ## Architecture
 
 ```
-┌──────────────────┐       ┌──────────────────────────────────┐
-│  Raspberry Pi    │       │  Docker Container (Pi)           │
-│                  │       │                                  │
-│  piagent binary  │──────▶│  Go API server (:3000)           │
-│  (reads GPIO,    │ HTTP  │  + React dashboard (static)      │
-│   sends events)  │       │  + SQLite database (/data/)      │
-└──────┬───────────┘       └──────────────────────────────────┘
-       │
-  5 contact switches
-  wired to GPIO pins
+                    ┌──────────────────────────────────────────┐
+  Raspberry Pi      │  Docker Container                        │
+                    │                                          │
+  5 contact  ──────▶│  /dev/gpiomem ──▶ piagent ──▶ API server │
+  switches   GPIO   │                    (HTTP on localhost)   │
+  on GPIO pins      │                    + React dashboard     │
+                    │                    + SQLite (/data/)     │
+                    └──────────────────────────────────────────┘
+                                    :3000
 ```
 
-- **piagent** runs natively on the Pi (needs GPIO access), polls pins every 100ms, and POSTs dispense events to the API
-- **SodaTracker API + dashboard** runs in Docker on the same Pi, serving both the REST API and the React frontend on port 3000
+Both processes run in a single container published to GHCR:
+
+- **piagent** polls the GPIO pins every 100ms and POSTs dispense events to the API over localhost. It reads real pins through periph.io, which needs `/dev/gpiomem` mapped into the container.
+- **API server** serves the REST API and the React dashboard on port 3000, backed by SQLite in the `/data` volume.
+
+The entrypoint takes a mode argument: `all` (both processes, the default), `server` (API only, for hosts without GPIO), or `piagent` (agent only, pointed at a remote API via `PIAGENT_API_URL`).
 
 ## GPIO Wiring
 
@@ -38,36 +41,65 @@ Each switch is normally-open, wired between its signal pin and an adjacent groun
 
 ## Quick Start
 
-### Run the API + Dashboard (Docker)
+### On the Raspberry Pi (compose, recommended)
+
+```bash
+cd ~/sodatracker
+git pull
+cp .env.example .env          # first time only, then edit secrets
+cp piagent.yaml.example piagent.yaml   # first time only, then set machineId
+docker compose pull
+docker compose up -d
+```
+
+`docker-compose.yml` already maps `/dev/gpiomem` and `/dev/gpiochip0` into the
+container, so GPIO works without any host-side agent.
+
+Dashboard: `http://<pi-ip>:3000/`
+Admin login: `http://<pi-ip>:3000/admin/login` (user: `admin`, pass: value of `ADMIN_PASSWORD`)
+API docs: `http://<pi-ip>:3000/swagger/index.html`
+
+### Plain `docker run` equivalent
 
 ```bash
 docker run -d \
   --name sodatracker \
   --restart unless-stopped \
   -p 3000:3000 \
+  --device /dev/gpiomem:/dev/gpiomem \
+  --device /dev/gpiochip0:/dev/gpiochip0 \
   -v sodatracker-data:/data \
+  -v /home/pi/piagent.yaml:/config/piagent.yaml:ro \
   -e API_KEY=dev-api-key \
   -e JWT_SECRET=dev-jwt-secret \
   -e ADMIN_PASSWORD=dev-admin-password \
-  ghcr.io/jeffwnelson/sodatracker:latest
+  -e PIAGENT_API_URL=http://127.0.0.1:3000 \
+  -e PIAGENT_API_KEY=dev-api-key \
+  -e PIAGENT_DB_PATH=/data/piagent-cache.db \
+  ghcr.io/jeffwnelson/sodatracker:latest all
 ```
 
-Dashboard: `http://<pi-ip>:3000/`
-Admin login: `http://<pi-ip>:3000/admin/login` (user: `admin`, pass: value of `ADMIN_PASSWORD`)
-API docs: `http://<pi-ip>:3000/swagger/index.html`
+### Without GPIO hardware
 
-### Run the Pi Agent (native)
+Append `server` instead of `all` (or set `SODATRACKER_MODE=server` in `.env`)
+and drop the `--device` flags. The agent is skipped entirely.
 
-```bash
-# Build on the Pi (with real GPIO support)
-cd ~/sodatracker
-GOOS=linux GOARCH=arm64 go build -tags rpi -o piagent ./cmd/piagent
+### Pi agent configuration
 
-# Run (requires root for GPIO access)
-sudo ./piagent -config piagent.yaml
-```
+Pin-to-slot mappings come from the YAML file mounted at `/config/piagent.yaml`
+— see `piagent.yaml.example`. Deployment-specific fields can be overridden with
+environment variables, which is what the compose file does:
 
-See `piagent.yaml.example` for config format.
+| Variable | Overrides |
+|----------|-----------|
+| `PIAGENT_API_URL` | `apiUrl` |
+| `PIAGENT_API_KEY` | `apiKey` |
+| `PIAGENT_MACHINE_ID` | `machineId` |
+| `PIAGENT_DB_PATH` | `dbPath` |
+| `PIAGENT_POLL_MS` | `pollMs` |
+| `PIAGENT_RETRY_MS` | `retryMs` |
+
+Pin mappings are YAML-only; there is no environment override for them.
 
 ## Development
 
@@ -91,19 +123,23 @@ make swagger        # Regenerate Swagger/OpenAPI docs
 
 ### Rebuilding & Deploying the Container
 
-```bash
-# Build for arm64 and push to GHCR
-docker buildx build --platform linux/arm64 -t ghcr.io/jeffwnelson/sodatracker:latest --push .
+Pushing to `main` runs the tests and publishes a multi-arch image
+(`linux/amd64` + `linux/arm64`) to `ghcr.io/jeffwnelson/sodatracker:latest`
+via `.github/workflows/docker-publish.yml`. Each build is also tagged with its
+commit SHA, and git tags matching `v*` publish that version tag.
 
-# On the Pi, pull and restart
-docker pull ghcr.io/jeffwnelson/sodatracker:latest
-docker stop sodatracker && docker rm sodatracker
-docker run -d --name sodatracker --restart unless-stopped \
-  -p 3000:3000 -v sodatracker-data:/data \
-  -e API_KEY=dev-api-key \
-  -e JWT_SECRET=dev-jwt-secret \
-  -e ADMIN_PASSWORD=dev-admin-password \
-  ghcr.io/jeffwnelson/sodatracker:latest
+To roll it out on the Pi:
+
+```bash
+make pi-deploy      # ssh in, docker compose pull && up -d
+make pi-logs        # tail the container logs
+```
+
+To build and push by hand instead of via CI:
+
+```bash
+make docker-push                       # arm64 → :latest
+make docker-push TAG=test PLATFORMS=linux/arm64
 ```
 
 ## Tech Stack

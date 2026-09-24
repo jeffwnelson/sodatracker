@@ -1,17 +1,35 @@
 services:
   sodatracker:
+    image: ghcr.io/jeffwnelson/sodatracker:${SODATRACKER_TAG:-latest}
     build: .
+    container_name: sodatracker
+    restart: unless-stopped
+    # "all" runs the API server and the GPIO agent together.
+    # Use "server" on hardware without GPIO.
+    command: ["${SODATRACKER_MODE:-all}"]
     ports:
       - "3000:3000"
     environment:
       - PORT=3000
       - DB_PATH=/data/sodatracker.db
-      - API_KEY=dev-api-key
-      - JWT_SECRET=dev-jwt-secret
+      - API_KEY=${API_KEY:-dev-api-key}
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-dev-admin-password}
       - STATIC_DIR=/app/static
       - LOG_FORMAT=json
+      # The agent talks to the server inside this same container.
+      - PIAGENT_API_URL=http://127.0.0.1:3000
+      - PIAGENT_API_KEY=${API_KEY:-dev-api-key}
+      - PIAGENT_MACHINE_ID=${MACHINE_ID:-}
+      - PIAGENT_DB_PATH=/data/piagent-cache.db
     volumes:
       - sodatracker-data:/data
+      - ${PIAGENT_CONFIG_FILE:-./piagent.yaml}:/config/piagent.yaml:ro
+    devices:
+      # /dev/gpiomem is what periph.io memory-maps on BCM283x (Pi 1-4).
+      # /dev/gpiochip0 is the character-device fallback.
+      - /dev/gpiomem:/dev/gpiomem
+      - /dev/gpiochip0:/dev/gpiochip0
 
 volumes:
   sodatracker-data:

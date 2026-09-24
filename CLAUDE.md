@@ -26,7 +26,7 @@ Note: Some legacy debris (`sodaTracker.js`, `npm-debug.log`, `quick2wire-gpio-ad
 - **Database:** DynamoDB (AWS, Phase 4) / SQLite via `modernc.org/sqlite` (self-hosted, pure Go, no CGO) — behind a `Store` interface
 - **Events:** SNS (AWS) / in-process channel-based pub/sub (self-hosted) — behind an `EventBus` interface (Phase 3)
 - **Frontend:** React 19 + TypeScript + Vite + TanStack Query + Recharts + Tailwind CSS v4 (Vite plugin, no `tailwind.config.js`) + react-router-dom v7
-- **Pi agent:** Go binary cross-compiled for ARM, mock GPIO implementation (real `periph.io` GPIO not yet implemented — build tag `rpi` reserved), SQLite local cache
+- **Pi agent:** Go binary cross-compiled for ARM; real `periph.io` GPIO behind the `rpi` build tag (mock otherwise), SQLite local cache. Ships inside the same container image as the server.
 - **IaC:** OpenTofu (Terraform-compatible) for AWS infrastructure (DynamoDB, Lambda, API Gateway, S3, CloudFront, SNS)
 - **Auth:** JWT (HS256, 24h expiry) for admin dashboard, API key for Pi agent, `APIKeyOrJWT` middleware on shared admin routes
 - **IDs:** Server-generated UUIDs via `google/uuid`
@@ -64,8 +64,10 @@ sodaTracker/
 │       ├── context/           # AuthContext (JWT token + user state, localStorage persistence)
 │       └── api/               # API client + TypeScript types
 ├── infra/                     # OpenTofu infrastructure (DynamoDB, Lambda, API GW, S3, CloudFront, SNS)
-├── docker-compose.yml         # Self-hosted: single container, SQLite volume
-├── Dockerfile                 # Multi-stage: Go API (CGO_ENABLED=0) + React static files
+├── .github/workflows/         # CI: test + multi-arch image build/push to GHCR
+├── docker-compose.yml         # Self-hosted: single container, SQLite volume, GPIO devices
+├── docker-entrypoint.sh       # Mode dispatch: all | server | piagent
+├── Dockerfile                 # Multi-stage cross-compile: server + piagent (rpi tag) + React
 ├── Makefile
 ├── piagent.yaml.example       # Example Pi agent config (pin-to-slot mappings)
 └── go.mod                     # Module: github.com/jeffwnelson/sodatracker
@@ -138,33 +140,62 @@ Swagger UI is served at `/swagger/index.html` when the server is running. Docs a
 
 ### Pi Deployment (GHCR → Raspberry Pi)
 
-The self-hosted demo runs on a Raspberry Pi (arm64) as a Docker container.
+The self-hosted demo runs on a Raspberry Pi 3 Model B (arm64) as a **single Docker
+container running both the API server and the GPIO pi agent**.
 
-- **SSH:** `ssh pi@sodatracker.example.com` (password: `<redacted>`)
-- **GHCR image:** `ghcr.io/jeffwnelson/sodatracker:latest` (linux/arm64)
+- **SSH:** `ssh pi@<office-ip>` (password: `<redacted>`)
+- **GHCR image:** `ghcr.io/jeffwnelson/sodatracker:latest` (linux/amd64 + linux/arm64)
 - **Container name:** `sodatracker`
-- **Data volume:** `sodatracker-data` mounted at `/data` (persists SQLite DB across restarts)
-- **Dashboard URL:** `http://sodatracker.example.com:3000`
+- **Compose dir on Pi:** `/home/pi/sodatracker` (git clone of this repo)
+- **Data volume:** `sodatracker-data` at `/data` (SQLite DB + piagent cache)
+- **Dashboard URL:** `http://<office-ip>:3000`
+
+Note: `sodatracker.example.com` no longer resolves — use the IP.
+
+**CI publishes the image.** `.github/workflows/docker-publish.yml` runs
+`go build`/`go vet`/`go test` plus a `-tags rpi` compile check, then builds and
+pushes a multi-arch image on every push to `main`. Tags: `latest`,
+`sha-<commit>`, and `v*` git tags.
 
 ```bash
-# Build arm64, push to GHCR, pull on Pi, restart container:
-cd sodaTracker
-docker buildx build --platform linux/arm64 -t ghcr.io/jeffwnelson/sodatracker:latest --push .
-sshpass -p '<redacted>' ssh pi@sodatracker.example.com '\
-  docker pull ghcr.io/jeffwnelson/sodatracker:latest && \
-  docker stop sodatracker && docker rm sodatracker && \
-  docker run -d --name sodatracker -p 3000:3000 \
-    -e API_KEY=dev-api-key \
-    -e JWT_SECRET=dev-jwt-secret \
-    -e ADMIN_PASSWORD=dev-admin-password \
-    -v sodatracker-data:/data \
-    ghcr.io/jeffwnelson/sodatracker:latest'
+make pi-deploy      # ssh to Pi, docker compose pull && docker compose up -d
+make pi-logs        # tail container logs
+make docker-push    # manual arm64 build+push, bypassing CI
 ```
 
-GHCR auth on the Pi is already configured (`~pi/.docker/config.json`). If it expires, re-auth with:
+GHCR auth on the Pi is already configured (`~pi/.docker/config.json`). If it expires:
 ```bash
-gh auth token | sshpass -p '<redacted>' ssh pi@sodatracker.example.com 'cat | docker login ghcr.io -u jeffwnelson --password-stdin'
+gh auth token | sshpass -p '<redacted>' ssh pi@<office-ip> 'cat | docker login ghcr.io -u jeffwnelson --password-stdin'
 ```
+
+### Container Modes and GPIO
+
+`docker-entrypoint.sh` is the image ENTRYPOINT and dispatches on its first argument:
+
+| Mode | Behavior |
+|------|----------|
+| `all` (default CMD) | Starts `server`, waits for `/api/v1/health`, then starts `piagent`. Exits if either child dies so the restart policy takes over. |
+| `server` | `exec`s the API server only — for hosts without GPIO. |
+| `piagent` | `exec`s the agent only — for pointing at a remote API via `PIAGENT_API_URL`. |
+| anything else | `exec "$@"` (escape hatch for a shell). |
+
+`tini` is PID 1 so signals reach both children; `docker stop` returns in ~1s with exit 0.
+
+**GPIO requirements.** periph.io memory-maps `/dev/gpiomem` on BCM283x, so the
+container needs `--device /dev/gpiomem` (plus `/dev/gpiochip0` as the character-device
+fallback). `docker-compose.yml` maps both. The container runs as root, so no
+`group_add` for the host `gpio` group (gid 986) is needed. The entrypoint fails
+fast with a clear message if the config or GPIO devices are missing.
+
+The `piagent` binary in the image is **always built with `-tags rpi`** (real
+periph.io GPIO, not the mock). That tag compiles cleanly on amd64 too, so the
+multi-arch build works — it just finds no pins there.
+
+**Pi agent config** is mounted at `/config/piagent.yaml` (`PIAGENT_CONFIG` env var).
+Pin mappings are YAML-only. Deployment-specific fields have env overrides
+(`applyEnvOverrides` in `pkg/piagent/config.go`): `PIAGENT_API_URL`,
+`PIAGENT_API_KEY`, `PIAGENT_MACHINE_ID`, `PIAGENT_DB_PATH`, `PIAGENT_POLL_MS`,
+`PIAGENT_RETRY_MS`.
 
 ## Key Configuration
 
@@ -178,7 +209,7 @@ gh auth token | sshpass -p '<redacted>' ssh pi@sodatracker.example.com 'cat | do
 - **DynamoDB table name:** (env `TABLE_NAME`) — only set for Lambda deployment
 - **SNS topic ARN:** (env `SNS_TOPIC_ARN`) — only set for Lambda deployment, enables SNS event fan-out
 - **Log format:** `text` for local dev, `json` for Docker/Lambda (env `LOG_FORMAT`, default `"text"`)
-- **Pi agent config:** YAML file only (no env var fallback) — see `piagent.yaml.example`
+- **Pi agent config:** YAML at `/config/piagent.yaml` (env `PIAGENT_CONFIG`) — see `piagent.yaml.example`. Pin mappings are YAML-only; other fields accept `PIAGENT_*` env overrides
 - **Pi agent cache DB:** `piagent-cache.db` (default, configurable in YAML)
 
 ## Data Model
@@ -321,7 +352,7 @@ Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed.
 - [x] Lambda entry point: chi V2 adapter, DynamoDB store, local bus + optional SNS fan-out (`cmd/lambda/`)
 - [x] OpenTofu infrastructure: DynamoDB, Lambda (ARM64), HTTP API v2, SNS, S3, CloudFront, IAM (`infra/`)
 - [x] Build targets: `make build-lambda`, `make deploy-frontend`, `make tf-plan`, `make tf-apply`
-- [ ] CI/CD via GitHub Actions
+- [x] CI/CD via GitHub Actions (test + multi-arch GHCR publish)
 
 ### Phase 5 — Polish [IN PROGRESS]
 - [x] Structured logging: `log/slog` replaces `log` across all Go code, `LOG_FORMAT` env var (`text`/`json`)
@@ -329,6 +360,6 @@ Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed.
 - [x] CSV/PDF export for dispense reports (`GET /api/v1/reports/dispenses?format=csv|pdf`)
 - [x] Swagger/OpenAPI docs via `swaggo/swag` — interactive UI at `/swagger/index.html`, all 23 endpoints annotated
 - [ ] Mobile responsive polish
-- [ ] Pi agent systemd service + watchdog
+- [x] Pi agent runs in-container (no systemd unit needed; Docker restart policy is the watchdog)
 - [ ] CloudWatch custom metrics
 - [ ] E2E tests (Playwright)

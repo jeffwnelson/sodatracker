@@ -1,4 +1,5 @@
-.PHONY: build build-server build-piagent build-lambda test lint run clean docker-up docker-down \
+.PHONY: build build-server build-piagent build-piagent-arm build-lambda test lint run clean \
+	docker-up docker-down docker-build docker-push pi-deploy pi-logs \
 	web-install web-dev web-build deploy-frontend tf-plan tf-apply swagger
 
 BINARY_DIR := bin
@@ -7,6 +8,12 @@ PIAGENT_BIN := $(BINARY_DIR)/piagent
 PIAGENT_ARM_BIN := $(BINARY_DIR)/piagent-arm
 LAMBDA_BIN := $(BINARY_DIR)/bootstrap
 LAMBDA_ZIP := $(BINARY_DIR)/lambda.zip
+
+IMAGE ?= ghcr.io/jeffwnelson/sodatracker
+TAG ?= latest
+PLATFORMS ?= linux/arm64
+PI_HOST ?= pi@<office-ip>
+PI_DIR ?= /home/pi/sodatracker
 
 build: build-server build-piagent
 
@@ -40,6 +47,20 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+# Build and push the multi-arch image by hand. Normally CI does this on push to main.
+docker-build:
+	docker buildx build --platform $(PLATFORMS) -t $(IMAGE):$(TAG) --load .
+
+docker-push:
+	docker buildx build --platform $(PLATFORMS) -t $(IMAGE):$(TAG) --push .
+
+# Pull the published image on the Pi and restart the stack there.
+pi-deploy:
+	ssh $(PI_HOST) 'cd $(PI_DIR) && docker compose pull && docker compose up -d'
+
+pi-logs:
+	ssh $(PI_HOST) 'cd $(PI_DIR) && docker compose logs -f --tail 100'
 
 web-install:
 	cd web && npm install
