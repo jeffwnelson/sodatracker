@@ -39,7 +39,6 @@ type Store interface {
 	// Users
 	CreateUser(ctx context.Context, u *domain.User) error
 	GetUserByUsername(ctx context.Context, username string) (*domain.User, error)
-	UpdateUserTheme(ctx context.Context, userID string, theme string) error
 
 	// Alert Configs
 	CreateAlertConfig(ctx context.Context, ac *domain.AlertConfig) error

@@ -5,7 +5,6 @@ import { StockGrid } from "../components/StockGrid";
 import { Card } from "../components/Card";
 import { SkeletonCard } from "../components/Skeleton";
 import { EmptyState } from "../components/EmptyState";
-import { ThemeToggle } from "../components/ThemeToggle";
 
 function MachineCard({ machineId }: { machineId: string }) {
   const { data, isLoading, error } = useQuery<MachineStatus>({
@@ -68,7 +67,6 @@ export function CustomerDashboard() {
               Live inventory status
             </p>
           </div>
-          <ThemeToggle />
         </div>
       </header>
 

@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/jeffwnelson/sodatracker/internal/auth"
 	"github.com/jeffwnelson/sodatracker/internal/domain"
 	"github.com/jeffwnelson/sodatracker/internal/export"
 	"github.com/jeffwnelson/sodatracker/internal/service"
@@ -790,43 +788,6 @@ func (h *handlers) resetAllData(w http.ResponseWriter, r *http.Request) {
 }
 
 // --- User Preferences ---
-
-// updateUserTheme godoc
-// @Summary      Update theme preference
-// @Description  Updates the authenticated user's theme preference (light, dark, or system)
-// @Tags         Users
-// @Accept       json
-// @Produce      json
-// @Param        theme  body      object{theme=string}  true  "Theme preference"
-// @Success      200    {object}  object{theme=string}
-// @Failure      400    {object}  ErrorResponse
-// @Failure      401    {object}  ErrorResponse
-// @Failure      500    {object}  ErrorResponse
-// @Security     BearerAuth
-// @Router       /users/me/theme [put]
-func (h *handlers) updateUserTheme(w http.ResponseWriter, r *http.Request) {
-	claims := auth.ClaimsFromContext(r.Context())
-	if claims == nil {
-		writeErr(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-	var req struct {
-		Theme string `json:"theme"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid JSON")
-		return
-	}
-	if err := h.svc.UpdateUserTheme(r.Context(), claims.UserID, req.Theme); err != nil {
-		if strings.Contains(err.Error(), "invalid theme") {
-			writeErr(w, http.StatusBadRequest, err.Error())
-			return
-		}
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]string{"theme": req.Theme})
-}
 
 // --- Helpers ---
 

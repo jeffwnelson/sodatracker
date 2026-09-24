@@ -113,9 +113,6 @@ func (s *SQLiteStore) migrate() error {
 	// Schema evolution for existing databases: add description column if missing.
 	s.db.Exec(`ALTER TABLE products ADD COLUMN description TEXT DEFAULT ''`)
 
-	// Schema evolution: add theme column to users if missing.
-	s.db.Exec(`ALTER TABLE users ADD COLUMN theme TEXT NOT NULL DEFAULT 'light'`)
-
 	// Schema evolution: remove UNIQUE constraint on upc for existing databases.
 	if err := s.migrateProductsDropUPCUnique(); err != nil {
 		return fmt.Errorf("migrate products upc: %w", err)
@@ -417,32 +414,23 @@ func (s *SQLiteStore) ListRestocks(ctx context.Context, machineID string, limit 
 // --- Users ---
 
 func (s *SQLiteStore) CreateUser(ctx context.Context, u *domain.User) error {
-	theme := u.Theme
-	if theme == "" {
-		theme = "light"
-	}
 	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO users (id, username, password_hash, role, theme) VALUES (?, ?, ?, ?, ?)
-		 ON CONFLICT(id) DO UPDATE SET username=excluded.username, password_hash=excluded.password_hash, role=excluded.role, theme=excluded.theme`,
-		u.ID, u.Username, u.PasswordHash, u.Role, theme)
+		`INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET username=excluded.username, password_hash=excluded.password_hash, role=excluded.role`,
+		u.ID, u.Username, u.PasswordHash, u.Role)
 	return err
 }
 
 func (s *SQLiteStore) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
-	row := s.db.QueryRowContext(ctx, `SELECT id, username, password_hash, role, theme FROM users WHERE username = ?`, username)
+	row := s.db.QueryRowContext(ctx, `SELECT id, username, password_hash, role FROM users WHERE username = ?`, username)
 	var u domain.User
-	if err := row.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.Role, &u.Theme); err != nil {
+	if err := row.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.Role); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
 	return &u, nil
-}
-
-func (s *SQLiteStore) UpdateUserTheme(ctx context.Context, userID string, theme string) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE users SET theme = ? WHERE id = ?`, theme, userID)
-	return err
 }
 
 // --- Alert Configs ---

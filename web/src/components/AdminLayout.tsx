@@ -1,6 +1,5 @@
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { ThemeToggle } from "./ThemeToggle";
 
 const navLinks = [
   { to: "/admin", label: "Dashboard", end: true },
@@ -57,7 +56,6 @@ export function AdminLayout() {
             >
               Customer View
             </Link>
-            <ThemeToggle />
             <button
               onClick={handleLogout}
               className="px-3 py-1.5 rounded-lg text-sm text-text-tertiary hover:text-text-primary hover:bg-surface-secondary transition-colors duration-150"

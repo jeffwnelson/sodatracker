@@ -263,12 +263,6 @@ export function resetAllData(): Promise<{ status: string }> {
 }
 
 // User Preferences
-export function updateTheme(
-  theme: "light" | "dark" | "system"
-): Promise<{ theme: string }> {
-  return putJSONAuth("/users/me/theme", { theme });
-}
-
 // Stock Predictions
 export function getStockPredictions(
   machineId: string,

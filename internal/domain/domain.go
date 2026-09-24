@@ -24,7 +24,7 @@ type Slot struct {
 	ProductID    string `json:"productId,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
 	GPIOPin      int    `json:"gpioPin,omitempty" example:"17"`
 	Capacity     int    `json:"capacity" example:"12"`
-	LowThreshold int   `json:"lowThreshold" example:"3"`
+	LowThreshold int    `json:"lowThreshold" example:"3"`
 }
 
 type Dispense struct {
@@ -68,14 +68,13 @@ type User struct {
 	Username     string `json:"username" example:"admin"`
 	PasswordHash string `json:"-"`
 	Role         string `json:"role" example:"admin"`
-	Theme        string `json:"theme" example:"light"` // "light", "dark", or "system"
 }
 
 type AlertConfig struct {
 	ID           string `json:"id" example:"550e8400-e29b-41d4-a716-446655440005"`
 	MachineID    string `json:"machineId" example:"550e8400-e29b-41d4-a716-446655440001"`
-	SlotPosition int    `json:"slotPosition" example:"0"`  // 0 = machine-wide default
-	LowThreshold int   `json:"lowThreshold" example:"3"`   // -1 = use slot's own threshold
+	SlotPosition int    `json:"slotPosition" example:"0"` // 0 = machine-wide default
+	LowThreshold int    `json:"lowThreshold" example:"3"` // -1 = use slot's own threshold
 	Enabled      bool   `json:"enabled" example:"true"`
 }
 

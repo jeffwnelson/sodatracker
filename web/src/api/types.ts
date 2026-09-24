@@ -61,7 +61,6 @@ export interface User {
   id: string;
   username: string;
   role: string;
-  theme: "light" | "dark" | "system";
 }
 
 export interface LoginResponse {

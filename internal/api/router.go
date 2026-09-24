@@ -97,7 +97,6 @@ func NewRouter(st store.Store, svc *service.Service, apiKey string, jwtSecret st
 		// JWT-only user endpoints
 		r.Group(func(r chi.Router) {
 			r.Use(auth.JWTMiddleware(jwtSecret))
-			r.Put("/users/me/theme", h.updateUserTheme)
 			r.Delete("/admin/reset", h.resetAllData)
 		})
 	})
