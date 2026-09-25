@@ -21,6 +21,8 @@ import (
 	"github.com/jeffwnelson/sodatracker/internal/notify"
 	"github.com/jeffwnelson/sodatracker/internal/seed"
 	"github.com/jeffwnelson/sodatracker/internal/service"
+	"github.com/jeffwnelson/sodatracker/internal/slackcmd"
+	"github.com/jeffwnelson/sodatracker/internal/slacksocket"
 	"github.com/jeffwnelson/sodatracker/internal/store/sqlite"
 )
 
@@ -64,6 +66,18 @@ func main() {
 		slog.Info("Slack notifications enabled")
 	}
 
+	// /soda over Socket Mode: the server dials out to Slack, so commands work
+	// without the Pi being reachable from the internet.
+	slackCtx, stopSlack := context.WithCancel(context.Background())
+	defer stopSlack()
+	if cfg.SlackAppToken != "" {
+		cmds := slackcmd.New(st, svc)
+		go slacksocket.New(cfg.SlackAppToken, func(ctx context.Context, _, text string) any {
+			return cmds.Run(ctx, text)
+		}).Run(slackCtx)
+		slog.Info("Slack commands enabled (Socket Mode)")
+	}
+
 	router := api.NewRouter(st, svc, api.RouterConfig{
 		APIKey:             cfg.APIKey,
 		JWTSecret:          cfg.JWTSecret,
@@ -93,6 +107,7 @@ func main() {
 
 	<-done
 	slog.Info("shutting down")
+	stopSlack()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

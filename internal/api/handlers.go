@@ -12,6 +12,7 @@ import (
 	"github.com/jeffwnelson/sodatracker/internal/domain"
 	"github.com/jeffwnelson/sodatracker/internal/export"
 	"github.com/jeffwnelson/sodatracker/internal/service"
+	"github.com/jeffwnelson/sodatracker/internal/slackcmd"
 	"github.com/jeffwnelson/sodatracker/internal/store"
 )
 
@@ -20,6 +21,7 @@ type handlers struct {
 	svc                *service.Service
 	jwtSecret          string
 	slackSigningSecret string
+	slackCmds          *slackcmd.Commands
 }
 
 // health godoc

@@ -14,8 +14,11 @@ type Config struct {
 	AdminPassword string
 	LogFormat     string
 
-	// Slack integration. Both are optional; each half turns on independently.
+	// Slack integration. Each part is optional and turns on independently:
+	// the webhook posts alerts, the app token receives /soda over Socket
+	// Mode, and the signing secret enables the public HTTP command endpoint.
 	SlackWebhookURL    string
+	SlackAppToken      string
 	SlackSigningSecret string
 }
 
@@ -30,6 +33,7 @@ func Load() Config {
 		LogFormat:     getEnv("LOG_FORMAT", "text"),
 
 		SlackWebhookURL:    getEnv("SLACK_WEBHOOK_URL", ""),
+		SlackAppToken:      getEnv("SLACK_APP_TOKEN", ""),
 		SlackSigningSecret: getEnv("SLACK_SIGNING_SECRET", ""),
 	}
 }

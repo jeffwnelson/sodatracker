@@ -27,6 +27,7 @@ import (
 
 	"github.com/jeffwnelson/sodatracker/internal/auth"
 	"github.com/jeffwnelson/sodatracker/internal/service"
+	"github.com/jeffwnelson/sodatracker/internal/slackcmd"
 	"github.com/jeffwnelson/sodatracker/internal/store"
 
 	_ "github.com/jeffwnelson/sodatracker/internal/api/docs"
@@ -56,7 +57,13 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 		MaxAge:           300,
 	}))
 
-	h := &handlers{store: st, svc: svc, jwtSecret: cfg.JWTSecret, slackSigningSecret: cfg.SlackSigningSecret}
+	h := &handlers{
+		store:              st,
+		svc:                svc,
+		jwtSecret:          cfg.JWTSecret,
+		slackSigningSecret: cfg.SlackSigningSecret,
+		slackCmds:          slackcmd.New(st, svc),
+	}
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", h.health)
