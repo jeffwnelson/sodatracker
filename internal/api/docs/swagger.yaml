@@ -218,6 +218,100 @@ definitions:
         example: admin
         type: string
     type: object
+  github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange:
+    properties:
+      bucket:
+        example: day
+        type: string
+      days:
+        example: 30.5
+        type: number
+      from:
+        example: "2026-08-25T00:00:00-05:00"
+        type: string
+      timezone:
+        example: America/Chicago
+        type: string
+      to:
+        example: "2026-09-24T12:00:00-05:00"
+        type: string
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.ConsumptionAnalytics:
+    properties:
+      heatmap:
+        description: Heatmap is indexed [weekday Monday=0][local hour].
+        items:
+          items:
+            type: integer
+          type: array
+        type: array
+      peakHour:
+        description: PeakHour is the local hour (0-23) with the most dispenses, -1
+          if none.
+        example: 14
+        type: integer
+      peakWeekday:
+        description: PeakWeekday is Monday=0..Sunday=6, -1 if none.
+        example: 2
+        type: integer
+      perDay:
+        example: 7.1
+        type: number
+      previousTotal:
+        description: |-
+          PreviousTotal is the count for the preceding window of the same length,
+          or null when tracking did not cover all of it.
+        example: 187
+        type: integer
+      range:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange'
+      series:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ConsumptionPoint'
+        type: array
+      total:
+        example: 212
+        type: integer
+      weekdayPerDay:
+        example: 9.4
+        type: number
+      weekendPerDay:
+        example: 1.2
+        type: number
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.ConsumptionPoint:
+    properties:
+      bucket:
+        example: "2026-09-01T00:00:00-05:00"
+        type: string
+      count:
+        example: 9
+        type: integer
+      trend:
+        description: Trend is the trailing moving average (7 days, 4 weeks or 3 months).
+        example: 7.4
+        type: number
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.DaypartStat:
+    properties:
+      counts:
+        additionalProperties:
+          type: integer
+        description: Counts maps productId to dispenses in this part of the day.
+        type: object
+      endHour:
+        example: 17
+        type: integer
+      name:
+        example: Afternoon
+        type: string
+      startHour:
+        example: 14
+        type: integer
+      total:
+        example: 80
+        type: integer
+    type: object
   github_com_jeffwnelson_sodatracker_internal_service.DispenseStats:
     properties:
       timeSeries:
@@ -235,6 +329,73 @@ definitions:
         example: 150
         type: integer
     type: object
+  github_com_jeffwnelson_sodatracker_internal_service.InventoryAnalytics:
+    properties:
+      range:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange'
+      restocks:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.RestockSummary'
+        type: array
+      series:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.StockLevelPoint'
+        type: array
+      slots:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.SlotInventory'
+        type: array
+      summary:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.InventorySummary'
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.InventorySummary:
+    properties:
+      avgRestockIntervalDays:
+        description: AvgRestockIntervalDays is null with fewer than two restocks.
+        example: 7.5
+        type: number
+      cansRestocked:
+        example: 96
+        type: integer
+      restockCount:
+        example: 4
+        type: integer
+      sellThrough:
+        description: |-
+          SellThrough is the share of cans restocked in the window that were
+          dispensed before that slot's next restock. Null with no restocks.
+        example: 0.82
+        type: number
+      stockoutHours:
+        example: 41.5
+        type: number
+      stockouts:
+        example: 3
+        type: integer
+      untrackedDispenses:
+        description: |-
+          UntrackedDispenses counts dispenses recorded while computed stock was
+          already zero: the slot held more cans than the last restock logged.
+        example: 2
+        type: integer
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.ProductAnalytics:
+    properties:
+      dayparts:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.DaypartStat'
+        type: array
+      products:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductStat'
+        type: array
+      range:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange'
+      series:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductSeriesPoint'
+        type: array
+    type: object
   github_com_jeffwnelson_sodatracker_internal_service.ProductRanking:
     properties:
       count:
@@ -249,6 +410,212 @@ definitions:
       totalCost:
         example: 14.7
         type: number
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.ProductSeriesPoint:
+    properties:
+      bucket:
+        example: "2026-09-01T00:00:00-05:00"
+        type: string
+      counts:
+        additionalProperties:
+          type: integer
+        description: Counts maps productId to dispenses in the bucket.
+        type: object
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.ProductSpend:
+    properties:
+      count:
+        example: 64
+        type: integer
+      name:
+        example: Coca-Cola
+        type: string
+      productId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      share:
+        example: 0.3
+        type: number
+      spend:
+        example: 22.4
+        type: number
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.ProductStat:
+    properties:
+      cost:
+        example: 22.4
+        type: number
+      count:
+        example: 64
+        type: integer
+      lastDispensed:
+        type: string
+      name:
+        example: Coca-Cola
+        type: string
+      previousCount:
+        example: 51
+        type: integer
+      previousRank:
+        example: 2
+        type: integer
+      productId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      rank:
+        description: |-
+          Rank is 1-based by count. PreviousRank is null when the product had no
+          dispenses in the preceding window (or tracking did not cover all of it).
+        example: 1
+        type: integer
+      share:
+        example: 0.31
+        type: number
+      slots:
+        items:
+          type: integer
+        type: array
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.RestockSummary:
+    properties:
+      cans:
+        example: 24
+        type: integer
+      daysSincePrevious:
+        example: 7.1
+        type: number
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440003
+        type: string
+      slots:
+        example: 3
+        type: integer
+      timestamp:
+        example: "2026-09-10T09:15:00-05:00"
+        type: string
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.SlotInventory:
+    properties:
+      avgRestockIntervalDays:
+        example: 6
+        type: number
+      cansRestocked:
+        example: 24
+        type: integer
+      capacity:
+        example: 12
+        type: integer
+      currentStock:
+        description: CurrentStock is null when the slot has never been restocked.
+        example: 5
+        type: integer
+      dispensed:
+        example: 19
+        type: integer
+      lowThreshold:
+        description: |-
+          LowThreshold is the slot's own low-stock level (alert configs can
+          override it for alerting, but not here).
+        example: 3
+        type: integer
+      position:
+        example: 1
+        type: integer
+      productId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      productName:
+        example: Coca-Cola
+        type: string
+      restocks:
+        example: 2
+        type: integer
+      sellThrough:
+        example: 0.79
+        type: number
+      stockoutHours:
+        example: 12.5
+        type: number
+      stockouts:
+        example: 1
+        type: integer
+      untrackedDispenses:
+        example: 0
+        type: integer
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.SpendAnalytics:
+    properties:
+      avgCostPerCan:
+        example: 0.35
+        type: number
+      byProduct:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductSpend'
+        type: array
+      count:
+        example: 212
+        type: integer
+      perDay:
+        example: 2.47
+        type: number
+      previousTotal:
+        description: |-
+          PreviousTotal is spend in the preceding window of the same length, or
+          null when tracking did not cover all of it.
+        example: 65.1
+        type: number
+      projectedMonthly:
+        example: 75.3
+        type: number
+      range:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange'
+      restockedValue:
+        description: |-
+          RestockedValue prices the cans restocked in the window at each slot's
+          current product cost.
+        example: 33.6
+        type: number
+      series:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.SpendPoint'
+        type: array
+      total:
+        example: 74.2
+        type: number
+      unpricedDispenses:
+        description: |-
+          UnpricedDispenses counts dispenses whose product has no cost set; they
+          add nothing to the totals.
+        example: 0
+        type: integer
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.SpendPoint:
+    properties:
+      bucket:
+        example: "2026-09-01T00:00:00-05:00"
+        type: string
+      count:
+        example: 9
+        type: integer
+      cumulative:
+        example: 28.7
+        type: number
+      spend:
+        example: 3.15
+        type: number
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.StockLevelPoint:
+    properties:
+      bucket:
+        example: "2026-09-01T00:00:00-05:00"
+        type: string
+      levels:
+        additionalProperties:
+          type: integer
+        description: |-
+          Levels maps slot position to stock at the end of the bucket, or null
+          when the slot had not been restocked yet.
+        type: object
     type: object
   github_com_jeffwnelson_sodatracker_internal_service.TimeSeriesPoint:
     properties:
@@ -340,6 +707,32 @@ paths:
       - ApiKeyAuth: []
         BearerAuth: []
       summary: Get machine cost
+      tags:
+      - Admin
+  /admin/reset:
+    delete:
+      description: Deletes all data from the database and re-seeds the admin user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              status:
+                type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reset all data
       tags:
       - Admin
   /admin/stats:
@@ -440,6 +833,212 @@ paths:
       summary: Update alert config
       tags:
       - Alerts
+  /analytics/consumption:
+    get:
+      description: Dispense volume over time with a moving-average trend, a weekday-by-hour
+        heatmap, and weekday vs weekend rates. The window's start is clamped to when
+        tracking began.
+      parameters:
+      - description: Machine ID
+        in: query
+        name: machineId
+        required: true
+        type: string
+      - description: 'RFC3339 start (default: 30 days before to)'
+        in: query
+        name: from
+        type: string
+      - description: 'RFC3339 end (default and maximum: now)'
+        in: query
+        name: to
+        type: string
+      - description: 'IANA timezone for buckets and hours (default: UTC)'
+        in: query
+        name: tz
+        type: string
+      - description: 'day, week or month (default: from window length)'
+        in: query
+        name: bucket
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ConsumptionAnalytics'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Consumption analytics
+      tags:
+      - Analytics
+  /analytics/inventory:
+    get:
+      description: Stock levels over time rebuilt from restocks and dispenses, hours
+        each slot sat empty, restock intervals, and sell-through.
+      parameters:
+      - description: Machine ID
+        in: query
+        name: machineId
+        required: true
+        type: string
+      - description: 'RFC3339 start (default: 30 days before to)'
+        in: query
+        name: from
+        type: string
+      - description: 'RFC3339 end (default and maximum: now)'
+        in: query
+        name: to
+        type: string
+      - description: 'IANA timezone for buckets and hours (default: UTC)'
+        in: query
+        name: tz
+        type: string
+      - description: 'day, week or month (default: from window length)'
+        in: query
+        name: bucket
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.InventoryAnalytics'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Inventory analytics
+      tags:
+      - Analytics
+  /analytics/products:
+    get:
+      description: Product ranking and share with the previous window's rank, per-bucket
+        counts by product, and counts by part of day. Products in a slot appear even
+        with no dispenses.
+      parameters:
+      - description: Machine ID
+        in: query
+        name: machineId
+        required: true
+        type: string
+      - description: 'RFC3339 start (default: 30 days before to)'
+        in: query
+        name: from
+        type: string
+      - description: 'RFC3339 end (default and maximum: now)'
+        in: query
+        name: to
+        type: string
+      - description: 'IANA timezone for buckets and hours (default: UTC)'
+        in: query
+        name: tz
+        type: string
+      - description: 'day, week or month (default: from window length)'
+        in: query
+        name: bucket
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductAnalytics'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Product analytics
+      tags:
+      - Analytics
+  /analytics/spend:
+    get:
+      description: Spend per bucket with a running total, spend by product, the previous
+        window's total, and a projected monthly figure.
+      parameters:
+      - description: Machine ID
+        in: query
+        name: machineId
+        required: true
+        type: string
+      - description: 'RFC3339 start (default: 30 days before to)'
+        in: query
+        name: from
+        type: string
+      - description: 'RFC3339 end (default and maximum: now)'
+        in: query
+        name: to
+        type: string
+      - description: 'IANA timezone for buckets and hours (default: UTC)'
+        in: query
+        name: tz
+        type: string
+      - description: 'day, week or month (default: from window length)'
+        in: query
+        name: bucket
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.SpendAnalytics'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Spend analytics
+      tags:
+      - Analytics
   /auth/login:
     post:
       consumes:
@@ -520,6 +1119,31 @@ paths:
       summary: Health check
       tags:
       - System
+  /integrations/slack/commands:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Handles /soda slash commands. Authenticated by Slack's request
+        signature, not by API key or JWT.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              response_type:
+                type: string
+              text:
+                type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      summary: Slack slash command
+      tags:
+      - integrations
   /machines:
     get:
       description: Returns all registered soda machines

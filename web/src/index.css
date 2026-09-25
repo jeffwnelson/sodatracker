@@ -92,10 +92,6 @@ body {
   font-size: 0.6875rem; /* 11px */
 }
 
-.recharts-line .recharts-line-curve {
-  stroke: var(--color-accent);
-}
-
 .recharts-default-tooltip {
   background: var(--color-surface-primary) !important;
   border: 1px solid var(--color-border-primary) !important;

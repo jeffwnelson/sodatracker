@@ -117,3 +117,124 @@ export interface StockPrediction {
   estimatedDaysLeft: number;
   predictedStockout?: string;
 }
+
+// --- Analytics ---
+
+export type AnalyticsKind = "consumption" | "products" | "inventory" | "spend";
+export type Bucket = "day" | "week" | "month";
+
+export interface AnalyticsRange {
+  from: string;
+  to: string;
+  days: number;
+  bucket: Bucket;
+  timezone: string;
+}
+
+export interface ConsumptionAnalytics {
+  range: AnalyticsRange;
+  total: number;
+  previousTotal: number | null;
+  perDay: number;
+  weekdayPerDay: number;
+  weekendPerDay: number;
+  peakHour: number;
+  peakWeekday: number;
+  series: { bucket: string; count: number; trend: number }[];
+  /** [weekday Monday=0][local hour] */
+  heatmap: number[][];
+}
+
+export interface ProductStat {
+  productId: string;
+  name: string;
+  count: number;
+  share: number;
+  cost: number;
+  rank: number;
+  previousRank: number | null;
+  previousCount: number | null;
+  slots: number[];
+  lastDispensed: string | null;
+}
+
+export interface DaypartStat {
+  name: string;
+  startHour: number;
+  endHour: number;
+  total: number;
+  counts: Record<string, number>;
+}
+
+export interface ProductAnalytics {
+  range: AnalyticsRange;
+  products: ProductStat[];
+  series: { bucket: string; counts: Record<string, number> }[];
+  dayparts: DaypartStat[];
+}
+
+export interface SlotInventory {
+  position: number;
+  productId?: string;
+  productName?: string;
+  capacity: number;
+  lowThreshold: number;
+  currentStock: number | null;
+  stockoutHours: number;
+  stockouts: number;
+  restocks: number;
+  cansRestocked: number;
+  dispensed: number;
+  avgRestockIntervalDays: number | null;
+  sellThrough: number | null;
+  untrackedDispenses: number;
+}
+
+export interface InventoryAnalytics {
+  range: AnalyticsRange;
+  summary: {
+    stockoutHours: number;
+    stockouts: number;
+    restockCount: number;
+    cansRestocked: number;
+    avgRestockIntervalDays: number | null;
+    sellThrough: number | null;
+    untrackedDispenses: number;
+  };
+  slots: SlotInventory[];
+  series: { bucket: string; levels: Record<string, number | null> }[];
+  restocks: {
+    id: string;
+    timestamp: string;
+    cans: number;
+    slots: number;
+    daysSincePrevious: number | null;
+  }[];
+}
+
+export interface SpendAnalytics {
+  range: AnalyticsRange;
+  total: number;
+  previousTotal: number | null;
+  count: number;
+  perDay: number;
+  projectedMonthly: number;
+  avgCostPerCan: number;
+  restockedValue: number;
+  unpricedDispenses: number;
+  series: { bucket: string; spend: number; count: number; cumulative: number }[];
+  byProduct: {
+    productId: string;
+    name: string;
+    spend: number;
+    count: number;
+    share: number;
+  }[];
+}
+
+export interface AnalyticsByKind {
+  consumption: ConsumptionAnalytics;
+  products: ProductAnalytics;
+  inventory: InventoryAnalytics;
+  spend: SpendAnalytics;
+}

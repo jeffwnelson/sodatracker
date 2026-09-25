@@ -9,6 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	// Embed the zoneinfo database: the Alpine runtime image has none, and
+	// analytics bucket by the caller's timezone.
+	_ "time/tzdata"
 
 	"github.com/jeffwnelson/sodatracker/internal/api"
 	"github.com/jeffwnelson/sodatracker/internal/config"

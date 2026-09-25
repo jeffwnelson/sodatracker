@@ -10,6 +10,8 @@ import type {
   AlertConfig,
   AlertEvent,
   StockPrediction,
+  AnalyticsKind,
+  AnalyticsByKind,
 } from "./types";
 
 const BASE = "/api/v1";
@@ -271,4 +273,15 @@ export function getStockPredictions(
   const params = new URLSearchParams();
   if (lookbackDays) params.set("lookbackDays", String(lookbackDays));
   return fetchJSONAuth(`/machines/${machineId}/predictions?${params}`);
+}
+
+// Analytics
+export function getAnalytics<K extends AnalyticsKind>(
+  kind: K,
+  params: { machineId: string; from?: string; tz?: string }
+): Promise<AnalyticsByKind[K]> {
+  const q = new URLSearchParams({ machineId: params.machineId });
+  if (params.from) q.set("from", params.from);
+  if (params.tz) q.set("tz", params.tz);
+  return fetchJSONAuth(`/analytics/${kind}?${q}`);
 }

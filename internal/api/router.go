@@ -109,6 +109,12 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 			r.Get("/admin/stats", h.getAdminStats)
 			r.Get("/admin/cost", h.getMachineCost)
 			r.Get("/reports/dispenses", h.exportDispenses)
+
+			// Analytics dashboards
+			r.Get("/analytics/consumption", h.getConsumptionAnalytics)
+			r.Get("/analytics/products", h.getProductAnalytics)
+			r.Get("/analytics/inventory", h.getInventoryAnalytics)
+			r.Get("/analytics/spend", h.getSpendAnalytics)
 		})
 
 		// JWT-only user endpoints

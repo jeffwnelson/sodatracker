@@ -62,6 +62,48 @@
                 }
             }
         },
+        "/admin/reset": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes all data from the database and re-seeds the admin user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Reset all data",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "status": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/stats": {
             "get": {
                 "security": [
@@ -213,6 +255,314 @@
                 }
             }
         },
+        "/analytics/consumption": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Dispense volume over time with a moving-average trend, a weekday-by-hour heatmap, and weekday vs weekend rates. The window's start is clamped to when tracking began.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics"
+                ],
+                "summary": "Consumption analytics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine ID",
+                        "name": "machineId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 start (default: 30 days before to)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 end (default and maximum: now)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IANA timezone for buckets and hours (default: UTC)",
+                        "name": "tz",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "day, week or month (default: from window length)",
+                        "name": "bucket",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ConsumptionAnalytics"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/analytics/inventory": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Stock levels over time rebuilt from restocks and dispenses, hours each slot sat empty, restock intervals, and sell-through.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics"
+                ],
+                "summary": "Inventory analytics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine ID",
+                        "name": "machineId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 start (default: 30 days before to)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 end (default and maximum: now)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IANA timezone for buckets and hours (default: UTC)",
+                        "name": "tz",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "day, week or month (default: from window length)",
+                        "name": "bucket",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.InventoryAnalytics"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/analytics/products": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Product ranking and share with the previous window's rank, per-bucket counts by product, and counts by part of day. Products in a slot appear even with no dispenses.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics"
+                ],
+                "summary": "Product analytics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine ID",
+                        "name": "machineId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 start (default: 30 days before to)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 end (default and maximum: now)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IANA timezone for buckets and hours (default: UTC)",
+                        "name": "tz",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "day, week or month (default: from window length)",
+                        "name": "bucket",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductAnalytics"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/analytics/spend": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Spend per bucket with a running total, spend by product, the previous window's total, and a projected monthly figure.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics"
+                ],
+                "summary": "Spend analytics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine ID",
+                        "name": "machineId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 start (default: 30 days before to)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 end (default and maximum: now)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IANA timezone for buckets and hours (default: UTC)",
+                        "name": "tz",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "day, week or month (default: from window length)",
+                        "name": "bucket",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.SpendAnalytics"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Authenticates a user and returns a JWT token",
@@ -331,6 +681,43 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_api.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/integrations/slack/commands": {
+            "post": {
+                "description": "Handles /soda slash commands. Authenticated by Slack's request signature, not by API key or JWT.",
+                "consumes": [
+                    "application/x-www-form-urlencoded"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "integrations"
+                ],
+                "summary": "Slack slash command",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "response_type": {
+                                    "type": "string"
+                                },
+                                "text": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
                         }
                     }
                 }
@@ -1436,6 +1823,132 @@
                 }
             }
         },
+        "github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange": {
+            "type": "object",
+            "properties": {
+                "bucket": {
+                    "type": "string",
+                    "example": "day"
+                },
+                "days": {
+                    "type": "number",
+                    "example": 30.5
+                },
+                "from": {
+                    "type": "string",
+                    "example": "2026-08-25T00:00:00-05:00"
+                },
+                "timezone": {
+                    "type": "string",
+                    "example": "America/Chicago"
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-09-24T12:00:00-05:00"
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.ConsumptionAnalytics": {
+            "type": "object",
+            "properties": {
+                "heatmap": {
+                    "description": "Heatmap is indexed [weekday Monday=0][local hour].",
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "peakHour": {
+                    "description": "PeakHour is the local hour (0-23) with the most dispenses, -1 if none.",
+                    "type": "integer",
+                    "example": 14
+                },
+                "peakWeekday": {
+                    "description": "PeakWeekday is Monday=0..Sunday=6, -1 if none.",
+                    "type": "integer",
+                    "example": 2
+                },
+                "perDay": {
+                    "type": "number",
+                    "example": 7.1
+                },
+                "previousTotal": {
+                    "description": "PreviousTotal is the count for the preceding window of the same length,\nor null when tracking did not cover all of it.",
+                    "type": "integer",
+                    "example": 187
+                },
+                "range": {
+                    "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange"
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ConsumptionPoint"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 212
+                },
+                "weekdayPerDay": {
+                    "type": "number",
+                    "example": 9.4
+                },
+                "weekendPerDay": {
+                    "type": "number",
+                    "example": 1.2
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.ConsumptionPoint": {
+            "type": "object",
+            "properties": {
+                "bucket": {
+                    "type": "string",
+                    "example": "2026-09-01T00:00:00-05:00"
+                },
+                "count": {
+                    "type": "integer",
+                    "example": 9
+                },
+                "trend": {
+                    "description": "Trend is the trailing moving average (7 days, 4 weeks or 3 months).",
+                    "type": "number",
+                    "example": 7.4
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.DaypartStat": {
+            "type": "object",
+            "properties": {
+                "counts": {
+                    "description": "Counts maps productId to dispenses in this part of the day.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "endHour": {
+                    "type": "integer",
+                    "example": 17
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Afternoon"
+                },
+                "startHour": {
+                    "type": "integer",
+                    "example": 14
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 80
+                }
+            }
+        },
         "github_com_jeffwnelson_sodatracker_internal_service.DispenseStats": {
             "type": "object",
             "properties": {
@@ -1461,6 +1974,97 @@
                 }
             }
         },
+        "github_com_jeffwnelson_sodatracker_internal_service.InventoryAnalytics": {
+            "type": "object",
+            "properties": {
+                "range": {
+                    "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange"
+                },
+                "restocks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.RestockSummary"
+                    }
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.StockLevelPoint"
+                    }
+                },
+                "slots": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.SlotInventory"
+                    }
+                },
+                "summary": {
+                    "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.InventorySummary"
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.InventorySummary": {
+            "type": "object",
+            "properties": {
+                "avgRestockIntervalDays": {
+                    "description": "AvgRestockIntervalDays is null with fewer than two restocks.",
+                    "type": "number",
+                    "example": 7.5
+                },
+                "cansRestocked": {
+                    "type": "integer",
+                    "example": 96
+                },
+                "restockCount": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "sellThrough": {
+                    "description": "SellThrough is the share of cans restocked in the window that were\ndispensed before that slot's next restock. Null with no restocks.",
+                    "type": "number",
+                    "example": 0.82
+                },
+                "stockoutHours": {
+                    "type": "number",
+                    "example": 41.5
+                },
+                "stockouts": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "untrackedDispenses": {
+                    "description": "UntrackedDispenses counts dispenses recorded while computed stock was\nalready zero: the slot held more cans than the last restock logged.",
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.ProductAnalytics": {
+            "type": "object",
+            "properties": {
+                "dayparts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.DaypartStat"
+                    }
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductStat"
+                    }
+                },
+                "range": {
+                    "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange"
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductSeriesPoint"
+                    }
+                }
+            }
+        },
         "github_com_jeffwnelson_sodatracker_internal_service.ProductRanking": {
             "type": "object",
             "properties": {
@@ -1479,6 +2083,274 @@
                 "totalCost": {
                     "type": "number",
                     "example": 14.7
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.ProductSeriesPoint": {
+            "type": "object",
+            "properties": {
+                "bucket": {
+                    "type": "string",
+                    "example": "2026-09-01T00:00:00-05:00"
+                },
+                "counts": {
+                    "description": "Counts maps productId to dispenses in the bucket.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.ProductSpend": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "example": 64
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Coca-Cola"
+                },
+                "productId": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "share": {
+                    "type": "number",
+                    "example": 0.3
+                },
+                "spend": {
+                    "type": "number",
+                    "example": 22.4
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.ProductStat": {
+            "type": "object",
+            "properties": {
+                "cost": {
+                    "type": "number",
+                    "example": 22.4
+                },
+                "count": {
+                    "type": "integer",
+                    "example": 64
+                },
+                "lastDispensed": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Coca-Cola"
+                },
+                "previousCount": {
+                    "type": "integer",
+                    "example": 51
+                },
+                "previousRank": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "productId": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "rank": {
+                    "description": "Rank is 1-based by count. PreviousRank is null when the product had no\ndispenses in the preceding window (or tracking did not cover all of it).",
+                    "type": "integer",
+                    "example": 1
+                },
+                "share": {
+                    "type": "number",
+                    "example": 0.31
+                },
+                "slots": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.RestockSummary": {
+            "type": "object",
+            "properties": {
+                "cans": {
+                    "type": "integer",
+                    "example": 24
+                },
+                "daysSincePrevious": {
+                    "type": "number",
+                    "example": 7.1
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440003"
+                },
+                "slots": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2026-09-10T09:15:00-05:00"
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.SlotInventory": {
+            "type": "object",
+            "properties": {
+                "avgRestockIntervalDays": {
+                    "type": "number",
+                    "example": 6
+                },
+                "cansRestocked": {
+                    "type": "integer",
+                    "example": 24
+                },
+                "capacity": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "currentStock": {
+                    "description": "CurrentStock is null when the slot has never been restocked.",
+                    "type": "integer",
+                    "example": 5
+                },
+                "dispensed": {
+                    "type": "integer",
+                    "example": 19
+                },
+                "lowThreshold": {
+                    "description": "LowThreshold is the slot's own low-stock level (alert configs can\noverride it for alerting, but not here).",
+                    "type": "integer",
+                    "example": 3
+                },
+                "position": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "productId": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "productName": {
+                    "type": "string",
+                    "example": "Coca-Cola"
+                },
+                "restocks": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "sellThrough": {
+                    "type": "number",
+                    "example": 0.79
+                },
+                "stockoutHours": {
+                    "type": "number",
+                    "example": 12.5
+                },
+                "stockouts": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "untrackedDispenses": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.SpendAnalytics": {
+            "type": "object",
+            "properties": {
+                "avgCostPerCan": {
+                    "type": "number",
+                    "example": 0.35
+                },
+                "byProduct": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductSpend"
+                    }
+                },
+                "count": {
+                    "type": "integer",
+                    "example": 212
+                },
+                "perDay": {
+                    "type": "number",
+                    "example": 2.47
+                },
+                "previousTotal": {
+                    "description": "PreviousTotal is spend in the preceding window of the same length, or\nnull when tracking did not cover all of it.",
+                    "type": "number",
+                    "example": 65.1
+                },
+                "projectedMonthly": {
+                    "type": "number",
+                    "example": 75.3
+                },
+                "range": {
+                    "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange"
+                },
+                "restockedValue": {
+                    "description": "RestockedValue prices the cans restocked in the window at each slot's\ncurrent product cost.",
+                    "type": "number",
+                    "example": 33.6
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.SpendPoint"
+                    }
+                },
+                "total": {
+                    "type": "number",
+                    "example": 74.2
+                },
+                "unpricedDispenses": {
+                    "description": "UnpricedDispenses counts dispenses whose product has no cost set; they\nadd nothing to the totals.",
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.SpendPoint": {
+            "type": "object",
+            "properties": {
+                "bucket": {
+                    "type": "string",
+                    "example": "2026-09-01T00:00:00-05:00"
+                },
+                "count": {
+                    "type": "integer",
+                    "example": 9
+                },
+                "cumulative": {
+                    "type": "number",
+                    "example": 28.7
+                },
+                "spend": {
+                    "type": "number",
+                    "example": 3.15
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.StockLevelPoint": {
+            "type": "object",
+            "properties": {
+                "bucket": {
+                    "type": "string",
+                    "example": "2026-09-01T00:00:00-05:00"
+                },
+                "levels": {
+                    "description": "Levels maps slot position to stock at the end of the bucket, or null\nwhen the slot had not been restocked yet.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
                 }
             }
         },

@@ -184,6 +184,7 @@ export function AdminDashboard() {
                   <Line
                     type="monotone"
                     dataKey="count"
+                    stroke="var(--color-accent)"
                     strokeWidth={2}
                     dot={false}
                   />
