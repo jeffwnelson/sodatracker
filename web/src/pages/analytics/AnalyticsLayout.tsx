@@ -75,8 +75,12 @@ export function AnalyticsLayout() {
         </div>
       </div>
 
+      {/* The baseline is an inset shadow rather than a border, so the active
+          tab's underline can cover it without a negative margin. A -1px
+          margin overflowed the nav, and overflow-x-auto then showed a
+          vertical scrollbar. */}
       <nav
-        className="flex gap-1 border-b border-border-primary overflow-x-auto"
+        className="flex gap-1 overflow-x-auto shadow-[inset_0_-1px_0_var(--color-border-primary)]"
         aria-label="Analytics dashboards"
       >
         {tabs.map((t) => (
@@ -84,7 +88,7 @@ export function AnalyticsLayout() {
             key={t.to}
             to={{ pathname: t.to, search }}
             className={({ isActive }) =>
-              `px-3 py-2 -mb-px border-b-2 text-sm font-medium whitespace-nowrap transition-colors duration-150 ${
+              `px-3 py-2 border-b-2 text-sm font-medium whitespace-nowrap transition-colors duration-150 ${
                 isActive
                   ? "border-accent text-accent"
                   : "border-transparent text-text-tertiary hover:text-text-primary"
