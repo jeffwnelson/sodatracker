@@ -23,6 +23,61 @@ Both processes run in a single container published to GHCR:
 
 The entrypoint takes a mode argument: `all` (both processes, the default), `server` (API only, for hosts without GPIO), or `piagent` (agent only, pointed at a remote API via `PIAGENT_API_URL`).
 
+## Hardware
+
+The machine is most likely a **Dixie-Narco DNCB 180/105-5**, a small 1980s
+Coca-Cola can vender. The model comes from matching its appearance and interior
+against auction listings, not from its serial plate, so it is unconfirmed until
+someone reads the plate on the right side of the cabinet.
+
+Specs for that model, from the [Dixie-Narco DNCB service manual][dn-manual]
+(February 1989):
+
+- **Capacity:** 180 twelve-ounce cans (or 105 regular bottles) across 5
+  double-depth columns. Each slot is configured with a capacity of 36, which
+  assumes the columns hold equal shares; that split isn't in the manual.
+- **Size:** 56-11/16" high, 28-5/16" wide, 26" deep; 462 lb shipping weight.
+- **Power:** 115V single phase, 60Hz, never below 103V or above 127V.
+
+Columns are labelled 1–5 from right to left when facing the open door. Each
+has its own vend motor turning a cam, with three stacked microswitches beside
+it: the vend motor switch, cam-hold switch and by-pass switch, which together
+run the motor for exactly one cam revolution per vend. A sold-out switch at the
+base of each stack is held down by the cans. Column 2's cam and motor don't
+match the others and look like a replacement.
+
+### How a vend turns the cam
+
+Each vend turns that column's cam exactly one revolution. At rest, the cam's
+notch sits under the switch arms. A coin arms the circuit, the select button
+starts the motor, the arms ride up onto the cam's high side while the can is
+released, and after one revolution they drop back into the notch and the vend
+motor switch stops the motor. A switch that follows the cam therefore closes
+once and reopens once per real vend; the piagent counts the reopening
+(LOW → HIGH). Button presses with no coin or on a sold-out column don't turn
+the cam; a jam, where the cam turns but no can falls, would still count.
+
+### Current wiring status (unverified)
+
+- The **legacy Pi (Model 2 B)** is wired to the cams over an Ethernet cable.
+  Something at the cams is covered with duct tape, so what those conductors
+  actually connect to is not known.
+- The **SodaTracker Pi** has only been tested with bench contact buttons. The
+  pin assignments below come from that bench setup, not from the cam wiring,
+  and dispenses recorded so far are likely test presses.
+
+**Mains voltage:** the machine's entire vend control circuit runs at 115V AC.
+The service manual draws it "across the line" between L1 and L2, so every
+select, cam-hold, by-pass, vend motor and sold-out switch, and every relay, is
+live. A GPIO pin must never touch any of those contacts. Before connecting the
+SodaTracker Pi to the cam wiring: unplug the machine and inspect under the
+tape; confirm each conductor goes only to its own isolated switch, with no
+continuity to any machine switch terminal or harness wire; then, with the
+machine powered and the legacy Pi disconnected, measure AC and DC from each
+conductor to the cabinet at rest and during a vend. Connect one channel first.
+
+[dn-manual]: https://www.vend-resource.com/sites/default/files/dixie-narco-pre-series-90-service-manual.pdf
+
 ## GPIO Wiring
 
 Each contact switch connects a GPIO signal pin to a ground pin. The Pi's internal pull-up resistor holds the pin HIGH when the switch is open. Closing the switch pulls it LOW; the piagent registers a dispense on the release (LOW → HIGH transition).
