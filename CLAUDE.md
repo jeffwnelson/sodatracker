@@ -62,7 +62,7 @@ sodaTracker/
 ├── web/                       # React frontend (Vite + Tailwind)
 │   └── src/
 │       ├── pages/             # CustomerDashboard, LoginPage, AdminDashboard, MachineDetailPage, RestockPage, AlertsPage, SetupPage
-│       │   └── analytics/     # AnalyticsLayout + Consumption/Products/Inventory/Spend dashboards
+│       │   └── analytics/     # AnalyticsLayout + Consumption/Products/Inventory/Spend/Predictions dashboards
 │       ├── components/        # StockGrid, AdminLayout, ProtectedRoute
 │       ├── context/           # AuthContext (JWT token + user state, localStorage persistence)
 │       └── api/               # API client + TypeScript types
@@ -352,8 +352,8 @@ Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed.
 - [x] EventBus interface + local (in-process channel) implementation (`internal/events/`, `internal/events/local/`)
 - [x] Alert service: evaluates stock after each dispense, fires low_stock/out_of_stock events, deduplicates, clears on restock
 - [x] Alert config CRUD: per-machine/slot threshold configuration (store, service, API, UI)
-- [x] Alert configuration UI (`/admin/alerts`): active alerts, config management
-- [x] Predictive stock-out: linear regression on dispense rate, shown in alerts page + machine detail page
+- [x] Alerts page (`/admin/alerts`): active alerts. The alert-config UI was removed 2026-09-30 (the API remains); with no configs, each slot's Low Threshold from Setup applies
+- [x] Predictive stock-out: dispense rate over a 14-day lookback, shown on the Analytics → Predictions tab + machine detail page
 - [x] Tests: 32 total — EventBus (5), store (6), auth (4), service (6), API (11)
 - [ ] Slack bot: push notifications on events, pull commands (`/soda status`, `/soda top`)
 - [ ] Discord bot: `discordgo` persistent WebSocket, same push/pull features

@@ -14,6 +14,7 @@ const tabs = [
   { to: "products", label: "Products" },
   { to: "inventory", label: "Inventory" },
   { to: "spend", label: "Spend" },
+  { to: "predictions", label: "Predictions" },
 ];
 
 export function AnalyticsLayout() {

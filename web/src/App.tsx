@@ -15,6 +15,7 @@ import { ConsumptionPage } from "./pages/analytics/ConsumptionPage";
 import { ProductsPage } from "./pages/analytics/ProductsPage";
 import { InventoryPage } from "./pages/analytics/InventoryPage";
 import { SpendPage } from "./pages/analytics/SpendPage";
+import { PredictionsPage } from "./pages/analytics/PredictionsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +54,7 @@ function App() {
                   <Route path="products" element={<ProductsPage />} />
                   <Route path="inventory" element={<InventoryPage />} />
                   <Route path="spend" element={<SpendPage />} />
+                  <Route path="predictions" element={<PredictionsPage />} />
                 </Route>
                 <Route path="alerts" element={<AlertsPage />} />
                 <Route path="setup" element={<SetupPage />} />
