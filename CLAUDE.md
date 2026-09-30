@@ -138,8 +138,8 @@ The self-hosted demo runs on a Raspberry Pi 3 Model B (arm64) as a **single Dock
 container running both the API server and the GPIO pi agent**.
 
 - **SSH:** `ssh pi@sodatracker` (Tailscale, works from any network) or
-  `ssh pi@<office-ip>` (office ethernet). The password is not kept in this
-  repo (it is public); ask the owner.
+  `ssh pi@<office-ip>` (office ethernet). Key-based: the owner's
+  `~/.ssh/id_ed25519` is authorized. The password is not kept in this repo.
 - **GHCR image:** `ghcr.io/jeffwnelson/sodatracker:latest` (linux/amd64 + linux/arm64)
 - **Container name:** `sodatracker`
 - **Compose dir on Pi:** `/home/pi/sodatracker` (git clone of this repo)
