@@ -1,26 +1,34 @@
-# --- Build Go binaries (cross-compiled from the build host, no emulation) ---
+# syntax=docker/dockerfile:1
+# --- Test, then build the Go binaries (cross-compiled, no emulation) ---
+# CI builds this image once: the tests below run as part of the build, so a
+# failing test fails the build and nothing is pushed.
 FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS api-build
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /src
+ENV CGO_ENABLED=0
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
-ENV CGO_ENABLED=0
+# Before ARG VERSION, so a new version doesn't invalidate the cached test run.
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    go vet ./... && go test ./...
 # Release version from cocogitto (CI passes it); shown in the page footer.
 ARG VERSION=dev
 ENV LDFLAGS="-X github.com/jeffwnelson/sodatracker/internal/buildinfo.Version=${VERSION}"
-RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "$LDFLAGS" -o /out/server ./cmd/server
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "$LDFLAGS" -o /out/server ./cmd/server
 # The rpi tag selects the periph.io GPIO provider instead of the mock.
-RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "$LDFLAGS" -tags rpi -o /out/piagent ./cmd/piagent
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "$LDFLAGS" -tags rpi -o /out/piagent ./cmd/piagent
 
 # --- Build React frontend ---
 FROM --platform=$BUILDPLATFORM node:22-alpine AS web-build
 WORKDIR /src
 COPY web/package.json web/package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 COPY web/ .
 RUN npm run build
 

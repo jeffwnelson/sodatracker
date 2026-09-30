@@ -66,7 +66,7 @@ sodaTracker/
 │       ├── components/        # StockGrid, AdminLayout, ProtectedRoute
 │       ├── context/           # AuthContext (JWT token + user state, localStorage persistence)
 │       └── api/               # API client + TypeScript types
-├── .github/workflows/         # CI: test + multi-arch image build/push to GHCR
+├── .github/workflows/         # CI: one arm64 build (tests inside), cocogitto release, push to GHCR
 ├── docker-compose.yml         # Self-hosted: single container, SQLite volume, GPIO devices
 ├── docker-entrypoint.sh       # Mode dispatch: all | server | piagent
 ├── Dockerfile                 # Multi-stage cross-compile: server + piagent (rpi tag) + React
@@ -140,7 +140,7 @@ container running both the API server and the GPIO pi agent**.
 - **SSH:** `ssh pi@sodatracker` (Tailscale, works from any network) or
   `ssh pi@<office-ip>` (office ethernet). Key-based: the owner's
   `~/.ssh/id_ed25519` is authorized. The password is not kept in this repo.
-- **GHCR image:** `ghcr.io/jeffwnelson/sodatracker:latest` (linux/amd64 + linux/arm64)
+- **GHCR image:** `ghcr.io/jeffwnelson/sodatracker:latest` (linux/arm64 only)
 - **Container name:** `sodatracker`
 - **Compose dir on Pi:** `/home/pi/sodatracker` (git clone of this repo)
 - **Data volume:** `sodatracker-data` at `/data` (SQLite DB + piagent cache)
@@ -160,7 +160,7 @@ corporate network, so there is no MagicDNS name; use the IP.
 **Releases (cocogitto).** Commits on `main` must follow
 [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`,
 `docs:`, `chore:`, `refactor:`, `test:`, `ci:`, with an optional scope, and `!` or a
-`BREAKING CHANGE:` footer for majors). After tests pass, the `release` job runs
+`BREAKING CHANGE:` footer for majors). After the image builds and tests pass, CI runs
 `cog bump --auto` (config in `cog.toml`): `feat` bumps the minor, `fix` the patch,
 and anything else releases nothing. It commits `CHANGELOG.md` as
 `chore(version): vX.Y.Z [skip ci]`, pushes the bump commit and tag, and creates
@@ -169,18 +169,23 @@ bot commit you don't. History before `v0.1.0` isn't conventional, and
 `from_latest_tag = true` keeps cog from checking it.
 
 **Version in the app.** `internal/buildinfo.Version` is stamped by ldflags: the
-Dockerfile takes `--build-arg VERSION` (CI passes `git describe --tags`, so
-`vX.Y.Z` on a release and `vX.Y.Z-N-gSHA` between releases), and the Makefile
+Dockerfile takes `--build-arg VERSION` (CI passes the version `cog bump --auto
+--dry-run` predicts, or `git describe --tags` (`vX.Y.Z-N-gSHA`) when nothing will release), and the Makefile
 uses `git describe --tags --always --dirty`. Unstamped builds say `dev`.
 `GET /api/v1/health` returns `{"status","version"}`, and `AppFooter` (admin and
 public pages) displays it. Release images also get a `vX.Y.Z` image tag.
 
-**CI publishes the image.** `.github/workflows/docker-publish.yml` runs
-`go build`/`go vet`/`go test` plus a `-tags rpi` compile check, then builds and
-pushes a multi-arch image on every push to `main`. Tags: `latest`,
-`sha-<commit>`, and `v*` git tags.
+**CI publishes the image.** `.github/workflows/docker-publish.yml` is one job that
+builds once: predict the version (`cog bump --auto --dry-run`), build and push the
+**arm64** image as `sha-<commit>` (the Dockerfile's `api-build` stage runs
+`go vet` and `go test`, so a failing test fails the build), then do the real bump,
+tag and GitHub release, and finally re-tag that same image as `latest` and `vX.Y.Z` with
+`docker buildx imagetools create` rather than rebuilding it. Go and npm caches are BuildKit
+cache mounts, which persist while the runner pod lives. A push of a `v*` tag builds and
+tags that version without moving `latest`. The image is arm64 only; on an Intel
+machine use `make run` or `docker compose up --build`.
 
-Both jobs run on the owner's **self-hosted** `sodatracker-runner` (a Docker-in-Docker
+It runs on the owner's **self-hosted** `sodatracker-runner` (a Docker-in-Docker
 StatefulSet defined in the `gitops-deployments` repo, `apps/github-runners`), not on
 GitHub-hosted runners. Keep this repo **private** while it uses them. The runners'
 Talos kernel has no `binfmt_misc`, so QEMU is unavailable: every `RUN` in the
@@ -218,8 +223,8 @@ fallback). `docker-compose.yml` maps both. The container runs as root, so no
 fast with a clear message if the config or GPIO devices are missing.
 
 The `piagent` binary in the image is **always built with `-tags rpi`** (real
-periph.io GPIO, not the mock). That tag compiles cleanly on amd64 too, so the
-multi-arch build works — it just finds no pins there.
+periph.io GPIO, not the mock). That tag compiles cleanly on amd64 too, so a
+local `docker compose up --build` works on an Intel host; it just finds no pins.
 
 **Pi agent config** is mounted at `/config/piagent.yaml` (`PIAGENT_CONFIG` env var).
 Pin mappings are YAML-only. Deployment-specific fields have env overrides
