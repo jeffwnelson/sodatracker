@@ -138,7 +138,8 @@ The self-hosted demo runs on a Raspberry Pi 3 Model B (arm64) as a **single Dock
 container running both the API server and the GPIO pi agent**.
 
 - **SSH:** `ssh pi@sodatracker` (Tailscale, works from any network) or
-  `ssh pi@<office-ip>` (office ethernet). Password: `<redacted>`
+  `ssh pi@<office-ip>` (office ethernet). The password is not kept in this
+  repo (it is public); ask the owner.
 - **GHCR image:** `ghcr.io/jeffwnelson/sodatracker:latest` (linux/amd64 + linux/arm64)
 - **Container name:** `sodatracker`
 - **Compose dir on Pi:** `/home/pi/sodatracker` (git clone of this repo)
@@ -169,7 +170,7 @@ make docker-push    # manual arm64 build+push, bypassing CI
 
 GHCR auth on the Pi is already configured (`~pi/.docker/config.json`). If it expires:
 ```bash
-gh auth token | sshpass -p '<redacted>' ssh pi@<office-ip> 'cat | docker login ghcr.io -u jeffwnelson --password-stdin'
+gh auth token | ssh pi@<office-ip> 'cat | docker login ghcr.io -u jeffwnelson --password-stdin'
 ```
 
 ### Container Modes and GPIO
@@ -205,9 +206,10 @@ Pin mappings are YAML-only. Deployment-specific fields have env overrides
 
 - **API port:** 3000 (env `PORT`)
 - **SQLite DB path:** `sodatracker.db` (env `DB_PATH`) — opens with `?_journal_mode=WAL&_busy_timeout=5000`
-- **API key:** `dev-api-key` (env `API_KEY`) — used by Pi agent; also accepted on admin CRUD routes via `APIKeyOrJWT` middleware
+- **Secrets:** the values below are **local-dev defaults only**. The Pi sets real ones in `/home/pi/sodatracker/.env` (rotated 2026-09-30; never commit them — this repo is public).
+- **API key:** `dev-api-key` (env `API_KEY`) — used by Pi agent (compose passes it as `PIAGENT_API_KEY`); also accepted on admin CRUD routes via `APIKeyOrJWT` middleware
 - **JWT secret:** `dev-jwt-secret` (env `JWT_SECRET`) — signs HS256 tokens for admin dashboard auth
-- **Admin password:** `dev-admin-password` (env `ADMIN_PASSWORD`) — bcrypt-hashed on first startup to seed the `admin` user
+- **Admin password:** `dev-admin-password` (env `ADMIN_PASSWORD`) — bcrypt-hashed only when the `admin` user is first seeded. Changing `ADMIN_PASSWORD` later has no effect until that user is deleted and re-seeded
 - **Static file dir:** empty in dev, `/app/static` in Docker (env `STATIC_DIR`) — serves SPA with index.html fallback
 - **Frontend dev server:** port 4000 with proxy to API at :3000
 - **Log format:** `text` for local dev, `json` for Docker (env `LOG_FORMAT`, default `"text"`)
