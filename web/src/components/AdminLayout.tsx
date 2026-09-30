@@ -52,12 +52,6 @@ export function AdminLayout() {
             </nav>
           </div>
           <div className="flex items-center gap-1">
-            <Link
-              to="/"
-              className="px-3 py-1.5 rounded-lg text-sm text-text-tertiary hover:text-text-primary hover:bg-surface-secondary transition-colors duration-150"
-            >
-              Customer View
-            </Link>
             <button
               onClick={handleLogout}
               className="px-3 py-1.5 rounded-lg text-sm text-text-tertiary hover:text-text-primary hover:bg-surface-secondary transition-colors duration-150"
