@@ -7,7 +7,9 @@ import { StockGrid } from "../components/StockGrid";
 import { Card } from "../components/Card";
 import { SkeletonCard } from "../components/Skeleton";
 import { EmptyState } from "../components/EmptyState";
-import { AppFooter } from "../components/AppFooter";
+import { AppShell } from "../components/AppShell";
+import { headerItemClass } from "../components/headerItemClass";
+import { PageHeader } from "../components/PageHeader";
 
 function MachineCard({ machineId }: { machineId: string }) {
   const { data, isLoading, error } = useQuery<MachineStatus>({
@@ -60,27 +62,19 @@ export function CustomerDashboard() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-secondary">
-      <header className="bg-surface-primary border-b border-border-primary">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-text-primary">
-              SodaTracker
-            </h1>
-            <p className="text-sm text-text-tertiary mt-0.5">
-              Live inventory status
-            </p>
-          </div>
-          <Link
-            to={isAuthenticated ? "/admin" : "/admin/login"}
-            className="inline-flex items-center rounded-xl border border-border-primary bg-surface-primary px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-150 ease-out-custom hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-          >
-            {isAuthenticated ? "Admin" : "Log in"}
-          </Link>
-        </div>
-      </header>
+    <AppShell
+      actions={
+        <Link
+          to={isAuthenticated ? "/admin" : "/admin/login"}
+          className={headerItemClass()}
+        >
+          {isAuthenticated ? "Admin" : "Log in"}
+        </Link>
+      }
+    >
+      <div className="space-y-6">
+        <PageHeader title="Inventory" subtitle="Live stock status" />
 
-      <main className="flex-1 w-full max-w-5xl mx-auto px-6 py-10 space-y-6">
         {isLoading && (
           <div className="space-y-6">
             <SkeletonCard />
@@ -101,8 +95,7 @@ export function CustomerDashboard() {
         )}
 
         {machines?.map((m) => <MachineCard key={m.id} machineId={m.id} />)}
-      </main>
-      <AppFooter width="max-w-5xl" />
-    </div>
+      </div>
+    </AppShell>
   );
 }

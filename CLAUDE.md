@@ -63,7 +63,7 @@ sodaTracker/
 │   └── src/
 │       ├── pages/             # CustomerDashboard, LoginPage, AdminDashboard, MachineDetailPage, RestockPage, AlertsPage, SetupPage
 │       │   └── analytics/     # AnalyticsLayout + Consumption/Products/Inventory/Spend/Predictions dashboards
-│       ├── components/        # StockGrid, AdminLayout, ProtectedRoute
+│       ├── components/        # AppShell (the one page frame: header, main, footer), AdminLayout, StockGrid, ProtectedRoute
 │       ├── context/           # AuthContext (JWT token + user state, localStorage persistence)
 │       └── api/               # API client + TypeScript types
 ├── .github/workflows/         # CI: one arm64 build (tests inside), cocogitto release, push to GHCR

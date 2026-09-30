@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Card } from "../components/Card";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";
+import { AppShell } from "../components/AppShell";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -28,14 +29,13 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-secondary flex items-center justify-center px-4">
+    <AppShell center>
       <div className="w-full max-w-sm animate-fade-up">
         <Card padding="none" className="p-10">
           <div className="text-center mb-8">
             <h1 className="text-xl font-semibold tracking-tight text-text-primary">
-              <Link to="/">SodaTracker</Link>
+              Sign in to admin
             </h1>
-            <p className="text-sm text-text-tertiary mt-1">Sign in to admin</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -60,6 +60,6 @@ export function LoginPage() {
           </form>
         </Card>
       </div>
-    </div>
+    </AppShell>
   );
 }
