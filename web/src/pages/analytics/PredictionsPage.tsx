@@ -52,7 +52,7 @@ const columns: Column<StockPrediction>[] = [
     headerClassName: "text-right",
   },
   {
-    header: "Est. stockout",
+    header: "Estimated restock",
     accessor: (row) =>
       row.predictedStockout
         ? new Date(row.predictedStockout).toLocaleDateString()
