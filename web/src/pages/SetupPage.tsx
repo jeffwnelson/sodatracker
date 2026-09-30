@@ -267,7 +267,11 @@ function ProductsSection() {
       setDeleteTarget(null);
       setEditTarget(null);
     },
-    onError: (err: Error) => setError(err.message),
+    onError: (err: Error) => {
+      setError(err.message);
+      setDeleteTarget(null);
+      setEditTarget(null);
+    },
   });
 
   const productColumns: Column<Product>[] = [
@@ -287,6 +291,24 @@ function ProductsSection() {
       header: "Cost/Can",
       accessor: (row) =>
         row.costPerCan != null ? `$${row.costPerCan.toFixed(2)}` : "\u2014",
+      headerClassName: "text-right",
+      className: "text-right",
+    },
+    {
+      header: "",
+      accessor: (row) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation(); // the row click opens the edit modal
+            setError("");
+            setDeleteTarget({ id: row.id, name: row.name });
+          }}
+          className="text-xs font-medium text-status-empty hover:text-red-700 transition-colors duration-150"
+        >
+          Delete
+        </button>
+      ),
       headerClassName: "text-right",
       className: "text-right",
     },

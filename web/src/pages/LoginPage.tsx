@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Card } from "../components/Card";
 import { Input } from "../components/Input";
@@ -33,7 +33,7 @@ export function LoginPage() {
         <Card padding="none" className="p-10">
           <div className="text-center mb-8">
             <h1 className="text-xl font-semibold tracking-tight text-text-primary">
-              SodaTracker
+              <Link to="/">SodaTracker</Link>
             </h1>
             <p className="text-sm text-text-tertiary mt-1">Sign in to admin</p>
           </div>
@@ -58,20 +58,6 @@ export function LoginPage() {
               Sign In
             </Button>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-border-primary text-center">
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => {
-                setUsername("admin");
-                setPassword("dev-admin-password");
-              }}
-              className="text-xs text-text-muted hover:text-text-tertiary transition-colors duration-150 disabled:opacity-50"
-            >
-              Fill dev credentials
-            </button>
-          </div>
         </Card>
       </div>
     </div>

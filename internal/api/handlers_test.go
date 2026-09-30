@@ -713,6 +713,47 @@ func TestExportDispensesPDF(t *testing.T) {
 	}
 }
 
+func TestDeleteProductInUse(t *testing.T) {
+	r := setup(t)
+	do := func(method, path string, v any) *httptest.ResponseRecorder {
+		var body []byte
+		if v != nil {
+			body, _ = json.Marshal(v)
+		}
+		req := httptest.NewRequest(method, path, bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-key")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		return w
+	}
+
+	w := do("POST", "/api/v1/products", domain.Product{Name: "Coke Zero"})
+	var product domain.Product
+	json.NewDecoder(w.Body).Decode(&product)
+	w = do("POST", "/api/v1/machines", domain.Machine{Name: "Soda Machine", SlotCount: 1})
+	var machine domain.Machine
+	json.NewDecoder(w.Body).Decode(&machine)
+	if w = do("POST", "/api/v1/machines/"+machine.ID+"/slots",
+		[]domain.Slot{{Position: 3, ProductID: product.ID, Capacity: 36}}); w.Code != http.StatusOK {
+		t.Fatalf("set slots: %d %s", w.Code, w.Body.String())
+	}
+
+	w = do("DELETE", "/api/v1/products/"+product.ID, nil)
+	if w.Code != http.StatusConflict {
+		t.Fatalf("expected 409 for product in a slot, got %d %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "slot 3 on Soda Machine") {
+		t.Errorf("error should name the slot, got %s", w.Body.String())
+	}
+
+	// Once no slot holds it, the delete goes through.
+	do("POST", "/api/v1/machines/"+machine.ID+"/slots", []domain.Slot{{Position: 3, Capacity: 36}})
+	if w = do("DELETE", "/api/v1/products/"+product.ID, nil); w.Code != http.StatusOK {
+		t.Fatalf("delete after unassigning: %d %s", w.Code, w.Body.String())
+	}
+}
+
 func TestDeleteProduct(t *testing.T) {
 	r := setup(t)
 

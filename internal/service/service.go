@@ -351,7 +351,33 @@ func (s *Service) GetStockPredictions(ctx context.Context, machineID string, loo
 
 // Delete pass-throughs
 
+// ProductInUseError is returned when deleting a product that a slot still
+// holds; removing it would leave that slot without a product.
+type ProductInUseError struct {
+	Machine  string
+	Position int
+}
+
+func (e *ProductInUseError) Error() string {
+	return fmt.Sprintf("product is assigned to slot %d on %s; change that slot first", e.Position, e.Machine)
+}
+
 func (s *Service) DeleteProduct(ctx context.Context, id string) error {
+	machines, err := s.store.ListMachines(ctx)
+	if err != nil {
+		return err
+	}
+	for _, m := range machines {
+		slots, err := s.store.GetSlots(ctx, m.ID)
+		if err != nil {
+			return err
+		}
+		for _, sl := range slots {
+			if sl.ProductID == id {
+				return &ProductInUseError{Machine: m.Name, Position: sl.Position}
+			}
+		}
+	}
 	return s.store.DeleteProduct(ctx, id)
 }
 

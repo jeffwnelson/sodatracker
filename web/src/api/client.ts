@@ -30,6 +30,29 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+const LOGIN_PATH = "/admin/login";
+
+// authFetch sends the stored token. A 401 means the token has expired (24h)
+// or was signed with a different secret, so drop it and go back to login
+// instead of leaving every admin page showing "API error: 401".
+async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const token = getToken();
+  const res = await fetch(`${BASE}${path}`, {
+    ...init,
+    headers: {
+      ...init.headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (res.status === 401 && token) {
+    clearToken();
+    if (window.location.pathname !== LOGIN_PATH) {
+      window.location.assign(LOGIN_PATH);
+    }
+  }
+  return res;
+}
+
 async function fetchJSON<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
   if (!res.ok) {
@@ -39,12 +62,7 @@ async function fetchJSON<T>(path: string): Promise<T> {
 }
 
 async function fetchJSONAuth<T>(path: string): Promise<T> {
-  const token = getToken();
-  const res = await fetch(`${BASE}${path}`, {
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
+  const res = await authFetch(path);
   if (!res.ok) {
     throw new Error(`API error: ${res.status}`);
   }
@@ -65,13 +83,9 @@ async function postJSON<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function postJSONAuth<T>(path: string, body: unknown): Promise<T> {
-  const token = getToken();
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await authFetch(path, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -182,13 +196,9 @@ export function createRestock(
 // Helpers for PUT/DELETE
 
 async function putJSONAuth<T>(path: string, body: unknown): Promise<T> {
-  const token = getToken();
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await authFetch(path, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -199,13 +209,7 @@ async function putJSONAuth<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function deleteJSONAuth<T>(path: string): Promise<T> {
-  const token = getToken();
-  const res = await fetch(`${BASE}${path}`, {
-    method: "DELETE",
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
+  const res = await authFetch(path, { method: "DELETE" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
     throw new Error(err.error || `API error: ${res.status}`);

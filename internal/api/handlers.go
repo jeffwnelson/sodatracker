@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -357,17 +358,23 @@ func (h *handlers) createProduct(w http.ResponseWriter, r *http.Request) {
 
 // deleteProduct godoc
 // @Summary      Delete a product
-// @Description  Deletes a product by ID
+// @Description  Deletes a product by ID. Fails with 409 if a slot still holds the product.
 // @Tags         Products
 // @Produce      json
 // @Param        id   path      string  true  "Product ID"
 // @Success      200  {object}  DeleteResponse
+// @Failure      409  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse
 // @Security     ApiKeyAuth || BearerAuth
 // @Router       /products/{id} [delete]
 func (h *handlers) deleteProduct(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if err := h.svc.DeleteProduct(r.Context(), id); err != nil {
+		var inUse *service.ProductInUseError
+		if errors.As(err, &inUse) {
+			writeErr(w, http.StatusConflict, err.Error())
+			return
+		}
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}

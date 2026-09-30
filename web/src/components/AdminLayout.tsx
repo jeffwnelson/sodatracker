@@ -29,7 +29,7 @@ export function AdminLayout() {
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between h-14">
           <div className="flex items-center gap-8">
             <Link
-              to="/admin"
+              to="/"
               className="text-base font-semibold tracking-tight text-text-primary"
             >
               SodaTracker
