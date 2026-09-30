@@ -1,0 +1,14 @@
+# Cocogitto: Conventional Commits and semver releases. CI runs `cog bump --auto`
+# on every push to main (see .github/workflows/docker-publish.yml).
+from_latest_tag = true
+ignore_merge_commits = true
+tag_prefix = "v"
+branch_whitelist = ["main"]
+skip_ci = "[skip ci]"
+
+[changelog]
+path = "CHANGELOG.md"
+template = "remote"
+remote = "github.com"
+repository = "sodatracker"
+owner = "jeffwnelson"

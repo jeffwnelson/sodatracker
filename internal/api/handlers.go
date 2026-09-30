@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jeffwnelson/sodatracker/internal/buildinfo"
 	"github.com/jeffwnelson/sodatracker/internal/domain"
 	"github.com/jeffwnelson/sodatracker/internal/export"
 	"github.com/jeffwnelson/sodatracker/internal/service"
@@ -27,13 +28,13 @@ type handlers struct {
 
 // health godoc
 // @Summary      Health check
-// @Description  Returns API health status
+// @Description  Returns API health status and the running release version
 // @Tags         System
 // @Produce      json
 // @Success      200  {object}  HealthResponse
 // @Router       /health [get]
 func (h *handlers) health(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	writeJSON(w, http.StatusOK, HealthResponse{Status: "ok", Version: buildinfo.Version})
 }
 
 // --- Machines ---

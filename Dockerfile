@@ -9,9 +9,12 @@ COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
 ENV CGO_ENABLED=0
-RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /out/server ./cmd/server
+# Release version from cocogitto (CI passes it); shown in the page footer.
+ARG VERSION=dev
+ENV LDFLAGS="-X github.com/jeffwnelson/sodatracker/internal/buildinfo.Version=${VERSION}"
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "$LDFLAGS" -o /out/server ./cmd/server
 # The rpi tag selects the periph.io GPIO provider instead of the mock.
-RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -tags rpi -o /out/piagent ./cmd/piagent
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "$LDFLAGS" -tags rpi -o /out/piagent ./cmd/piagent
 
 # --- Build React frontend ---
 FROM --platform=$BUILDPLATFORM node:22-alpine AS web-build

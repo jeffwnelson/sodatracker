@@ -1,4 +1,5 @@
 import type {
+  HealthResponse,
   Machine,
   MachineStatus,
   Product,
@@ -96,6 +97,10 @@ async function postJSONAuth<T>(path: string, body: unknown): Promise<T> {
 }
 
 // Public
+export function getHealth(): Promise<HealthResponse> {
+  return fetchJSON("/health");
+}
+
 export function listMachines(): Promise<Machine[]> {
   return fetchJSON("/machines");
 }

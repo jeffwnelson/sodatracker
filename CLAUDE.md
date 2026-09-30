@@ -157,6 +157,24 @@ Tailscale is what makes the Pi usable without the ethernet cable. Tailscale was
 brought up with `--accept-dns=false` to avoid resolver conflicts with the
 corporate network, so there is no MagicDNS name; use the IP.
 
+**Releases (cocogitto).** Commits on `main` must follow
+[Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`,
+`docs:`, `chore:`, `refactor:`, `test:`, `ci:`, with an optional scope, and `!` or a
+`BREAKING CHANGE:` footer for majors). After tests pass, the `release` job runs
+`cog bump --auto` (config in `cog.toml`): `feat` bumps the minor, `fix` the patch,
+and anything else releases nothing. It commits `CHANGELOG.md` as
+`chore(version): vX.Y.Z [skip ci]`, pushes the bump commit and tag, and creates
+a GitHub release. **Pull before committing after a release**, because `main` then has a
+bot commit you don't. History before `v0.1.0` isn't conventional, and
+`from_latest_tag = true` keeps cog from checking it.
+
+**Version in the app.** `internal/buildinfo.Version` is stamped by ldflags: the
+Dockerfile takes `--build-arg VERSION` (CI passes `git describe --tags`, so
+`vX.Y.Z` on a release and `vX.Y.Z-N-gSHA` between releases), and the Makefile
+uses `git describe --tags --always --dirty`. Unstamped builds say `dev`.
+`GET /api/v1/health` returns `{"status","version"}`, and `AppFooter` (admin and
+public pages) displays it. Release images also get a `vX.Y.Z` image tag.
+
 **CI publishes the image.** `.github/workflows/docker-publish.yml` runs
 `go build`/`go vet`/`go test` plus a `-tags rpi` compile check, then builds and
 pushes a multi-arch image on every push to `main`. Tags: `latest`,

@@ -1,5 +1,6 @@
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { AppFooter } from "./AppFooter";
 
 const navLinks = [
   { to: "/admin", label: "Dashboard", end: true },
@@ -24,7 +25,7 @@ export function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-secondary">
+    <div className="min-h-screen flex flex-col bg-surface-secondary">
       <header className="bg-surface-primary border-b border-border-primary">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between h-14">
           <div className="flex items-center gap-8">
@@ -66,9 +67,10 @@ export function AdminLayout() {
           </div>
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-6 py-10">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-6 py-10">
         <Outlet />
       </main>
+      <AppFooter />
     </div>
   );
 }

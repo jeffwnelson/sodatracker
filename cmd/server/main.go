@@ -14,6 +14,7 @@ import (
 	_ "time/tzdata"
 
 	"github.com/jeffwnelson/sodatracker/internal/api"
+	"github.com/jeffwnelson/sodatracker/internal/buildinfo"
 	"github.com/jeffwnelson/sodatracker/internal/config"
 	"github.com/jeffwnelson/sodatracker/internal/events"
 	"github.com/jeffwnelson/sodatracker/internal/events/local"
@@ -98,7 +99,7 @@ func main() {
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		slog.Info("SodaTracker API starting", "port", cfg.Port)
+		slog.Info("SodaTracker API starting", "port", cfg.Port, "version", buildinfo.Version)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("server error", "error", err)
 			os.Exit(1)

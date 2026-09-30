@@ -10,9 +10,18 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
-# Both jobs run on the owner's self-hosted runners (the sodatracker-runner
+# Every job runs on the owner's self-hosted runners (the sodatracker-runner
 # StatefulSet in gitops-deployments, which runs its own Docker daemon).
 # Keep this repo private while it uses them.
+#
+# On main: test -> release (cocogitto bumps the version from Conventional
+# Commits, commits CHANGELOG.md and pushes a vX.Y.Z tag) -> publish (builds the
+# image stamped with that version). Pushes made with GITHUB_TOKEN don't start
+# workflows, so the bump commit and tag don't re-trigger this one.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   test:
     runs-on: self-hosted
@@ -28,14 +37,74 @@ jobs:
       # The Pi build path uses the rpi tag; make sure it still compiles.
       - run: go build -tags rpi ./cmd/piagent
 
-  publish:
+  release:
     needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: self-hosted
+    permissions:
+      contents: write
+    outputs:
+      ref: ${{ steps.push.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Fails when no feat/fix/breaking commit landed since the last tag;
+      # that just means there is nothing to release.
+      - id: bump
+        continue-on-error: true
+        uses: cocogitto/cocogitto-action@v4
+        with:
+          command: bump
+          args: --auto
+          git-user: cog-bot
+          git-user-email: cog-bot@users.noreply.github.com
+
+      - id: push
+        if: steps.bump.outcome == 'success'
+        run: |
+          tag=$(git describe --tags --exact-match HEAD)
+          git push origin HEAD:main
+          git push origin "$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - if: steps.bump.outcome == 'success'
+        run: cog changelog --at "${{ steps.push.outputs.tag }}" -t full_hash > RELEASE_NOTES.md
+
+      - if: steps.bump.outcome == 'success'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.push.outputs.tag }}
+          body_path: RELEASE_NOTES.md
+
+  publish:
+    needs: [test, release]
+    # release is skipped for tag pushes; build those too.
+    if: >-
+      always() && needs.test.result == 'success' &&
+      (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: self-hosted
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The release tag when release just bumped, so the image holds the
+          # bumped CHANGELOG commit; otherwise the pushed commit.
+          ref: ${{ needs.release.outputs.ref || github.sha }}
+          fetch-depth: 0
+
+      # vX.Y.Z on a release, vX.Y.Z-N-gSHA between releases.
+      - id: version
+        run: |
+          echo "version=$(git describe --tags --always)" >> "$GITHUB_OUTPUT"
+          if git describe --tags --exact-match HEAD >/dev/null 2>&1; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: docker/setup-buildx-action@v4
 
@@ -53,12 +122,14 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=long
             type=ref,event=tag
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.release }}
 
       - uses: docker/build-push-action@v7
         with:
           context: .
           # arm64 for the Pi, amd64 so the same image runs on a dev box.
           platforms: linux/amd64,linux/arm64
+          build-args: VERSION=${{ steps.version.outputs.version }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

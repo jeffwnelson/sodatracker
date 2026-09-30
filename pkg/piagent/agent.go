@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jeffwnelson/sodatracker/internal/buildinfo"
 	"github.com/jeffwnelson/sodatracker/pkg/gpio"
 )
 
@@ -72,7 +73,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	retryTicker := time.NewTicker(retryInterval)
 	defer retryTicker.Stop()
 
-	slog.Info("Pi agent started", "machine", a.cfg.MachineID, "pollMs", a.cfg.PollMs,
+	slog.Info("Pi agent started", "version", buildinfo.Version, "machine", a.cfg.MachineID, "pollMs", a.cfg.PollMs,
 		"minClosedMs", a.cfg.MinClosedMs, "minOpenMs", a.cfg.MinOpenMs, "pins", len(a.pins))
 
 	for {

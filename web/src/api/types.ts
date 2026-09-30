@@ -1,3 +1,8 @@
+export interface HealthResponse {
+  status: string;
+  version: string;
+}
+
 export interface Product {
   id: string;
   upc?: string;

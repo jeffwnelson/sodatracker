@@ -12,17 +12,19 @@ TAG ?= latest
 PLATFORMS ?= linux/arm64
 PI_HOST ?= pi@sodatracker
 PI_DIR ?= /home/pi/sodatracker
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+LDFLAGS := -X github.com/jeffwnelson/sodatracker/internal/buildinfo.Version=$(VERSION)
 
 build: build-server build-piagent
 
 build-server:
-	go build -o $(SERVER_BIN) ./cmd/server
+	go build -ldflags "$(LDFLAGS)" -o $(SERVER_BIN) ./cmd/server
 
 build-piagent:
-	go build -o $(PIAGENT_BIN) ./cmd/piagent
+	go build -ldflags "$(LDFLAGS)" -o $(PIAGENT_BIN) ./cmd/piagent
 
 build-piagent-arm:
-	GOOS=linux GOARCH=arm GOARM=7 go build -tags rpi -o $(PIAGENT_ARM_BIN) ./cmd/piagent
+	GOOS=linux GOARCH=arm GOARM=7 go build -ldflags "$(LDFLAGS)" -tags rpi -o $(PIAGENT_ARM_BIN) ./cmd/piagent
 
 test:
 	go test ./...
@@ -47,7 +49,7 @@ docker-build:
 	docker buildx build --platform $(PLATFORMS) -t $(IMAGE):$(TAG) --load .
 
 docker-push:
-	docker buildx build --platform $(PLATFORMS) -t $(IMAGE):$(TAG) --push .
+	docker buildx build --platform $(PLATFORMS) --build-arg VERSION=$(VERSION) -t $(IMAGE):$(TAG) --push .
 
 # Pull the published image on the Pi and restart the stack there.
 pi-deploy:

@@ -100,6 +100,13 @@ func TestHealth(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d", w.Code)
 	}
+	var resp HealthResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Status != "ok" || resp.Version != "dev" {
+		t.Errorf("got %+v, want status ok and the unstamped version \"dev\"", resp)
+	}
 }
 
 func TestCreateAndListMachines(t *testing.T) {

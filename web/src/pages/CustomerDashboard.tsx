@@ -7,6 +7,7 @@ import { StockGrid } from "../components/StockGrid";
 import { Card } from "../components/Card";
 import { SkeletonCard } from "../components/Skeleton";
 import { EmptyState } from "../components/EmptyState";
+import { AppFooter } from "../components/AppFooter";
 
 function MachineCard({ machineId }: { machineId: string }) {
   const { data, isLoading, error } = useQuery<MachineStatus>({
@@ -59,7 +60,7 @@ export function CustomerDashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-surface-secondary">
+    <div className="min-h-screen flex flex-col bg-surface-secondary">
       <header className="bg-surface-primary border-b border-border-primary">
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
           <div>
@@ -79,7 +80,7 @@ export function CustomerDashboard() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-10 space-y-6">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-6 py-10 space-y-6">
         {isLoading && (
           <div className="space-y-6">
             <SkeletonCard />
@@ -101,6 +102,7 @@ export function CustomerDashboard() {
 
         {machines?.map((m) => <MachineCard key={m.id} machineId={m.id} />)}
       </main>
+      <AppFooter width="max-w-5xl" />
     </div>
   );
 }

@@ -9,7 +9,8 @@ type ErrorResponse struct {
 
 // HealthResponse represents the health check response.
 type HealthResponse struct {
-	Status string `json:"status" example:"ok"`
+	Status  string `json:"status" example:"ok"`
+	Version string `json:"version" example:"v0.2.0"`
 }
 
 // LoginRequest represents the login request body.
