@@ -162,6 +162,13 @@ corporate network, so there is no MagicDNS name; use the IP.
 pushes a multi-arch image on every push to `main`. Tags: `latest`,
 `sha-<commit>`, and `v*` git tags.
 
+Both jobs run on the owner's **self-hosted** `sodatracker-runner` (a Docker-in-Docker
+StatefulSet defined in the `gitops-deployments` repo, `apps/github-runners`), not on
+GitHub-hosted runners. Keep this repo **private** while it uses them. The runners'
+Talos kernel has no `binfmt_misc`, so QEMU is unavailable: every `RUN` in the
+Dockerfile must stay in a `--platform=$BUILDPLATFORM` stage, and the final stage
+only `COPY`s (tini comes from a build-platform stage via `apk --arch`).
+
 ```bash
 make pi-deploy      # ssh to Pi, docker compose pull && docker compose up -d
 make pi-logs        # tail container logs
