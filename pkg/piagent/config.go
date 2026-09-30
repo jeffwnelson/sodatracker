@@ -9,13 +9,17 @@ import (
 )
 
 type Config struct {
-	APIURL    string      `yaml:"apiUrl"`
-	APIKey    string      `yaml:"apiKey"`
-	MachineID string      `yaml:"machineId"`
-	PollMs    int         `yaml:"pollMs"`
-	RetryMs   int         `yaml:"retryMs"`
-	DBPath    string      `yaml:"dbPath"`
-	Pins      []PinConfig `yaml:"pins"`
+	APIURL    string `yaml:"apiUrl"`
+	APIKey    string `yaml:"apiKey"`
+	MachineID string `yaml:"machineId"`
+	PollMs    int    `yaml:"pollMs"`
+	RetryMs   int    `yaml:"retryMs"`
+	// A contact must read closed this long before it counts as a vend, and
+	// then read open this long before the vend is reported.
+	MinClosedMs int         `yaml:"minClosedMs"`
+	MinOpenMs   int         `yaml:"minOpenMs"`
+	DBPath      string      `yaml:"dbPath"`
+	Pins        []PinConfig `yaml:"pins"`
 }
 
 type PinConfig struct {
@@ -39,6 +43,12 @@ func LoadConfig(path string) (*Config, error) {
 	if cfg.RetryMs == 0 {
 		cfg.RetryMs = 30000
 	}
+	if cfg.MinClosedMs == 0 {
+		cfg.MinClosedMs = 100
+	}
+	if cfg.MinOpenMs == 0 {
+		cfg.MinOpenMs = 500
+	}
 	if cfg.DBPath == "" {
 		cfg.DBPath = "piagent-cache.db"
 	}
@@ -54,6 +64,8 @@ func applyEnvOverrides(cfg *Config) {
 	overrideString(&cfg.DBPath, "PIAGENT_DB_PATH")
 	overrideInt(&cfg.PollMs, "PIAGENT_POLL_MS")
 	overrideInt(&cfg.RetryMs, "PIAGENT_RETRY_MS")
+	overrideInt(&cfg.MinClosedMs, "PIAGENT_MIN_CLOSED_MS")
+	overrideInt(&cfg.MinOpenMs, "PIAGENT_MIN_OPEN_MS")
 }
 
 func overrideString(dst *string, key string) {

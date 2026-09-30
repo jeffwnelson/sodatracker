@@ -3,15 +3,20 @@ apiKey: dev-api-key
 machineId: machine-1
 pollMs: 100
 retryMs: 30000
+# Debounce: a contact must read closed this long to count as a vend, then
+# read open this long before the vend is reported.
+minClosedMs: 100
+minOpenMs: 500
 dbPath: piagent-cache.db
+# Slots are the machine's own column numbers. See README "Pin Assignments".
 pins:
-  - pin: 27
-    slot: 1   # Physical 13+14 — Coca-Cola
-  - pin: 5
-    slot: 2   # Physical 29+30 — Diet Mountain Dew #1
-  - pin: 13
-    slot: 3   # Physical 33+34 — Diet Mountain Dew #2
-  - pin: 26
-    slot: 4   # Physical 37+39 — Mountain Dew
+  - pin: 25
+    slot: 1   # Physical 22, Pi-side brown: Diet Mountain Dew
   - pin: 17
-    slot: 5   # Physical 11+9  — Diet Coke
+    slot: 2   # Physical 11, Pi-side blue: Diet Mountain Dew
+  - pin: 19
+    slot: 3   # Physical 35, Pi-side white/green: Coke Zero
+  - pin: 13
+    slot: 4   # Physical 33, Pi-side green: Mountain Dew
+  - pin: 22
+    slot: 5   # Physical 15, Pi-side white/blue: Diet Coke

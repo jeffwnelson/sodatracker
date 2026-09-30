@@ -18,12 +18,13 @@ type Agent struct {
 	cache    *Cache
 	client   *http.Client
 	pins     []monitoredPin
+	now      func() time.Time
 }
 
 type monitoredPin struct {
 	pin      gpio.Pin
 	slot     int
-	lastHigh bool
+	debounce *debouncer
 }
 
 type dispensePayload struct {
@@ -43,7 +44,10 @@ func New(cfg *Config, provider gpio.Provider) (*Agent, error) {
 		provider: provider,
 		cache:    cache,
 		client:   &http.Client{Timeout: 10 * time.Second},
+		now:      time.Now,
 	}
+	minClosed := time.Duration(cfg.MinClosedMs) * time.Millisecond
+	minOpen := time.Duration(cfg.MinOpenMs) * time.Millisecond
 	for _, pc := range cfg.Pins {
 		pin, err := provider.OpenInput(pc.Pin)
 		if err != nil {
@@ -52,7 +56,7 @@ func New(cfg *Config, provider gpio.Provider) (*Agent, error) {
 		a.pins = append(a.pins, monitoredPin{
 			pin:      pin,
 			slot:     pc.Slot,
-			lastHigh: true, // assume not pressed initially
+			debounce: newDebouncer(minClosed, minOpen),
 		})
 	}
 	return a, nil
@@ -68,7 +72,8 @@ func (a *Agent) Run(ctx context.Context) error {
 	retryTicker := time.NewTicker(retryInterval)
 	defer retryTicker.Stop()
 
-	slog.Info("Pi agent started", "machine", a.cfg.MachineID, "pollMs", a.cfg.PollMs, "pins", len(a.pins))
+	slog.Info("Pi agent started", "machine", a.cfg.MachineID, "pollMs", a.cfg.PollMs,
+		"minClosedMs", a.cfg.MinClosedMs, "minOpenMs", a.cfg.MinOpenMs, "pins", len(a.pins))
 
 	for {
 		select {
@@ -85,6 +90,7 @@ func (a *Agent) Run(ctx context.Context) error {
 }
 
 func (a *Agent) poll() {
+	now := a.now()
 	for i := range a.pins {
 		mp := &a.pins[i]
 		high, err := mp.pin.Read()
@@ -92,20 +98,21 @@ func (a *Agent) poll() {
 			slog.Error("error reading pin", "pin", mp.pin.Number(), "error", err)
 			continue
 		}
-		// Detect button release: was low (pressed), now high (released)
-		if !mp.lastHigh && high {
-			slog.Info("dispense detected", "slot", mp.slot, "pin", mp.pin.Number())
-			a.handleDispense(mp.slot)
+		// A vend closes the contact (LOW) and reports once it has stayed
+		// open again; see debouncer for the timing rules.
+		if vend, closedAt := mp.debounce.update(high, now); vend {
+			slog.Info("dispense detected", "slot", mp.slot, "pin", mp.pin.Number(),
+				"closedMs", now.Sub(closedAt).Milliseconds())
+			a.handleDispense(mp.slot, closedAt)
 		}
-		mp.lastHigh = high
 	}
 }
 
-func (a *Agent) handleDispense(slot int) {
+func (a *Agent) handleDispense(slot int, at time.Time) {
 	evt := CachedEvent{
 		MachineID: a.cfg.MachineID,
 		Slot:      slot,
-		Timestamp: time.Now().UTC(),
+		Timestamp: at.UTC(),
 	}
 	if err := a.sendDispense(evt); err != nil {
 		slog.Warn("failed to send dispense, caching", "slot", slot, "error", err)

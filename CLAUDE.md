@@ -199,7 +199,7 @@ multi-arch build works — it just finds no pins there.
 Pin mappings are YAML-only. Deployment-specific fields have env overrides
 (`applyEnvOverrides` in `pkg/piagent/config.go`): `PIAGENT_API_URL`,
 `PIAGENT_API_KEY`, `PIAGENT_MACHINE_ID`, `PIAGENT_DB_PATH`, `PIAGENT_POLL_MS`,
-`PIAGENT_RETRY_MS`.
+`PIAGENT_RETRY_MS`, `PIAGENT_MIN_CLOSED_MS`, `PIAGENT_MIN_OPEN_MS`.
 
 ## Key Configuration
 
@@ -287,24 +287,25 @@ Pin mappings are YAML-only. Deployment-specific fields have env overrides
 
 ## Test Structure
 
-Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **54 tests total** across 7 packages, all run by `go test ./...` with no build tags or external services.
+Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **63 tests total** across 9 packages, all run by `go test ./...` with no build tags or external services.
 
 - `internal/events/local/local_test.go` — EventBus tests (5): `TestPublishSubscribe`, `TestMultipleSubscribers`, `TestUnsubscribe`, `TestPublishNoSubscribers`, `TestDifferentEventTypes`
 - `internal/store/sqlite/sqlite_test.go` — Store CRUD tests (6): `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestUserCRUD`, `TestAlertConfigCRUD`, `TestAlertEventCRUD`, `TestDispenseAndRestock`
 - `internal/auth/jwt_test.go` — JWT tests (4): `TestGenerateAndValidateToken`, `TestJWTMiddleware_MissingToken`, `TestJWTMiddleware_InvalidToken`, `TestJWTMiddleware_ValidToken`
 - `internal/service/service_test.go` — Service logic tests (6): `TestLogin` (success + bad password + non-existent user), `TestGetDispenseStats`, `TestGetMachineCost`, `TestEvaluateStockAlert`, `TestCreateRestockClearsAlerts`, `TestGetStockPredictions`
-- `internal/api/handlers_test.go` — API integration tests (16) using `httptest.NewRecorder()` against the real chi router with EventBus wired: `TestHealth`, `TestCreateAndListMachines`, `TestDispenseRequiresAPIKey`, `TestLoginSuccess`, `TestLoginBadPassword`, `TestAdminStatsRequiresAuth`, `TestFullWorkflow`, `TestFullWorkflowWithJWT`, `TestAlertConfigCRUD`, `TestPredictionsEndpoint`, `TestFullWorkflowWithAlerts`, `TestExportDispensesCSV`, `TestExportDispensesPDF`, `TestDeleteProduct`, `TestDeleteMachine`, `TestExportRequiresAuth`
+- `internal/api/handlers_test.go` — API integration tests (17) using `httptest.NewRecorder()` against the real chi router with EventBus wired: `TestHealth`, `TestCreateAndListMachines`, `TestDispenseRequiresAPIKey`, `TestLoginSuccess`, `TestLoginBadPassword`, `TestAdminStatsRequiresAuth`, `TestFullWorkflow`, `TestFullWorkflowWithJWT`, `TestAlertConfigCRUD`, `TestPredictionsEndpoint`, `TestFullWorkflowWithAlerts`, `TestExportDispensesCSV`, `TestExportDispensesPDF`, `TestDeleteProduct`, `TestDeleteProductInUse`, `TestDeleteMachine`, `TestExportRequiresAuth`
 - `internal/export/export_test.go` — Export unit tests (3): `TestWriteDispensesCSV`, `TestWriteDispensesPDF`, `TestEmptyExport`
 - `internal/service/analytics_test.go` — Analytics tests (5): `TestConsumptionAnalytics` (includes a DST-spanning window), `TestAnalyticsClampsToTrackingStart`, `TestProductAnalytics`, `TestInventoryAnalytics`, `TestSpendAnalytics`
 - `internal/api/analytics_test.go` — Analytics endpoint auth, 404 and parameter validation (1): `TestAnalyticsEndpoints`
 - `internal/api/slack_test.go` — Slack slash command signature checks (5)
 - `internal/notify/slack_test.go` — Slack notifier (3)
+- `pkg/piagent/debounce_test.go`, `agent_test.go` — Debounce against recorded bounce patterns, and one dispense per bouncy vend end to end (4)
 
 ## Key Business Logic
 
 - `internal/service/service.go` — `GetMachineStatus`: computes stock per slot (restock qty - dispenses since restock), assigns status (ok/low/empty), caps stock at 0. `Login`: bcrypt verify + JWT generation. `GetDispenseStats`: in-memory aggregation (hourly bucketing, product ranking, cost). `GetMachineCost`: sum of costPerCan for all dispenses. `RegisterDispense`: store + publish EventDispense. `CreateRestock`: store + clear alerts + publish EventStockCleared. `EvaluateStockAlert`: compute stock, resolve threshold from configs, deduplicate, create AlertEvent. `GetStockPredictions`: dispenses/day over lookback window, estimate days until stock-out.
 - `internal/api/handlers.go` — `createDispense`: auto-resolves productId from slot config if not provided. `login`: authenticates and returns JWT. `getAdminStats`, `getMachineCost`, `listRestocks`: admin analytics. Alert CRUD: `listAlertConfigs`, `createAlertConfig`, `updateAlertConfig`, `deleteAlertConfig`. `listAlertEvents`: fired alerts with `?active=true` filter. `getStockPredictions`: per-slot predictions with `?lookbackDays` param. `exportDispenses`: CSV/PDF report with `?machineId&format=csv|pdf` params.
-- `pkg/piagent/agent.go` — polls GPIO pins every 100ms, counts a dispense on each LOW→HIGH transition (a normally-open switch reopening; see README "Hardware" for how this maps to the vend cam and the unverified cam wiring), sends to API, caches failures in local SQLite for retry every 30s (max 50 pending events per retry cycle, stops on first failure)
+- `pkg/piagent/agent.go` — polls GPIO pins every 100ms and debounces each through `debounce.go`: a closure (LOW) counts after `minClosedMs` (100) and is reported after the pin reads open (HIGH) for `minOpenMs` (500), timestamped at the closure start, so a bouncing bare-wire contact counts once per vend. A contact already closed at startup is not reported. Sends to API, caches failures in local SQLite for retry every 30s (max 50 pending events per retry cycle, stops on first failure)
 - `internal/store/sqlite/sqlite.go` — `GetLastRestock`: walks restocks in reverse chronological order to find the most recent one containing the target slot position
 
 ## Phased Implementation Plan

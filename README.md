@@ -57,14 +57,17 @@ once and reopens once per real vend; the piagent counts the reopening
 (LOW → HIGH). Button presses with no coin or on a sold-out column don't turn
 the cam; a jam, where the cam turns but no can falls, would still count.
 
-### Current wiring status (unverified)
+### Current wiring
 
-- The **legacy Pi (Model 2 B)** is wired to the cams over an Ethernet cable.
-  Something at the cams is covered with duct tape, so what those conductors
-  actually connect to is not known.
-- The **SodaTracker Pi** has only been tested with bench contact buttons. The
-  pin assignments below come from that bench setup, not from the cam wiring,
-  and dispenses recorded so far are likely test presses.
+The SodaTracker Pi took over the legacy Pi's harness on 2026-09-30. Each column
+has an added contact: two bare wires that an arm presses together while the
+vend cam turns. Those contacts are separate from the machine's own switch
+stack. They run to the Pi over an 8-conductor Ethernet cable, with the
+contact commons on two conductors and one conductor spare. The cable's colors
+don't match end to end, so the pin table below goes by the Pi-side color.
+
+Every column was verified by closing its contact and by real vends. The two
+Diet Mountain Dew columns are still unconfirmed as machine #1 vs #2.
 
 **Mains voltage:** the machine's entire vend control circuit runs at 115V AC.
 The service manual draws it "across the line" between L1 and L2, so every
@@ -80,19 +83,31 @@ conductor to the cabinet at rest and during a vend. Connect one channel first.
 
 ## GPIO Wiring
 
-Each contact switch connects a GPIO signal pin to a ground pin. The Pi's internal pull-up resistor holds the pin HIGH when the switch is open. Closing the switch pulls it LOW; the piagent registers a dispense on the release (LOW → HIGH transition).
+Each contact connects a GPIO signal pin to ground. The Pi's internal pull-up
+holds the pin HIGH while the contact is open, and a vend closes it (LOW). The
+bare-wire contacts bounce, so the piagent debounces: a closure counts once the
+pin has read LOW for `minClosedMs` (default 100), and the vend is reported,
+timestamped at the start of the closure, once the pin has read HIGH again for
+`minOpenMs` (default 500). Shorter blips and mid-vend bounces are ignored.
 
 ### Pin Assignments
 
-| Slot | Product              | Physical Signal | Physical GND | BCM Pin |
-|------|----------------------|-----------------|--------------|---------|
-| 1    | Coca-Cola            | 13              | 14           | 27      |
-| 2    | Diet Mountain Dew #1 | 29              | 30           | 5       |
-| 3    | Diet Mountain Dew #2 | 33              | 34           | 13      |
-| 4    | Mountain Dew         | 37              | 39           | 26      |
-| 5    | Diet Coke            | 11              | 9            | 17      |
+Slots use the machine's own column numbers.
 
-Each switch is normally-open, wired between its signal pin and an adjacent ground pin. No external resistors needed — the Pi's internal pull-ups are enabled by the piagent via periph.io.
+| Slot | Product           | Pi-side wire | Physical | BCM |
+|------|-------------------|--------------|----------|-----|
+| 1    | Diet Mountain Dew | brown        | 22       | 25  |
+| 2    | Diet Mountain Dew | blue         | 11       | 17  |
+| 3    | Coke Zero         | white/green  | 35       | 19  |
+| 4    | Mountain Dew      | green        | 33       | 13  |
+| 5    | Diet Coke         | white/blue   | 15       | 22  |
+| —    | common            | white/brown  | 14 (GND) | —   |
+| —    | common            | white/orange | 20 (GND) | —   |
+| —    | spare             | orange       | 16       | 23  |
+
+No external resistors are needed: the piagent enables the internal pull-ups
+through periph.io. Nothing should connect to the 3.3V pins (1, 17) or the 5V
+pins (2, 4).
 
 ## Quick Start
 
