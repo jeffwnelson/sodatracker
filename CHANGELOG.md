@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.3.0](https://github.com/jeffwnelson/sodatracker/compare/ac99172a6416baf3172b4deae4e4d8efd624d334..v0.3.0) - 2026-09-30
+#### Features
+- per-product colors, set on the Setup page - ([6eac56e](https://github.com/jeffwnelson/sodatracker/commit/6eac56e6dc2e3311b6bc869428924dce629ceb7a)) - Jeff Nelson
+#### Continuous Integration
+- build the image once, with tests inside, for arm64 only - ([ac99172](https://github.com/jeffwnelson/sodatracker/commit/ac99172a6416baf3172b4deae4e4d8efd624d334)) - Jeff Nelson
+
+- - -
+
 ## [v0.2.0](https://github.com/jeffwnelson/sodatracker/compare/02896fa6c895fb753120a713334d390dda4e9910..v0.2.0) - 2026-09-30
 #### Features
 - release with cocogitto and show the version in the page footer - ([02896fa](https://github.com/jeffwnelson/sodatracker/commit/02896fa6c895fb753120a713334d390dda4e9910)) - Jeff Nelson
