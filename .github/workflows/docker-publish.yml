@@ -10,9 +10,12 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+# Both jobs run on the owner's self-hosted runners (the sodatracker-runner
+# StatefulSet in gitops-deployments, which runs its own Docker daemon).
+# Keep this repo private while it uses them.
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -27,12 +30,16 @@ jobs:
 
   publish:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v7
+
+      # The arm64 stage runs `apk add`, which needs QEMU emulation. GitHub's
+      # hosted runners ship with it; the self-hosted ones don't.
+      - uses: docker/setup-qemu-action@v3
 
       - uses: docker/setup-buildx-action@v4
 
