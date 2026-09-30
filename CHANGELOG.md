@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.3.1](https://github.com/jeffwnelson/sodatracker/compare/4c8e583c04ac27fc5443ca16abf981d8e62e1632..v0.3.1) - 2026-09-30
+#### Bug Fixes
+- (**web**) use one page frame so the header stays the same everywhere - ([d34168e](https://github.com/jeffwnelson/sodatracker/commit/d34168ebff9c0b2441f8b1efd4f44da65855b1e3)) - Jeff Nelson
+#### Refactoring
+- (**web**) label the predicted stock-out date "Estimated restock" - ([86b168d](https://github.com/jeffwnelson/sodatracker/commit/86b168d6257ec13bd7993a1ca800da1844c1b3c0)) - Jeff Nelson
+- (**web**) drop the Customer View link from the admin header - ([4c8e583](https://github.com/jeffwnelson/sodatracker/commit/4c8e583c04ac27fc5443ca16abf981d8e62e1632)) - Jeff Nelson
+
+- - -
+
 ## [v0.3.0](https://github.com/jeffwnelson/sodatracker/compare/ac99172a6416baf3172b4deae4e4d8efd624d334..v0.3.0) - 2026-09-30
 #### Features
 - per-product colors, set on the Setup page - ([6eac56e](https://github.com/jeffwnelson/sodatracker/commit/6eac56e6dc2e3311b6bc869428924dce629ceb7a)) - Jeff Nelson
