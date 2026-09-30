@@ -1,5 +1,6 @@
 import type { SlotStatus } from "../api/types";
 import { Badge } from "./Badge";
+import { ProductDot } from "./ProductDot";
 
 const statusBarColor: Record<string, string> = {
   ok: "bg-status-ok",
@@ -33,8 +34,11 @@ export function StockGrid({ slots }: { slots: SlotStatus[] }) {
             className="rounded-xl border border-border-primary bg-surface-primary p-4 transition-colors duration-150 hover:border-border-secondary"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-text-primary truncate">
-                {ss.product?.name || `Slot ${ss.slot.position}`}
+              <span className="flex items-center gap-2 min-w-0 text-sm font-medium text-text-primary">
+                <ProductDot color={ss.product?.color} />
+                <span className="truncate">
+                  {ss.product?.name || `Slot ${ss.slot.position}`}
+                </span>
               </span>
               <Badge variant={statusBadgeVariant[ss.status]}>
                 {ss.status}

@@ -118,6 +118,7 @@ export function createProduct(product: {
   name: string;
   description?: string;
   costPerCan?: number;
+  color?: string;
 }): Promise<Product> {
   return postJSONAuth("/products", product);
 }

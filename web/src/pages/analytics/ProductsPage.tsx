@@ -16,7 +16,7 @@ import type { Column } from "../../components/DataTable";
 import {
   SERIES,
   axisProps,
-  colorMap,
+  productColorMap,
   formatBucket,
   formatBucketLong,
   formatDateTime,
@@ -43,10 +43,10 @@ export function ProductsPage() {
       {(data) => (
         <Products
           data={data}
-          colors={colorMap([
-            ...(catalog.data ?? []).map((p) => p.id),
-            ...data.products.map((p) => p.productId),
-          ])}
+          colors={productColorMap(
+            catalog.data ?? [],
+            data.products.map((p) => p.productId),
+          )}
         />
       )}
     </Loaded>

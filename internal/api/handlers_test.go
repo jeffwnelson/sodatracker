@@ -720,6 +720,34 @@ func TestExportDispensesPDF(t *testing.T) {
 	}
 }
 
+func TestProductColorValidation(t *testing.T) {
+	r := setup(t)
+	post := func(p domain.Product) *httptest.ResponseRecorder {
+		body, _ := json.Marshal(p)
+		req := httptest.NewRequest("POST", "/api/v1/products", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-key")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		return w
+	}
+
+	for _, bad := range []string{"red", "#e40", "#e4002bff", "e4002b"} {
+		if w := post(domain.Product{Name: "Coke Zero", Color: bad}); w.Code != http.StatusBadRequest {
+			t.Errorf("color %q: expected 400, got %d", bad, w.Code)
+		}
+	}
+	w := post(domain.Product{Name: "Coke Zero", Color: "#E4002B"})
+	if w.Code != http.StatusCreated {
+		t.Fatalf("valid color: %d %s", w.Code, w.Body.String())
+	}
+	var p domain.Product
+	json.NewDecoder(w.Body).Decode(&p)
+	if p.Color != "#e4002b" {
+		t.Errorf("expected color stored lowercase, got %q", p.Color)
+	}
+}
+
 func TestDeleteProductInUse(t *testing.T) {
 	r := setup(t)
 	do := func(method, path string, v any) *httptest.ResponseRecorder {

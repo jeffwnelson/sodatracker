@@ -2,6 +2,8 @@ package sqlite
 
 import (
 	"context"
+	"database/sql"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -18,11 +20,49 @@ func testStore(t *testing.T) *SQLiteStore {
 	return s
 }
 
+// A database created before products had a color column gains it on open, and
+// existing rows read back with no color.
+func TestProductColorMigration(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "old.db")
+	old, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, stmt := range []string{
+		`CREATE TABLE products (id TEXT PRIMARY KEY, upc TEXT DEFAULT '', name TEXT NOT NULL,
+			cost_per_can REAL DEFAULT 0, image_url TEXT DEFAULT '', description TEXT DEFAULT '')`,
+		`INSERT INTO products (id, name) VALUES ('p1', 'Diet Coke')`,
+	} {
+		if _, err := old.Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	old.Close()
+
+	s, err := New(path)
+	if err != nil {
+		t.Fatalf("open migrated store: %v", err)
+	}
+	defer s.Close()
+	ctx := context.Background()
+	got, err := s.GetProduct(ctx, "p1")
+	if err != nil || got == nil || got.Name != "Diet Coke" || got.Color != "" {
+		t.Fatalf("existing product after migration: %+v, %v", got, err)
+	}
+	got.Color = "#a7a9ac"
+	if err := s.CreateProduct(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ = s.GetProduct(ctx, "p1"); got.Color != "#a7a9ac" {
+		t.Errorf("color after update: %q", got.Color)
+	}
+}
+
 func TestProductCRUD(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
 
-	p := &domain.Product{ID: "p1", UPC: "012345678901", Name: "Cola", Description: "Classic cola"}
+	p := &domain.Product{ID: "p1", UPC: "012345678901", Name: "Cola", Description: "Classic cola", Color: "#e4002b"}
 	if err := s.CreateProduct(ctx, p); err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -33,6 +73,9 @@ func TestProductCRUD(t *testing.T) {
 	}
 	if got.Name != "Cola" {
 		t.Errorf("expected Cola, got %s", got.Name)
+	}
+	if got.Color != "#e4002b" {
+		t.Errorf("expected color #e4002b, got %q", got.Color)
 	}
 
 	got, err = s.GetProductByUPC(ctx, "012345678901")

@@ -16,6 +16,7 @@ import type { Column } from "../components/DataTable";
 import { SkeletonCard } from "../components/Skeleton";
 import { EmptyState } from "../components/EmptyState";
 import type { Dispense, Restock } from "../api/types";
+import { ProductDot } from "../components/ProductDot";
 
 const statusBarColor: Record<string, string> = {
   ok: "bg-status-ok",
@@ -162,8 +163,11 @@ export function MachineDetailPage() {
             return (
               <Card key={ss.slot.position} padding="sm">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-text-primary truncate">
-                    {ss.product?.name || `Slot ${ss.slot.position}`}
+                  <span className="flex items-center gap-2 min-w-0 text-sm font-medium text-text-primary">
+                    <ProductDot color={ss.product?.color} />
+                    <span className="truncate">
+                      {ss.product?.name || `Slot ${ss.slot.position}`}
+                    </span>
                   </span>
                   <Badge variant={statusBadgeVariant[ss.status]}>
                     {ss.status}

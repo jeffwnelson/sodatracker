@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -347,6 +349,11 @@ func (h *handlers) createProduct(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "name is required")
 		return
 	}
+	p.Color = strings.ToLower(p.Color)
+	if p.Color != "" && !hexColor.MatchString(p.Color) {
+		writeErr(w, http.StatusBadRequest, `color must be a "#rrggbb" hex value`)
+		return
+	}
 	if p.ID == "" {
 		p.ID = uuid.NewString()
 	}
@@ -356,6 +363,8 @@ func (h *handlers) createProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusCreated, p)
 }
+
+var hexColor = regexp.MustCompile(`^#[0-9a-f]{6}$`)
 
 // deleteProduct godoc
 // @Summary      Delete a product

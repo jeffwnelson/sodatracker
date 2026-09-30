@@ -10,6 +10,8 @@ export interface Product {
   description?: string;
   costPerCan?: number;
   imageUrl?: string;
+  /** "#rrggbb", or absent to use the default palette. */
+  color?: string;
 }
 
 export interface Machine {

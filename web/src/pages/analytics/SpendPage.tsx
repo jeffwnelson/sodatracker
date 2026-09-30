@@ -16,7 +16,7 @@ import { DataTable } from "../../components/DataTable";
 import {
   ACCENT,
   axisProps,
-  colorMap,
+  productColorMap,
   formatBucket,
   formatBucketLong,
   money,
@@ -42,10 +42,10 @@ export function SpendPage() {
       {(data) => (
         <Spend
           data={data}
-          colors={colorMap([
-            ...(catalog.data ?? []).map((p) => p.id),
-            ...data.byProduct.map((p) => p.productId),
-          ])}
+          colors={productColorMap(
+            catalog.data ?? [],
+            data.byProduct.map((p) => p.productId),
+          )}
         />
       )}
     </Loaded>

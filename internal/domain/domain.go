@@ -9,6 +9,9 @@ type Product struct {
 	Description string  `json:"description,omitempty" example:"Classic cola"`
 	CostPerCan  float64 `json:"costPerCan,omitempty" example:"0.35"`
 	ImageURL    string  `json:"imageUrl,omitempty" example:"https://example.com/coke.png"`
+	// Color is a "#rrggbb" hex used for the product's dot and chart series.
+	// Empty means the dashboard picks one from its default palette.
+	Color string `json:"color,omitempty" example:"#e4002b"`
 }
 
 type Machine struct {

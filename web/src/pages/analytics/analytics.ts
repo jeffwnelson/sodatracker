@@ -120,6 +120,23 @@ export function colorMap(ids: string[]): Record<string, string> {
   return out;
 }
 
+/**
+ * Product colors for charts: a color chosen on the Setup page wins, and
+ * products without one keep their stable palette slot. Chosen colors aren't
+ * CVD-validated like SERIES, which is one more reason every chart keeps its
+ * table view and labelled legend.
+ */
+export function productColorMap(
+  catalog: { id: string; color?: string }[],
+  ids: string[],
+): Record<string, string> {
+  const out = colorMap([...catalog.map((p) => p.id), ...ids]);
+  for (const p of catalog) {
+    if (p.color) out[p.id] = p.color;
+  }
+  return out;
+}
+
 // --- Formatting --------------------------------------------------------------
 
 export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

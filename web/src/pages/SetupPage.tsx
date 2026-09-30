@@ -13,6 +13,7 @@ import {
 } from "../api/client";
 import type { Product, Machine } from "../api/types";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ProductDot } from "../components/ProductDot";
 import { PageHeader } from "../components/PageHeader";
 import { Card } from "../components/Card";
 import { Input } from "../components/Input";
@@ -52,6 +53,8 @@ function ProductModal({
   const [costPerCan, setCostPerCan] = useState(
     product?.costPerCan != null ? String(product.costPerCan) : ""
   );
+  // "" means no color: the dashboard falls back to its default palette.
+  const [color, setColor] = useState(product?.color ?? "");
   const [error, setError] = useState("");
   const queryClient = useQueryClient();
 
@@ -62,6 +65,8 @@ function ProductModal({
         name,
         ...(description ? { description } : {}),
         ...(costPerCan ? { costPerCan: Number(costPerCan) } : {}),
+        // Always sent: saving is an upsert, so leaving it out would clear it.
+        color,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -110,6 +115,35 @@ function ProductModal({
             onChange={(e) => setCostPerCan(e.target.value)}
             placeholder="0.35"
           />
+          <div>
+            <label
+              htmlFor="product-color"
+              className="block text-xs font-medium uppercase tracking-wider text-text-tertiary mb-1.5"
+            >
+              Color
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                id="product-color"
+                type="color"
+                value={color || "#a8a29e"}
+                onChange={(e) => setColor(e.target.value)}
+                className="h-9 w-12 cursor-pointer rounded-lg border border-border-primary bg-surface-primary p-1"
+              />
+              <span className="text-sm text-text-secondary tabular-nums">
+                {color || "Default palette"}
+              </span>
+              {color && (
+                <button
+                  type="button"
+                  onClick={() => setColor("")}
+                  className="text-xs font-medium text-text-tertiary hover:text-text-primary transition-colors duration-150"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
           {error && <p className="text-sm text-status-empty">{error}</p>}
           <div className="flex items-center justify-between pt-4 border-t border-border-primary">
             <div>
@@ -278,7 +312,10 @@ function ProductsSection() {
     {
       header: "Name",
       accessor: (row) => (
-        <span className="font-medium text-text-primary">{row.name}</span>
+        <span className="inline-flex items-center gap-2 font-medium text-text-primary">
+          <ProductDot color={row.color} />
+          {row.name}
+        </span>
       ),
     },
     {
