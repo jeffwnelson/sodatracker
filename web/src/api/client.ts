@@ -340,10 +340,18 @@ export function getStockPredictions(
 // Analytics
 export function getAnalytics<K extends AnalyticsKind>(
   kind: K,
-  params: { machineId: string; from?: string; tz?: string }
+  params: {
+    machineId: string;
+    from?: string;
+    to?: string;
+    tz?: string;
+    bucket?: string;
+  }
 ): Promise<AnalyticsByKind[K]> {
   const q = new URLSearchParams({ machineId: params.machineId });
   if (params.from) q.set("from", params.from);
+  if (params.to) q.set("to", params.to);
   if (params.tz) q.set("tz", params.tz);
+  if (params.bucket) q.set("bucket", params.bucket);
   return fetchJSONAuth(`/analytics/${kind}?${q}`);
 }

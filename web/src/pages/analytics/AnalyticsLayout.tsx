@@ -8,6 +8,7 @@ import {
   timezone,
   useAnalyticsFilters,
 } from "./analytics";
+import { DateRangePicker } from "./DateRangePicker";
 
 const tabs = [
   { to: "consumption", label: "Consumption" },
@@ -20,8 +21,17 @@ const tabs = [
 ];
 
 export function AnalyticsLayout() {
-  const { machines, machineId, range, setMachine, setRange } =
-    useAnalyticsFilters();
+  const {
+    machines,
+    machineId,
+    range,
+    days,
+    compare,
+    compareRange,
+    setMachine,
+    setRange,
+    apply,
+  } = useAnalyticsFilters();
   const { search } = useLocation();
 
   if (machines.isLoading) {
@@ -40,8 +50,9 @@ export function AnalyticsLayout() {
     <div className="space-y-8">
       <PageHeader title="Analytics" subtitle={`Times shown in ${timezone}`} />
 
-      {/* One filter row scopes every chart on every tab. */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* One filter row scopes every chart on every tab. It anchors the date
+          picker's popover, which is wider than the space right of its button. */}
+      <div className="relative flex flex-wrap items-center gap-3">
         <Select
           value={machineId}
           onChange={(e) => setMachine(e.target.value)}
@@ -76,6 +87,13 @@ export function AnalyticsLayout() {
             </button>
           ))}
         </div>
+        <DateRangePicker
+          range={range}
+          days={days}
+          compare={compare}
+          compareRange={compareRange}
+          onApply={apply}
+        />
       </div>
 
       {/* The baseline is an inset shadow rather than a border, so the active

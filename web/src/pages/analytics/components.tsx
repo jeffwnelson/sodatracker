@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
+import type { AnalyticsRange } from "../../api/types";
+import { comparisonCoverage, formatDayRange, useAnalyticsFilters } from "./analytics";
 import { Card } from "../../components/Card";
 import { SkeletonCard } from "../../components/Skeleton";
 
@@ -47,29 +49,41 @@ export function Loaded<T>({
   );
 }
 
+/** Comparison marks: the picker, tile lines and chart overlays share it. */
+export const COMPARE_COLOR = "#eb6834";
+
+export function CompareDot() {
+  return (
+    <span
+      aria-hidden
+      className="inline-block w-2 h-2 rounded-full shrink-0"
+      style={{ background: COMPARE_COLOR }}
+    />
+  );
+}
+
 /**
- * Change against the previous window of equal length. Neutral ink: more
- * dispenses is not inherently good or bad.
+ * Change against the comparison range. Neutral ink: more dispenses is not
+ * inherently good or bad.
  */
 export function Delta({
   current,
   previous,
   format = (n) => String(n),
 }: {
-  current: number;
+  current: number | null;
   previous: number | null;
   format?: (n: number) => string;
 }) {
-  if (previous === null) {
-    return <span>No earlier data to compare</span>;
-  }
+  if (previous === null) return <span>No comparison data</span>;
+  if (current === null) return <span>was {format(previous)}</span>;
   const diff = current - previous;
-  if (Math.abs(diff) < 1e-9) return <span>Same as previous period</span>;
-  const pct = previous > 0 ? ` (${Math.round((diff / previous) * 100)}%)` : "";
+  if (Math.abs(diff) < 1e-9) return <span>Same · was {format(previous)}</span>;
+  const pct = previous !== 0 ? ` (${diff > 0 ? "+" : "−"}${Math.abs(Math.round((diff / previous) * 100))}%)` : "";
   return (
     <span>
       {diff > 0 ? "▲" : "▼"} {format(Math.abs(diff))}
-      {pct} vs previous period
+      {pct} · was {format(previous)}
     </span>
   );
 }
@@ -78,10 +92,13 @@ export function StatTile({
   label,
   value,
   sub,
+  compare,
 }: {
   label: string;
   value: ReactNode;
   sub?: ReactNode;
+  /** The comparison range's figure, usually a <Delta>. */
+  compare?: ReactNode;
 }) {
   return (
     <Card>
@@ -92,6 +109,12 @@ export function StatTile({
         {value}
       </p>
       {sub && <p className="mt-2 text-xs text-text-secondary">{sub}</p>}
+      {compare && (
+        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-text-secondary">
+          <CompareDot />
+          {compare}
+        </p>
+      )}
     </Card>
   );
 }
@@ -316,5 +339,24 @@ export function BreakdownPie({
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * Says how much of the comparison range has no data because tracking hadn't
+ * begun, since a half-empty comparison reads as a big change.
+ */
+export function ComparisonNotice({ range }: { range: AnalyticsRange }) {
+  const { compareRange } = useAnalyticsFilters();
+  if (!compareRange) return null;
+  const { missing, total } = comparisonCoverage(compareRange, range.trackingSince);
+  if (missing === 0) return null;
+  return (
+    <p className="flex items-center gap-2 text-sm text-text-secondary bg-surface-tertiary rounded-xl px-4 py-3">
+      <CompareDot />
+      {missing >= total
+        ? `The comparison range, ${formatDayRange(compareRange)}, is before tracking began, so there is nothing to compare with.`
+        : `Tracking began partway through the comparison range: ${missing} of its ${total} days have no data.`}
+    </p>
   );
 }

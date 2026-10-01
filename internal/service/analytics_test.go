@@ -99,6 +99,18 @@ func TestAnalyticsClampsToTrackingStart(t *testing.T) {
 	if c.Range.From != "2026-03-10T00:00:00Z" {
 		t.Errorf("from = %s, want clamped to 2026-03-10", c.Range.From)
 	}
+	if c.Range.TrackingSince == nil || *c.Range.TrackingSince != "2026-03-10T09:00:00Z" {
+		t.Errorf("trackingSince = %v, want the first dispense", c.Range.TrackingSince)
+	}
+	// A window entirely before tracking isn't clamped but still says when
+	// tracking began, so a client can tell it apart from a quiet one.
+	early, err := svc.GetConsumptionAnalytics(ctx, AnalyticsQuery{MachineID: "m1", From: first.AddDate(0, -2, 0), To: first.AddDate(0, -1, 0)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if early.Range.TrackingSince == nil || *early.Range.TrackingSince != "2026-03-10T09:00:00Z" {
+		t.Errorf("early window trackingSince = %v", early.Range.TrackingSince)
+	}
 	if c.PreviousTotal != nil {
 		t.Errorf("previousTotal = %d, want null before tracking began", *c.PreviousTotal)
 	}

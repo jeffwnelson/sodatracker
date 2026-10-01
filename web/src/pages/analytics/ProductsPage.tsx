@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { listProducts } from "../../api/client";
 import type { ProductAnalytics, ProductStat } from "../../api/types";
+import type { Comparison } from "./analytics";
 import { Card } from "../../components/Card";
 import { DataTable } from "../../components/DataTable";
 import type { Column } from "../../components/DataTable";
@@ -24,9 +25,12 @@ import {
   money,
   percent,
   useAnalytics,
+  useComparison,
 } from "./analytics";
 import {
   ChartCard,
+  ComparisonNotice,
+  CompareDot,
   ChartTooltip,
   Legend,
   Loaded,
@@ -36,6 +40,7 @@ import {
 
 export function ProductsPage() {
   const query = useAnalytics("products");
+  const cmp = useComparison("products", query.data);
   // Colors key off the full catalog so a product keeps its hue across ranges.
   const catalog = useQuery({ queryKey: ["products"], queryFn: listProducts });
   return (
@@ -43,6 +48,7 @@ export function ProductsPage() {
       {(data) => (
         <Products
           data={data}
+          cmp={cmp}
           colors={productColorMap(
             catalog.data ?? [],
             data.products.map((p) => p.productId),
@@ -53,12 +59,13 @@ export function ProductsPage() {
   );
 }
 
-function RankChange({ p }: { p: ProductStat }) {
-  if (p.previousCount === null) return <span className="text-text-tertiary">—</span>;
-  if (p.previousRank === null) {
+/** Rank against the comparison range: "New" if it had no dispenses there. */
+function RankChange({ p, before }: { p: ProductStat; before?: ProductStat }) {
+  if (!before || before.count === 0) {
     return p.count > 0 ? <span>New</span> : <span className="text-text-tertiary">—</span>;
   }
-  const diff = p.previousRank - p.rank;
+  if (p.count === 0) return <span className="text-text-tertiary">None now</span>;
+  const diff = before.rank - p.rank;
   if (diff === 0) return <span className="text-text-tertiary">Same</span>;
   return (
     <span>
@@ -69,11 +76,14 @@ function RankChange({ p }: { p: ProductStat }) {
 
 function Products({
   data,
+  cmp,
   colors,
 }: {
   data: ProductAnalytics;
+  cmp: Comparison<ProductAnalytics> | null;
   colors: Record<string, string>;
 }) {
+  const before = new Map(cmp?.data.products.map((p) => [p.productId, p]));
   const bucket = data.range.bucket;
   const used = data.products.filter((p) => p.count > 0);
   const total = used.reduce((n, p) => n + p.count, 0);
@@ -123,7 +133,22 @@ function Products({
       ),
       headerClassName: "text-right",
     },
-    { header: "Rank change", accessor: (p) => <RankChange p={p} />, className: "text-right", headerClassName: "text-right" },
+    ...(cmp
+      ? [
+          {
+            header: "Comparison",
+            accessor: (p: ProductStat) => before.get(p.productId)?.count ?? 0,
+            className: "text-right tabular-nums",
+            headerClassName: "text-right",
+          },
+          {
+            header: "Rank change",
+            accessor: (p: ProductStat) => <RankChange p={p} before={before.get(p.productId)} />,
+            className: "text-right whitespace-nowrap",
+            headerClassName: "text-right",
+          },
+        ]
+      : []),
     { header: "Cost", accessor: (p) => money(p.cost), className: "text-right tabular-nums", headerClassName: "text-right" },
     { header: "Slots", accessor: (p) => (p.slots.length ? p.slots.join(", ") : "—"), className: "text-right", headerClassName: "text-right" },
     {
@@ -136,12 +161,18 @@ function Products({
 
   return (
     <>
+      <ComparisonNotice range={data.range} />
       <Card>
         <div className="flex flex-wrap items-baseline justify-between gap-2 mb-4">
           <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
             Product ranking
           </p>
-          <p className="text-xs text-text-tertiary">Rank change compares with the previous period of the same length</p>
+          {cmp && (
+            <p className="flex items-center gap-1.5 text-xs text-text-tertiary">
+              <CompareDot />
+              Comparison and rank change are against the comparison range
+            </p>
+          )}
         </div>
         <DataTable columns={columns} data={data.products} keyFn={(p) => p.productId} emptyMessage="No products stocked or dispensed." />
         {slow.length > 0 && (

@@ -157,6 +157,8 @@ export interface AnalyticsRange {
   days: number;
   bucket: Bucket;
   timezone: string;
+  /** First dispense or restock ever; null with neither. */
+  trackingSince: string | null;
 }
 
 export interface ConsumptionAnalytics {

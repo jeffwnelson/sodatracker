@@ -8,6 +8,7 @@ import {
   YAxis,
 } from "recharts";
 import type { InventoryAnalytics, SlotInventory } from "../../api/types";
+import type { Comparison } from "./analytics";
 import { Card } from "../../components/Card";
 import { DataTable } from "../../components/DataTable";
 import type { Column } from "../../components/DataTable";
@@ -19,9 +20,12 @@ import {
   formatDateTime,
   percent,
   useAnalytics,
+  useComparison,
 } from "./analytics";
 import {
   ChartCard,
+  ComparisonNotice,
+  Delta,
   Loaded,
   NoData,
   StatGrid,
@@ -30,7 +34,8 @@ import {
 
 export function InventoryPage() {
   const query = useAnalytics("inventory");
-  return <Loaded query={query}>{(data) => <Inventory data={data} />}</Loaded>;
+  const cmp = useComparison("inventory", query.data);
+  return <Loaded query={query}>{(data) => <Inventory data={data} cmp={cmp} />}</Loaded>;
 }
 
 function hours(h: number): string {
@@ -47,7 +52,14 @@ function slotLabel(s: SlotInventory): string {
   return `Slot ${s.position}${s.productName ? ` · ${s.productName}` : ""}`;
 }
 
-function Inventory({ data }: { data: InventoryAnalytics }) {
+function Inventory({
+  data,
+  cmp,
+}: {
+  data: InventoryAnalytics;
+  cmp: Comparison<InventoryAnalytics> | null;
+}) {
+  const c = cmp?.data.summary;
   const bucket = data.range.bucket;
   const { summary } = data;
   const tracked = data.slots.filter((s) => s.currentStock !== null);
@@ -78,9 +90,11 @@ function Inventory({ data }: { data: InventoryAnalytics }) {
 
   return (
     <>
+      <ComparisonNotice range={data.range} />
       <StatGrid>
         <StatTile
           label="Time empty"
+          compare={c && <Delta current={summary.stockoutHours} previous={c.stockoutHours} format={hours} />}
           value={hours(summary.stockoutHours)}
           sub={`Summed across slots · ran out ${summary.stockouts} time${summary.stockouts === 1 ? "" : "s"}`}
         />
@@ -88,10 +102,12 @@ function Inventory({ data }: { data: InventoryAnalytics }) {
           label="Used before restock"
           value={summary.usedShare === null ? "—" : percent(summary.usedShare)}
           sub="Share of restocked cans dispensed before the next restock"
+          compare={c && (c.usedShare === null ? "No restocks" : <Delta current={summary.usedShare} previous={c.usedShare} format={percent} />)}
         />
         <StatTile
           label="Restocks"
           value={summary.restockCount}
+          compare={c && <Delta current={summary.restockCount} previous={c.restockCount} />}
           sub={
             summary.avgRestockIntervalDays === null
               ? `${summary.cansRestocked} cans added`
@@ -102,6 +118,7 @@ function Inventory({ data }: { data: InventoryAnalytics }) {
           label="Untracked dispenses"
           value={summary.untrackedDispenses}
           sub="Dispensed after stock hit zero, so restocks were under-logged"
+          compare={c && <Delta current={summary.untrackedDispenses} previous={c.untrackedDispenses} />}
         />
       </StatGrid>
 

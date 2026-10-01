@@ -44,6 +44,10 @@ type AnalyticsRange struct {
 	Days     float64 `json:"days" example:"30.5"`
 	Bucket   string  `json:"bucket" example:"day"`
 	Timezone string  `json:"timezone" example:"America/Chicago"`
+	// TrackingSince is the machine's first dispense or restock, ever; null
+	// with neither. Clients use it to tell a quiet range from one before
+	// tracking began.
+	TrackingSince *string `json:"trackingSince" example:"2026-09-10T07:12:00-05:00"`
 }
 
 // analyticsData is everything the analytics loaded once per request: all-time
@@ -56,6 +60,7 @@ type analyticsData struct {
 	dispenses    []domain.Dispense
 	restocks     []domain.Restock
 	buckets      []time.Time
+	earliest     time.Time
 	// hasPrevious reports whether tracking covered the whole preceding window
 	// of the same length. A partly covered one would make any comparison
 	// with it look like a jump.
@@ -134,6 +139,7 @@ func (s *Service) loadAnalytics(ctx context.Context, q AnalyticsQuery) (*analyti
 		a.buckets = append(a.buckets, t)
 	}
 	a.q = q
+	a.earliest = earliest
 	return a, nil
 }
 
@@ -182,12 +188,18 @@ func mondayIndex(w time.Weekday) int {
 }
 
 func (a *analyticsData) rangeInfo() AnalyticsRange {
+	var since *string
+	if !a.earliest.IsZero() {
+		s := a.earliest.In(a.q.Location).Format(time.RFC3339)
+		since = &s
+	}
 	return AnalyticsRange{
-		From:     a.q.From.In(a.q.Location).Format(time.RFC3339),
-		To:       a.q.To.In(a.q.Location).Format(time.RFC3339),
-		Days:     round1(a.days()),
-		Bucket:   a.q.Bucket,
-		Timezone: a.q.Location.String(),
+		TrackingSince: since,
+		From:          a.q.From.In(a.q.Location).Format(time.RFC3339),
+		To:            a.q.To.In(a.q.Location).Format(time.RFC3339),
+		Days:          round1(a.days()),
+		Bucket:        a.q.Bucket,
+		Timezone:      a.q.Location.String(),
 	}
 }
 

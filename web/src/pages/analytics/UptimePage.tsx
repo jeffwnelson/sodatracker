@@ -8,6 +8,7 @@ import {
   YAxis,
 } from "recharts";
 import type { UptimeAnalytics } from "../../api/types";
+import type { Comparison } from "./analytics";
 import { Card } from "../../components/Card";
 import { DataTable } from "../../components/DataTable";
 import {
@@ -18,10 +19,12 @@ import {
   formatDateTime,
   formatHours,
   useAnalytics,
+  useComparison,
 } from "./analytics";
 import {
   BreakdownPie,
   ChartCard,
+  Delta,
   ChartTooltip,
   Legend,
   Loaded,
@@ -36,10 +39,21 @@ const UNTRACKED = OTHER_COLOR;
 
 export function UptimePage() {
   const query = useAnalytics("uptime");
-  return <Loaded query={query}>{(data) => <Uptime data={data} />}</Loaded>;
+  const cmp = useComparison("uptime", query.data);
+  return <Loaded query={query}>{(data) => <Uptime data={data} cmp={cmp} />}</Loaded>;
 }
 
-function Uptime({ data }: { data: UptimeAnalytics }) {
+function Uptime({
+  data,
+  cmp,
+}: {
+  data: UptimeAnalytics;
+  cmp: Comparison<UptimeAnalytics> | null;
+}) {
+  // Heartbeats have their own start, so tracking is judged by uptime itself
+  // rather than the dispense-based notice the other tabs show.
+  const c = cmp?.data;
+  const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
   const bucket = data.range.bucket;
   if (!data.trackingSince) {
     return (
@@ -62,6 +76,7 @@ function Uptime({ data }: { data: UptimeAnalytics }) {
           label="Uptime"
           value={data.uptime === null ? "—" : `${(data.uptime * 100).toFixed(1)}%`}
           sub="Of the tracked time in this range"
+          compare={c && (c.uptime === null ? "Not tracked then" : <Delta current={data.uptime} previous={c.uptime} format={pct} />)}
         />
         <StatTile
           label="Outages"
@@ -71,11 +86,13 @@ function Uptime({ data }: { data: UptimeAnalytics }) {
               ? `Longest: ${formatHours(data.longestOutageHours)}`
               : "None in this range"
           }
+          compare={c && (c.uptime === null ? "Not tracked then" : <Delta current={data.outages} previous={c.outages} />)}
         />
         <StatTile
           label="Time offline"
           value={data.offlineHours ? formatHours(data.offlineHours) : "0"}
           sub="Dispenses in this time weren't counted"
+          compare={c && (c.uptime === null ? "Not tracked then" : <Delta current={data.offlineHours} previous={c.offlineHours} format={formatHours} />)}
         />
         <StatTile
           label="Tracked since"
