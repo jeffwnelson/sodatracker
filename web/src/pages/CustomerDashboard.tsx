@@ -33,18 +33,6 @@ function MachineCard({ machineId }: { machineId: string }) {
 
   return (
     <Card>
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight text-text-primary">
-            {data.machine.name}
-          </h2>
-          {data.machine.location && (
-            <p className="text-sm text-text-tertiary mt-0.5">
-              {data.machine.location}
-            </p>
-          )}
-        </div>
-      </div>
       <StockGrid slots={data.slots} />
     </Card>
   );
