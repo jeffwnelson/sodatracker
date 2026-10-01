@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.5.0](https://github.com/jeffwnelson/sodatracker/compare/cab0e11bbd01373db269786d9da872dd528b10a5..v0.5.0) - 2026-10-01
+#### Features
+- (**analytics**) highlights and Pi agent uptime tabs - ([e161181](https://github.com/jeffwnelson/sodatracker/commit/e161181892dec257ab07b650c42f8ff77945167a)) - Jeff Nelson
+#### Tests
+- (**slacksocket**) don't fail on writes to a connection the client already dropped - ([583d2ab](https://github.com/jeffwnelson/sodatracker/commit/583d2ab8863e088e3e2ddc0b0a43859475404bb1)) - Jeff Nelson
+#### Refactoring
+- (**web**) drop the footer and show the version next to the brand - ([cab0e11](https://github.com/jeffwnelson/sodatracker/commit/cab0e11bbd01373db269786d9da872dd528b10a5)) - Jeff Nelson
+
+- - -
+
 ## [v0.4.0](https://github.com/jeffwnelson/sodatracker/compare/5e854ba18afd9f858fb0d60726907364d39da6b1..v0.4.0) - 2026-10-01
 #### Features
 - real-time dashboards over SSE and a Pi agent heartbeat - ([5e854ba](https://github.com/jeffwnelson/sodatracker/commit/5e854ba18afd9f858fb0d60726907364d39da6b1)) - Jeff Nelson
