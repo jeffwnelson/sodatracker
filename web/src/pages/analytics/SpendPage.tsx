@@ -119,7 +119,7 @@ function Spend({
       {data.unpricedDispenses > 0 && (
         <p className="text-sm text-status-low bg-status-low-bg rounded-xl px-4 py-3">
           ⚠ {data.unpricedDispenses} dispense{data.unpricedDispenses === 1 ? " has" : "s have"} no
-          cost because the product has no cost per can. Set one in Setup to include them.
+          cost because the product has no cost per can. Set one in Settings to include them.
         </p>
       )}
 

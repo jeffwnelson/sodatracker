@@ -62,8 +62,8 @@ export function AlertsPage() {
             <p className="text-xs text-text-muted mt-1 mb-4">
               A slot alerts when its stock reaches its Low Threshold, set per
               slot on the{" "}
-              <Link to="/admin/setup" className="text-accent hover:underline">
-                Setup
+              <Link to="/admin/settings" className="text-accent hover:underline">
+                Settings
               </Link>{" "}
               page. Stock predictions are under Analytics.
             </p>

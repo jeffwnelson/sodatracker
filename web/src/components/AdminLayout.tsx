@@ -7,7 +7,7 @@ const navLinks = [
   { to: "/admin", label: "Dashboard", end: true },
   { to: "/admin/analytics", label: "Analytics" },
   { to: "/admin/alerts", label: "Alerts" },
-  { to: "/admin/setup", label: "Setup" },
+  { to: "/admin/settings", label: "Settings" },
 ];
 
 export function AdminLayout() {

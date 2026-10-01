@@ -10,7 +10,7 @@ import { AdminDashboard } from "./pages/AdminDashboard";
 import { MachineDetailPage } from "./pages/MachineDetailPage";
 import { RestockPage } from "./pages/RestockPage";
 import { AlertsPage } from "./pages/AlertsPage";
-import { SetupPage } from "./pages/SetupPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { AnalyticsLayout } from "./pages/analytics/AnalyticsLayout";
 import { ConsumptionPage } from "./pages/analytics/ConsumptionPage";
 import { ProductsPage } from "./pages/analytics/ProductsPage";
@@ -63,7 +63,9 @@ function App() {
                   <Route path="uptime" element={<UptimePage />} />
                 </Route>
                 <Route path="alerts" element={<AlertsPage />} />
-                <Route path="setup" element={<SetupPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+                {/* Old bookmarks */}
+                <Route path="setup" element={<Navigate to="/admin/settings" replace />} />
               </Route>
             </Routes>
           </BrowserRouter>

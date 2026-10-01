@@ -362,7 +362,7 @@ export function colorMap(ids: string[]): Record<string, string> {
 }
 
 /**
- * Product colors for charts: a color chosen on the Setup page wins, and
+ * Product colors for charts: a color chosen on the Settings page wins, and
  * products without one keep their stable palette slot. Chosen colors aren't
  * CVD-validated like SERIES, which is one more reason every chart keeps its
  * table view and labelled legend.

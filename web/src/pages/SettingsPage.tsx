@@ -22,10 +22,10 @@ import { Button } from "../components/Button";
 import { DataTable } from "../components/DataTable";
 import type { Column } from "../components/DataTable";
 
-export function SetupPage() {
+export function SettingsPage() {
   return (
     <div className="space-y-8">
-      <PageHeader title="Setup" />
+      <PageHeader title="Settings" />
       <ProductsSection />
       <MachinesSection />
       <SlotConfigSection />
