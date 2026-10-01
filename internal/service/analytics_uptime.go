@@ -112,11 +112,13 @@ func (s *Service) GetUptimeAnalytics(ctx context.Context, q AnalyticsQuery) (*Up
 	}
 	untracked := []interval{{from, trackedFrom}}
 
-	out.OnlineHours = round1(hours(online, from, to))
-	out.OfflineHours = round1(hours(offline, from, to))
+	onlineH, offlineH := hours(online, from, to), hours(offline, from, to)
+	out.OnlineHours = round1(onlineH)
+	out.OfflineHours = round1(offlineH)
 	out.UntrackedHours = round1(hours(untracked, from, to))
-	if tracked := out.OnlineHours + out.OfflineHours; tracked > 0 {
-		u := round3(out.OnlineHours / tracked)
+	// From the unrounded hours, so a few minutes of tracking still counts.
+	if tracked := onlineH + offlineH; tracked > 0 {
+		u := round3(onlineH / tracked)
 		out.Uptime = &u
 	}
 

@@ -41,6 +41,15 @@ func TestUptimeAnalytics(t *testing.T) {
 		t.Fatalf("no heartbeats: %+v", u)
 	}
 
+	// Two minutes of heartbeats, still running: 100%, though the hours
+	// round to zero.
+	addSession(t, st, to.Add(-2*time.Minute), to.Add(-30*time.Second))
+	if u, _ = svc.GetUptimeAnalytics(ctx, q); u.Uptime == nil || *u.Uptime != 1 {
+		t.Fatalf("two minutes tracked: uptime %v", u.Uptime)
+	}
+	st.DeleteMachine(ctx, "m1")
+	st.CreateMachine(ctx, &domain.Machine{ID: "m1", Name: "Test", SlotCount: 1})
+
 	// Online 06:00–12:00, an hour's outage, then online through the end
 	// (last beat 30s before it, so the session is still running).
 	addSession(t, st, from.Add(6*time.Hour), from.Add(12*time.Hour))
