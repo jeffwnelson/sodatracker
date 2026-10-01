@@ -66,7 +66,7 @@ function Spend({
     <>
       <StatGrid>
         <StatTile
-          label="Spend"
+          label="Cost"
           value={money(data.total)}
           sub={<Delta current={data.total} previous={data.previousTotal} format={money} />}
         />
@@ -81,7 +81,7 @@ function Spend({
           sub={`${data.count} dispense${data.count === 1 ? "" : "s"}`}
         />
         <StatTile
-          label="Restocked value"
+          label="Restocked cost"
           value={money(data.restockedValue)}
           sub="Cans restocked, at current product cost"
         />
@@ -96,14 +96,14 @@ function Spend({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard
-          title="Spend over time"
+          title="Cost over time"
           subtitle={`Per ${bucket}`}
           table={
             <DataTable
               columns={[
                 { header: bucket, accessor: (r) => formatBucketLong(r.bucket, bucket), headerClassName: "capitalize" },
                 { header: "Dispenses", accessor: (r) => r.count, className: "text-right tabular-nums", headerClassName: "text-right" },
-                { header: "Spend", accessor: (r) => money(r.spend), className: "text-right tabular-nums", headerClassName: "text-right" },
+                { header: "Cost", accessor: (r) => money(r.spend), className: "text-right tabular-nums", headerClassName: "text-right" },
               ]}
               data={[...data.series].reverse()}
               keyFn={(r) => r.bucket}
@@ -122,7 +122,7 @@ function Spend({
                   cursor={{ fill: "var(--color-surface-tertiary)" }}
                   content={(p) => <ChartTooltip {...p} title={(l) => formatBucketLong(l, bucket)} value={money} />}
                 />
-                <Bar dataKey="spend" name="Spend" isAnimationActive={false} fill={ACCENT} radius={[4, 4, 0, 0]} maxBarSize={28} />
+                <Bar dataKey="spend" name="Cost" isAnimationActive={false} fill={ACCENT} radius={[4, 4, 0, 0]} maxBarSize={28} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -130,7 +130,7 @@ function Spend({
 
         <ChartCard
           title="Running total"
-          subtitle="Cumulative spend across the range"
+          subtitle="Cumulative cost across the range"
           table={
             <DataTable
               columns={[
@@ -167,7 +167,7 @@ function Spend({
         </ChartCard>
       </div>
 
-      <ChartCard title="Spend by product" subtitle="Share of spend in this range">
+      <ChartCard title="Cost by product" subtitle="Share of cost in this range">
         <DataTable
           columns={[
             {
@@ -192,7 +192,7 @@ function Spend({
               ),
               headerClassName: "text-right",
             },
-            { header: "Spend", accessor: (r) => money(r.spend), className: "text-right tabular-nums", headerClassName: "text-right" },
+            { header: "Cost", accessor: (r) => money(r.spend), className: "text-right tabular-nums", headerClassName: "text-right" },
           ]}
           data={data.byProduct}
           keyFn={(r) => r.productId}

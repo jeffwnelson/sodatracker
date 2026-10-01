@@ -413,7 +413,7 @@ func daypartIndex(hour int) int {
 }
 
 // GetProductAnalytics ranks products, compares with the previous window, and
-// shows what sells at which time of day. Products stocked in a slot appear
+// shows what people take at which time of day. Products stocked in a slot appear
 // even with zero dispenses so slow movers are visible.
 func (s *Service) GetProductAnalytics(ctx context.Context, q AnalyticsQuery) (*ProductAnalytics, error) {
 	a, err := s.loadAnalytics(ctx, q)
@@ -543,9 +543,9 @@ type InventorySummary struct {
 	CansRestocked int     `json:"cansRestocked" example:"96"`
 	// AvgRestockIntervalDays is null with fewer than two restocks.
 	AvgRestockIntervalDays *float64 `json:"avgRestockIntervalDays" example:"7.5"`
-	// SellThrough is the share of cans restocked in the window that were
+	// UsedShare is the share of cans restocked in the window that were
 	// dispensed before that slot's next restock. Null with no restocks.
-	SellThrough *float64 `json:"sellThrough" example:"0.82"`
+	UsedShare *float64 `json:"usedShare" example:"0.82"`
 	// UntrackedDispenses counts dispenses recorded while computed stock was
 	// already zero: the slot held more cans than the last restock logged.
 	UntrackedDispenses int `json:"untrackedDispenses" example:"2"`
@@ -567,7 +567,7 @@ type SlotInventory struct {
 	CansRestocked          int      `json:"cansRestocked" example:"24"`
 	Dispensed              int      `json:"dispensed" example:"19"`
 	AvgRestockIntervalDays *float64 `json:"avgRestockIntervalDays" example:"6.0"`
-	SellThrough            *float64 `json:"sellThrough" example:"0.79"`
+	UsedShare              *float64 `json:"usedShare" example:"0.79"`
 	UntrackedDispenses     int      `json:"untrackedDispenses" example:"0"`
 }
 
@@ -618,7 +618,7 @@ func (s *Service) GetInventoryAnalytics(ctx context.Context, q AnalyticsQuery) (
 	}
 
 	steps := map[int][]stockStep{}
-	var soldTotal, cycleCansTotal int
+	var usedTotal, cycleCansTotal int
 	var slotIntervals []float64
 
 	for _, sl := range a.slots {
@@ -643,12 +643,12 @@ func (s *Service) GetInventoryAnalytics(ctx context.Context, q AnalyticsQuery) (
 		// The open restock cycle, counted only if it began in the window.
 		cycleQty, cycleStart, cycleInRange := 0, 0, false
 		var intervals []float64
-		var sold, cycleCans int
+		var used, cycleCans int
 
 		closeCycle := func() {
 			if cycleInRange {
 				cycleCans += cycleQty
-				sold += cycleStart - stock
+				used += cycleStart - stock
 			}
 		}
 
@@ -703,10 +703,10 @@ func (s *Service) GetInventoryAnalytics(ctx context.Context, q AnalyticsQuery) (
 			slotIntervals = append(slotIntervals, intervals...)
 		}
 		if cycleCans > 0 {
-			st := round3(float64(sold) / float64(cycleCans))
-			si.SellThrough = &st
+			st := round3(float64(used) / float64(cycleCans))
+			si.UsedShare = &st
 		}
-		soldTotal += sold
+		usedTotal += used
 		cycleCansTotal += cycleCans
 
 		out.Summary.StockoutHours += si.StockoutHours
@@ -717,8 +717,8 @@ func (s *Service) GetInventoryAnalytics(ctx context.Context, q AnalyticsQuery) (
 	}
 	out.Summary.StockoutHours = round1(out.Summary.StockoutHours)
 	if cycleCansTotal > 0 {
-		st := round3(float64(soldTotal) / float64(cycleCansTotal))
-		out.Summary.SellThrough = &st
+		st := round3(float64(usedTotal) / float64(cycleCansTotal))
+		out.Summary.UsedShare = &st
 	}
 
 	// Machine-level restock log. Intervals are between restock visits,
@@ -819,7 +819,8 @@ type ProductSpend struct {
 	Share     float64 `json:"share" example:"0.30"`
 }
 
-// GetSpendAnalytics prices dispenses at each product's cost per can.
+// GetSpendAnalytics prices dispenses at each product's cost per can: what
+// the company paid for the cans people took. Nothing in the app is used.
 func (s *Service) GetSpendAnalytics(ctx context.Context, q AnalyticsQuery) (*SpendAnalytics, error) {
 	a, err := s.loadAnalytics(ctx, q)
 	if err != nil || a == nil {

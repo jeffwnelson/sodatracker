@@ -156,7 +156,7 @@ func (a *Agent) sendDispense(evt CachedEvent) error {
 }
 
 // heartbeatLoop tells the server the agent is alive, at once and then every
-// interval, so dashboards can flag a dead agent instead of showing no sales.
+// interval, so dashboards can flag a dead agent instead of showing no dispenses.
 func (a *Agent) heartbeatLoop(ctx context.Context, interval time.Duration) {
 	t := time.NewTicker(interval)
 	defer t.Stop()

@@ -141,7 +141,7 @@ function Consumption({ data }: { data: ConsumptionAnalytics }) {
       </ChartCard>
 
       <ChartCard
-        title="When people buy"
+        title="When people grab a soda"
         subtitle="Dispenses by day of week and hour"
         table={<HeatmapTable heatmap={data.heatmap} />}
       >

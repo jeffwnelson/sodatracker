@@ -9,7 +9,7 @@ import (
 
 // HighlightsAnalytics are records and habits from the window's dispenses:
 // when the first and last cans of the day go, the busiest day and hour, the
-// longest gap between sales, weekday streaks, and which product people
+// longest gap between dispenses, weekday streaks, and which product people
 // reach for first. Null fields mean there were no dispenses.
 type HighlightsAnalytics struct {
 	Range        AnalyticsRange `json:"range"`
@@ -20,15 +20,15 @@ type HighlightsAnalytics struct {
 	BusiestDay   *CountAt       `json:"busiestDay"`
 	BusiestHour  *CountAt       `json:"busiestHour"`
 	LongestGap   *Gap           `json:"longestGap"`
-	// Streaks count consecutive weekdays with at least one sale; weekends
+	// Streaks count consecutive weekdays with at least one dispense; weekends
 	// neither count nor break them. The current streak ignores today until
-	// its first sale.
+	// its first dispense.
 	LongestStreak    int            `json:"longestStreak" example:"12"`
 	CurrentStreak    int            `json:"currentStreak" example:"4"`
 	FirstCanProducts []ProductCount `json:"firstCanProducts"`
 }
 
-// TimeOfDay summarises one sale per active day (the first or the last).
+// TimeOfDay summarises one dispense per active day (the first or the last).
 // AvgMinute is minutes after local midnight; Record is the earliest first can
 // or the latest last can.
 type TimeOfDay struct {

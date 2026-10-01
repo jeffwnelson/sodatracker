@@ -13,7 +13,7 @@ const tabs = [
   { to: "consumption", label: "Consumption" },
   { to: "products", label: "Products" },
   { to: "inventory", label: "Inventory" },
-  { to: "spend", label: "Spend" },
+  { to: "spend", label: "Cost" },
   { to: "predictions", label: "Predictions" },
   { to: "highlights", label: "Highlights" },
   { to: "uptime", label: "Uptime" },

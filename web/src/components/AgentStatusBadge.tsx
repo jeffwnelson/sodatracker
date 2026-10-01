@@ -13,7 +13,7 @@ function timeAgo(iso: string): string {
 
 /**
  * Whether the machine's Pi agent is heartbeating. Offline means dispenses
- * aren't being counted, which otherwise looks the same as no sales.
+ * aren't being counted, which otherwise looks the same as nobody taking a soda.
  */
 export function AgentStatusBadge({ agent }: { agent?: AgentStatus }) {
   if (!agent) return null;

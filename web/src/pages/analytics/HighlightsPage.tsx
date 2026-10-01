@@ -80,7 +80,7 @@ function Highlights({ data }: { data: HighlightsAnalytics }) {
         <StatTile
           label="Weekday streak"
           value={data.currentStreak}
-          sub={`Weekdays in a row with a sale. Longest: ${data.longestStreak}`}
+          sub={`Weekdays in a row with a dispense. Longest: ${data.longestStreak}`}
         />
         <StatTile
           label="Longest dry spell"
@@ -91,7 +91,7 @@ function Highlights({ data }: { data: HighlightsAnalytics }) {
           }
         />
         <StatTile
-          label="Days with sales"
+          label="Days with dispenses"
           value={data.activeDays}
           sub={`${data.perActiveDay.toFixed(1)} cans on each`}
         />

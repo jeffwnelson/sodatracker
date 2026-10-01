@@ -214,7 +214,7 @@ export interface SlotInventory {
   cansRestocked: number;
   dispensed: number;
   avgRestockIntervalDays: number | null;
-  sellThrough: number | null;
+  usedShare: number | null;
   untrackedDispenses: number;
 }
 
@@ -226,7 +226,7 @@ export interface InventoryAnalytics {
     restockCount: number;
     cansRestocked: number;
     avgRestockIntervalDays: number | null;
-    sellThrough: number | null;
+    usedShare: number | null;
     untrackedDispenses: number;
   };
   slots: SlotInventory[];

@@ -200,9 +200,9 @@ func TestInventoryAnalytics(t *testing.T) {
 	if s1.Restocks != 2 || s1.CansRestocked != 7 || s1.Dispensed != 4 {
 		t.Errorf("slot 1 restocks %d cans %d dispensed %d", s1.Restocks, s1.CansRestocked, s1.Dispensed)
 	}
-	// Cycle 1 sold 2 of 2, cycle 2 has sold 1 of 5 so far.
-	if s1.SellThrough == nil || *s1.SellThrough != 0.429 {
-		t.Errorf("slot 1 sell-through = %v, want 0.429", s1.SellThrough)
+	// Cycle 1 used 2 of 2, cycle 2 has used 1 of 5 so far.
+	if s1.UsedShare == nil || *s1.UsedShare != 0.429 {
+		t.Errorf("slot 1 used share = %v, want 0.429", s1.UsedShare)
 	}
 	if s1.AvgRestockIntervalDays == nil || *s1.AvgRestockIntervalDays != 0.4 {
 		t.Errorf("slot 1 interval = %v, want 0.4 days", s1.AvgRestockIntervalDays)

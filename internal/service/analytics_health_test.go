@@ -141,9 +141,9 @@ func TestHighlightsAnalytics(t *testing.T) {
 		t.Errorf("first can products %+v", h.FirstCanProducts)
 	}
 
-	// Today (Wed) with no sale yet doesn't break the current streak.
+	// Today (Wed) with no dispense yet doesn't break the current streak.
 	h, _ = svc.GetHighlightsAnalytics(ctx, AnalyticsQuery{MachineID: "m1", From: from, To: at(11, 8, 0), Location: time.UTC})
 	if h.CurrentStreak != 1 {
-		t.Errorf("current streak before today's first sale = %d, want 1", h.CurrentStreak)
+		t.Errorf("current streak before today's first dispense = %d, want 1", h.CurrentStreak)
 	}
 }

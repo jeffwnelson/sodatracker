@@ -107,7 +107,7 @@ func (h *handlers) getProductAnalytics(w http.ResponseWriter, r *http.Request) {
 
 // getInventoryAnalytics godoc
 // @Summary      Inventory analytics
-// @Description  Stock levels over time rebuilt from restocks and dispenses, hours each slot sat empty, restock intervals, and sell-through.
+// @Description  Stock levels over time rebuilt from restocks and dispenses, hours each slot sat empty, restock intervals, and the share of restocked cans dispensed before the next restock.
 // @Tags         Analytics
 // @Produce      json
 // @Param        machineId  query     string  true   "Machine ID"
@@ -147,7 +147,7 @@ func (h *handlers) getSpendAnalytics(w http.ResponseWriter, r *http.Request) {
 
 // getHighlightsAnalytics godoc
 // @Summary      Highlights
-// @Description  Records and habits: average and record first/last can of the day, busiest day and hour, longest gap between sales, weekday streaks, and which product is bought first each day.
+// @Description  Records and habits: average and record first/last can of the day, busiest day and hour, longest gap between dispenses, weekday streaks, and which product is dispensed first each day.
 // @Tags         Analytics
 // @Produce      json
 // @Param        machineId  query     string  true   "Machine ID"

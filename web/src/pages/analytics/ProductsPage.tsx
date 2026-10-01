@@ -75,14 +75,14 @@ function Products({
   colors: Record<string, string>;
 }) {
   const bucket = data.range.bucket;
-  const sold = data.products.filter((p) => p.count > 0);
-  const total = sold.reduce((n, p) => n + p.count, 0);
+  const used = data.products.filter((p) => p.count > 0);
+  const total = used.reduce((n, p) => n + p.count, 0);
   const slow = data.products.filter((p) => p.slots.length > 0 && p.share < 0.05);
   const names = Object.fromEntries(data.products.map((p) => [p.productId, p.name]));
   // Stack and legend follow palette order, so neighbouring segments are the
   // pairs the palette was validated for.
   const slot = (id: string) => SERIES.indexOf(colors[id]);
-  const stackIds = sold
+  const stackIds = used
     .map((p) => p.productId)
     .sort((a, b) => slot(a) - slot(b));
   const legend = (
@@ -127,7 +127,7 @@ function Products({
     { header: "Cost", accessor: (p) => money(p.cost), className: "text-right tabular-nums", headerClassName: "text-right" },
     { header: "Slots", accessor: (p) => (p.slots.length ? p.slots.join(", ") : "—"), className: "text-right", headerClassName: "text-right" },
     {
-      header: "Last sold",
+      header: "Last dispensed",
       accessor: (p) => (p.lastDispensed ? formatDateTime(p.lastDispensed) : "—"),
       className: "text-right whitespace-nowrap",
       headerClassName: "text-right",
@@ -143,7 +143,7 @@ function Products({
           </p>
           <p className="text-xs text-text-tertiary">Rank change compares with the previous period of the same length</p>
         </div>
-        <DataTable columns={columns} data={data.products} keyFn={(p) => p.productId} emptyMessage="No products stocked or sold." />
+        <DataTable columns={columns} data={data.products} keyFn={(p) => p.productId} emptyMessage="No products stocked or dispensed." />
         {slow.length > 0 && (
           <p className="mt-4 text-sm text-text-secondary">
             <span className="font-medium text-text-primary">Slow movers:</span>{" "}
@@ -207,7 +207,7 @@ function Products({
 
       <ChartCard
         title="Time of day"
-        subtitle="What sells in each part of the day"
+        subtitle="What people take in each part of the day"
         legend={legend}
         table={
           <DataTable

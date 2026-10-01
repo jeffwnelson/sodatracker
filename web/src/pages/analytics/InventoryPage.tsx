@@ -72,7 +72,7 @@ function Inventory({ data }: { data: InventoryAnalytics }) {
     { header: "Restocks", accessor: (s) => s.restocks, className: "text-right tabular-nums", headerClassName: "text-right" },
     { header: "Cans in", accessor: (s) => s.cansRestocked, className: "text-right tabular-nums", headerClassName: "text-right" },
     { header: "Cans out", accessor: (s) => s.dispensed, className: "text-right tabular-nums", headerClassName: "text-right" },
-    { header: "Sell-through", accessor: (s) => (s.sellThrough === null ? "—" : percent(s.sellThrough)), className: "text-right tabular-nums", headerClassName: "text-right" },
+    { header: "Used before restock", accessor: (s) => (s.usedShare === null ? "—" : percent(s.usedShare)), className: "text-right tabular-nums", headerClassName: "text-right" },
     { header: "Restock every", accessor: (s) => days(s.avgRestockIntervalDays), className: "text-right tabular-nums whitespace-nowrap", headerClassName: "text-right" },
   ];
 
@@ -85,9 +85,9 @@ function Inventory({ data }: { data: InventoryAnalytics }) {
           sub={`Summed across slots · ran out ${summary.stockouts} time${summary.stockouts === 1 ? "" : "s"}`}
         />
         <StatTile
-          label="Sell-through"
-          value={summary.sellThrough === null ? "—" : percent(summary.sellThrough)}
-          sub="Share of restocked cans sold before the next restock"
+          label="Used before restock"
+          value={summary.usedShare === null ? "—" : percent(summary.usedShare)}
+          sub="Share of restocked cans dispensed before the next restock"
         />
         <StatTile
           label="Restocks"
@@ -101,13 +101,13 @@ function Inventory({ data }: { data: InventoryAnalytics }) {
         <StatTile
           label="Untracked dispenses"
           value={summary.untrackedDispenses}
-          sub="Sold after stock hit zero, so restocks were under-logged"
+          sub="Dispensed after stock hit zero, so restocks were under-logged"
         />
       </StatGrid>
 
       <ChartCard
         title="Stock levels"
-        subtitle={`Cans in each slot at the end of each ${bucket}, rebuilt from restocks and dispenses. Drops are sales, jumps are restocks.`}
+        subtitle={`Cans in each slot at the end of each ${bucket}, rebuilt from restocks and dispenses. Drops are dispenses, jumps are restocks.`}
         table={
           <DataTable
             columns={[
