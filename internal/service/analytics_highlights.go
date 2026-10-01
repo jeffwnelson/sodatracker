@@ -8,23 +8,15 @@ import (
 )
 
 // HighlightsAnalytics are records and habits from the window's dispenses:
-// when the first and last cans of the day go, the busiest day and hour, the
-// longest gap between dispenses, weekday streaks, and which product people
-// reach for first. Null fields mean there were no dispenses.
+// when the first and last cans of the day go, the busiest day and hour,
+// totals for soda, caffeine and aluminum, and which product people reach for
+// first. Null fields mean there were no dispenses.
 type HighlightsAnalytics struct {
-	Range        AnalyticsRange `json:"range"`
-	ActiveDays   int            `json:"activeDays" example:"21"`
-	PerActiveDay float64        `json:"perActiveDay" example:"8.4"`
-	FirstCan     *TimeOfDay     `json:"firstCan"`
-	LastCan      *TimeOfDay     `json:"lastCan"`
-	BusiestDay   *CountAt       `json:"busiestDay"`
-	BusiestHour  *CountAt       `json:"busiestHour"`
-	LongestGap   *Gap           `json:"longestGap"`
-	// Streaks count consecutive weekdays with at least one dispense; weekends
-	// neither count nor break them. The current streak ignores today until
-	// its first dispense.
-	LongestStreak    int            `json:"longestStreak" example:"12"`
-	CurrentStreak    int            `json:"currentStreak" example:"4"`
+	Range            AnalyticsRange `json:"range"`
+	FirstCan         *TimeOfDay     `json:"firstCan"`
+	LastCan          *TimeOfDay     `json:"lastCan"`
+	BusiestDay       *CountAt       `json:"busiestDay"`
+	BusiestHour      *CountAt       `json:"busiestHour"`
 	FirstCanProducts []ProductCount `json:"firstCanProducts"`
 
 	// Totals for the window, from each product's can size and caffeine.
@@ -32,11 +24,6 @@ type HighlightsAnalytics struct {
 	CaffeineMg float64 `json:"caffeineMg" example:"4120"`
 	// AluminumLb is the cans' aluminum, as if every one is recycled.
 	AluminumLb float64 `json:"aluminumLb" example:"2.8"`
-
-	// EarliestEver and LatestEver are the earliest and latest time of day a
-	// can has ever been dispensed, over all history whatever the window.
-	EarliestEver *string `json:"earliestEver" example:"2026-09-14T06:58:00-05:00"`
-	LatestEver   *string `json:"latestEver" example:"2026-09-22T19:41:00-05:00"`
 }
 
 // aluminumGPer12oz is the aluminum in a 12 oz can, about 32 cans to the
@@ -47,7 +34,7 @@ const gramsPerLb = 453.59237
 
 // TimeOfDay summarises one dispense per active day (the first or the last).
 // AvgMinute is minutes after local midnight; Record is the earliest first can
-// or the latest last can.
+// or the latest last can, so the window's earliest or latest can.
 type TimeOfDay struct {
 	AvgMinute int    `json:"avgMinute" example:"512"`
 	Record    string `json:"record" example:"2026-09-14T06:58:00-05:00"`
@@ -56,12 +43,6 @@ type TimeOfDay struct {
 type CountAt struct {
 	At    string `json:"at" example:"2026-09-16T00:00:00-05:00"`
 	Count int    `json:"count" example:"19"`
-}
-
-type Gap struct {
-	From  string  `json:"from" example:"2026-09-12T16:40:00-05:00"`
-	To    string  `json:"to" example:"2026-09-15T08:05:00-05:00"`
-	Hours float64 `json:"hours" example:"63.4"`
 }
 
 type ProductCount struct {
@@ -105,22 +86,6 @@ func (s *Service) GetHighlightsAnalytics(ctx context.Context, q AnalyticsQuery) 
 		t := a.dispenses[i].Timestamp.In(loc)
 		return t.Hour()*60 + t.Minute()
 	}
-	// All-time time-of-day records, whatever the window.
-	if len(a.dispenses) > 0 {
-		lo, hi := 0, 0
-		for i := range a.dispenses {
-			if minuteOf(i) < minuteOf(lo) {
-				lo = i
-			}
-			if minuteOf(i) > minuteOf(hi) {
-				hi = i
-			}
-		}
-		e := a.dispenses[lo].Timestamp.In(loc).Format(time.RFC3339)
-		l := a.dispenses[hi].Timestamp.In(loc).Format(time.RFC3339)
-		out.EarliestEver, out.LatestEver = &e, &l
-	}
-
 	if len(inWindow) == 0 {
 		return out, nil
 	}
@@ -139,9 +104,6 @@ func (s *Service) GetHighlightsAnalytics(ctx context.Context, q AnalyticsQuery) 
 	out.Ounces = round1(out.Ounces)
 	out.CaffeineMg = math.Round(out.CaffeineMg)
 	out.AluminumLb = round2(alumG / gramsPerLb)
-
-	out.ActiveDays = len(days)
-	out.PerActiveDay = round1(float64(len(inWindow)) / float64(len(days)))
 
 	var firstSum, lastSum int
 	firstRec, lastRec := -1, -1
@@ -185,20 +147,6 @@ func (s *Service) GetHighlightsAnalytics(ctx context.Context, q AnalyticsQuery) 
 	}
 	out.BusiestHour = &CountAt{At: busiestHour.Format(time.RFC3339), Count: hours[busiestHour]}
 
-	for k := 1; k < len(inWindow); k++ {
-		prev, cur := a.dispenses[inWindow[k-1]].Timestamp, a.dispenses[inWindow[k]].Timestamp
-		if h := cur.Sub(prev).Hours(); out.LongestGap == nil || h > out.LongestGap.Hours {
-			out.LongestGap = &Gap{
-				From:  prev.In(loc).Format(time.RFC3339),
-				To:    cur.In(loc).Format(time.RFC3339),
-				Hours: h,
-			}
-		}
-	}
-	if out.LongestGap != nil {
-		out.LongestGap.Hours = round1(out.LongestGap.Hours)
-	}
-
 	for _, p := range byProduct {
 		out.FirstCanProducts = append(out.FirstCanProducts, *p)
 	}
@@ -209,21 +157,5 @@ func (s *Service) GetHighlightsAnalytics(ctx context.Context, q AnalyticsQuery) 
 		}
 		return pi.Name < pj.Name
 	})
-
-	// Streaks walk the window's weekdays in order.
-	today := bucketStart(a.q.To, loc, BucketDay)
-	run := 0
-	for d := bucketStart(a.q.From, loc, BucketDay); !d.After(today); d = d.AddDate(0, 0, 1) {
-		if w := d.Weekday(); w == time.Saturday || w == time.Sunday {
-			continue
-		}
-		if days[d] != nil {
-			run++
-			out.LongestStreak = max(out.LongestStreak, run)
-		} else if !d.Equal(today) {
-			run = 0
-		}
-	}
-	out.CurrentStreak = run
 	return out, nil
 }

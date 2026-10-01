@@ -5,7 +5,6 @@ import type { Comparison } from "./analytics";
 import { DataTable } from "../../components/DataTable";
 import {
   formatHour,
-  formatHours,
   formatMinuteOfDay,
   productColorMap,
   useAnalytics,
@@ -61,24 +60,40 @@ function Highlights({
   if (!data.firstCan) {
     return <NoData message="No dispenses in this range." />;
   }
-  const { firstCan, lastCan, busiestDay, busiestHour, longestGap } = data;
+  const { firstCan, lastCan, busiestDay, busiestHour } = data;
+  // The range's earliest and latest cans are the records among each day's
+  // first and last cans.
 
   return (
     <>
       <ComparisonNotice range={data.range} />
       <StatGrid>
         <StatTile
-          label="First can"
+          label="First can average"
           value={formatMinuteOfDay(firstCan.avgMinute)}
-          sub={`On average. Earliest: ${clock(firstCan.record)}, ${day(firstCan.record)}`}
+          sub="Average time of each day's first can"
           compare={was(c?.firstCan && formatMinuteOfDay(c.firstCan.avgMinute))}
         />
         <StatTile
-          label="Last can"
+          label="Last can average"
           value={lastCan ? formatMinuteOfDay(lastCan.avgMinute) : "—"}
-          sub={lastCan && `On average. Latest: ${clock(lastCan.record)}, ${day(lastCan.record)}`}
+          sub="Average time of each day's last can"
           compare={was(c?.lastCan && formatMinuteOfDay(c.lastCan.avgMinute))}
         />
+        <StatTile
+          label="Earliest can"
+          value={clock(firstCan.record)}
+          sub={day(firstCan.record)}
+          compare={was(c?.firstCan && `${clock(c.firstCan.record)}, ${day(c.firstCan.record)}`)}
+        />
+        <StatTile
+          label="Latest can"
+          value={lastCan ? clock(lastCan.record) : "—"}
+          sub={lastCan && day(lastCan.record)}
+          compare={was(c?.lastCan && `${clock(c.lastCan.record)}, ${day(c.lastCan.record)}`)}
+        />
+      </StatGrid>
+      <StatGrid cols={5}>
         <StatTile
           label="Busiest day"
           value={busiestDay?.count ?? "—"}
@@ -94,8 +109,6 @@ function Highlights({
           }
           compare={was(c?.busiestHour && `${c.busiestHour.count} from ${formatHour(new Date(c.busiestHour.at).getHours())}`)}
         />
-      </StatGrid>
-      <StatGrid>
         <StatTile
           label="Soda consumed"
           value={`${Math.round(data.ounces).toLocaleString()} oz`}
@@ -111,41 +124,7 @@ function Highlights({
         <StatTile
           label="Aluminum to recycle"
           value={`${data.aluminumLb.toFixed(1)} lb`}
-          sub="If every can is recycled"
           compare={c && <Delta current={data.aluminumLb} previous={c.aluminumLb} format={(n) => `${n.toFixed(1)} lb`} />}
-        />
-        <StatTile
-          label="Days with dispenses"
-          value={data.activeDays}
-          sub={`${data.perActiveDay.toFixed(1)} cans on each`}
-          compare={c && <Delta current={data.activeDays} previous={c.activeDays} />}
-        />
-      </StatGrid>
-      <StatGrid>
-        <StatTile
-          label="Earliest can ever"
-          value={data.earliestEver ? clock(data.earliestEver) : "—"}
-          sub={data.earliestEver ? `${day(data.earliestEver)}, ${new Date(data.earliestEver).getFullYear()} · all time` : "All time"}
-        />
-        <StatTile
-          label="Latest can ever"
-          value={data.latestEver ? clock(data.latestEver) : "—"}
-          sub={data.latestEver ? `${day(data.latestEver)}, ${new Date(data.latestEver).getFullYear()} · all time` : "All time"}
-        />
-        <StatTile
-          label="Weekday streak"
-          value={data.currentStreak}
-          sub={`Weekdays in a row with a dispense. Longest: ${data.longestStreak}`}
-          compare={c && `Longest then: ${c.longestStreak}`}
-        />
-        <StatTile
-          label="Longest dry spell"
-          value={longestGap ? formatHours(longestGap.hours) : "—"}
-          compare={was(c?.longestGap && formatHours(c.longestGap.hours))}
-          sub={
-            longestGap &&
-            `${day(longestGap.from)} ${clock(longestGap.from)} to ${day(longestGap.to)} ${clock(longestGap.to)}`
-          }
         />
       </StatGrid>
 

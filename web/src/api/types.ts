@@ -289,22 +289,14 @@ export interface CountAt {
 
 export interface HighlightsAnalytics {
   range: AnalyticsRange;
-  activeDays: number;
-  perActiveDay: number;
   firstCan: TimeOfDay | null;
   lastCan: TimeOfDay | null;
   busiestDay: CountAt | null;
   busiestHour: CountAt | null;
-  longestGap: { from: string; to: string; hours: number } | null;
-  longestStreak: number;
-  currentStreak: number;
   firstCanProducts: { productId: string; name: string; count: number }[];
   ounces: number;
   caffeineMg: number;
   aluminumLb: number;
-  /** All-time time-of-day records, whatever the range. */
-  earliestEver: string | null;
-  latestEver: string | null;
 }
 
 export interface UptimeAnalytics {

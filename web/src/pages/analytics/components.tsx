@@ -119,9 +119,9 @@ export function StatTile({
   );
 }
 
-export function StatGrid({ children }: { children: ReactNode }) {
+export function StatGrid({ children, cols = 4 }: { children: ReactNode; cols?: 4 | 5 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${cols === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
       {children}
     </div>
   );

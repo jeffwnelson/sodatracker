@@ -108,16 +108,13 @@ func TestHighlightsAnalytics(t *testing.T) {
 	addDispense(t, st, "p1", 1, at(6, 14, 40))
 	addDispense(t, st, "p1", 1, at(6, 18, 0)) // latest last can
 	// Weekend and Monday empty; Monday breaks the streak.
-	addDispense(t, st, "p1", 1, at(10, 9, 0)) // Tue
-	addDispense(t, st, "p1", 1, at(11, 9, 0)) // Wed (today)
+	addDispense(t, st, "p1", 1, at(10, 9, 0))                                 // Tue
+	addDispense(t, st, "p1", 1, at(11, 9, 0))                                 // Wed (today)
 	addDispense(t, st, "p1", 1, time.Date(2026, 2, 2, 6, 30, 0, 0, time.UTC)) // long before the window
 
 	h, err := svc.GetHighlightsAnalytics(ctx, AnalyticsQuery{MachineID: "m1", From: from, To: to, Location: time.UTC})
 	if err != nil {
 		t.Fatal(err)
-	}
-	if h.ActiveDays != 4 || h.PerActiveDay != 2 {
-		t.Errorf("active days %d, per day %v", h.ActiveDays, h.PerActiveDay)
 	}
 	// First cans 8:00, 7:00, 9:00, 9:00 → 8:15. Last cans 15:00, 18:00, 9:00, 9:00 → 12:45.
 	if h.FirstCan.AvgMinute != 8*60+15 || h.FirstCan.Record != "2026-03-06T07:00:00Z" {
@@ -132,27 +129,17 @@ func TestHighlightsAnalytics(t *testing.T) {
 	if h.BusiestHour.At != "2026-03-06T14:00:00Z" || h.BusiestHour.Count != 2 {
 		t.Errorf("busiest hour %+v", h.BusiestHour)
 	}
-	if h.LongestGap.From != "2026-03-06T18:00:00Z" || h.LongestGap.Hours != 87 {
-		t.Errorf("longest gap %+v", h.LongestGap)
-	}
-	if h.LongestStreak != 2 || h.CurrentStreak != 2 {
-		t.Errorf("streaks longest %d current %d, want 2 and 2", h.LongestStreak, h.CurrentStreak)
-	}
 	// 6 Cola + 2 Diet, all 12 oz.
 	if h.Ounces != 96 || h.CaffeineMg != 6*34+2*46 || h.AluminumLb != 0.25 {
 		t.Errorf("totals oz %v caffeine %v aluminum %v", h.Ounces, h.CaffeineMg, h.AluminumLb)
 	}
-	// All-time records reach outside the window.
-	if h.EarliestEver == nil || *h.EarliestEver != "2026-02-02T06:30:00Z" || h.LatestEver == nil || *h.LatestEver != "2026-03-06T18:00:00Z" {
-		t.Errorf("ever: %v %v", h.EarliestEver, h.LatestEver)
+	// The earliest and latest cans stay inside the window: the 06:30 can
+	// in February doesn't count.
+	if h.FirstCan.Record != "2026-03-06T07:00:00Z" || h.LastCan.Record != "2026-03-06T18:00:00Z" {
+		t.Errorf("earliest %s latest %s", h.FirstCan.Record, h.LastCan.Record)
 	}
 	if len(h.FirstCanProducts) != 2 || h.FirstCanProducts[0].Name != "Cola" || h.FirstCanProducts[0].Count != 3 {
 		t.Errorf("first can products %+v", h.FirstCanProducts)
 	}
 
-	// Today (Wed) with no dispense yet doesn't break the current streak.
-	h, _ = svc.GetHighlightsAnalytics(ctx, AnalyticsQuery{MachineID: "m1", From: from, To: at(11, 8, 0), Location: time.UTC})
-	if h.CurrentStreak != 1 {
-		t.Errorf("current streak before today's first dispense = %d, want 1", h.CurrentStreak)
-	}
 }

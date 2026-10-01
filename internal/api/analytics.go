@@ -147,7 +147,7 @@ func (h *handlers) getSpendAnalytics(w http.ResponseWriter, r *http.Request) {
 
 // getHighlightsAnalytics godoc
 // @Summary      Highlights
-// @Description  Records and habits: average and record first/last can of the day, busiest day and hour, longest gap between dispenses, weekday streaks, and which product is dispensed first each day.
+// @Description  Records and habits: average and record first/last can of the day, busiest day and hour, soda, caffeine and aluminum totals, and which product is dispensed first each day.
 // @Tags         Analytics
 // @Produce      json
 // @Param        machineId  query     string  true   "Machine ID"
