@@ -63,7 +63,7 @@ sodaTracker/
 │   └── src/
 │       ├── pages/             # CustomerDashboard, LoginPage, AdminDashboard, MachineDetailPage, RestockPage, AlertsPage, SetupPage
 │       │   └── analytics/     # AnalyticsLayout + Consumption/Products/Inventory/Spend/Predictions dashboards
-│       ├── components/        # AppShell (the one page frame: header, main, footer), AdminLayout, StockGrid, ProtectedRoute
+│       ├── components/        # AppShell (the one page frame: header with version, main), AdminLayout, StockGrid, ProtectedRoute
 │       ├── context/           # AuthContext (JWT token + user state, localStorage persistence)
 │       └── api/               # API client + TypeScript types
 ├── .github/workflows/         # CI: one arm64 build (tests inside), cocogitto release, push to GHCR
@@ -172,8 +172,8 @@ bot commit you don't. History before `v0.1.0` isn't conventional, and
 Dockerfile takes `--build-arg VERSION` (CI passes the version `cog bump --auto
 --dry-run` predicts, or `git describe --tags` (`vX.Y.Z-N-gSHA`) when nothing will release), and the Makefile
 uses `git describe --tags --always --dirty`. Unstamped builds say `dev`.
-`GET /api/v1/health` returns `{"status","version"}`, and `AppFooter` (admin and
-public pages) displays it. Release images also get a `vX.Y.Z` image tag.
+`GET /api/v1/health` returns `{"status","version"}`, and `AppVersion` (in the header next to the
+brand, on every page) displays it. Release images also get a `vX.Y.Z` image tag.
 
 **CI publishes the image.** `.github/workflows/docker-publish.yml` is one job that
 builds once: predict the version (`cog bump --auto --dry-run`), build and push the
