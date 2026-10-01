@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.5.1](https://github.com/jeffwnelson/sodatracker/compare/8e59d37562d5c15bc2f8c0d72378fd9f54722463..v0.5.1) - 2026-10-01
+#### Bug Fixes
+- (**analytics**) report uptime from unrounded hours so a short tracked span isn't null - ([8e59d37](https://github.com/jeffwnelson/sodatracker/commit/8e59d37562d5c15bc2f8c0d72378fd9f54722463)) - Jeff Nelson
+
+- - -
+
 ## [v0.5.0](https://github.com/jeffwnelson/sodatracker/compare/cab0e11bbd01373db269786d9da872dd528b10a5..v0.5.0) - 2026-10-01
 #### Features
 - (**analytics**) highlights and Pi agent uptime tabs - ([e161181](https://github.com/jeffwnelson/sodatracker/commit/e161181892dec257ab07b650c42f8ff77945167a)) - Jeff Nelson
