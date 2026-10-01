@@ -356,6 +356,13 @@ func (h *handlers) createProduct(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, `color must be a "#rrggbb" hex value`)
 		return
 	}
+	if p.SizeOz < 0 || p.CaffeineMg < 0 {
+		writeErr(w, http.StatusBadRequest, "sizeOz and caffeineMg can't be negative")
+		return
+	}
+	if p.SizeOz == 0 {
+		p.SizeOz = 12
+	}
 	if p.ID == "" {
 		p.ID = uuid.NewString()
 	}

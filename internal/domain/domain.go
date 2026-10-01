@@ -12,6 +12,10 @@ type Product struct {
 	// Color is a "#rrggbb" hex used for the product's dot and chart series.
 	// Empty means the dashboard picks one from its default palette.
 	Color string `json:"color,omitempty" example:"#e4002b"`
+	// SizeOz is the can's volume in US fluid ounces; createProduct defaults
+	// it to 12. CaffeineMg is per can; 0 for caffeine-free or unknown.
+	SizeOz     float64 `json:"sizeOz" example:"12"`
+	CaffeineMg float64 `json:"caffeineMg" example:"34"`
 }
 
 type Machine struct {

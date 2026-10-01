@@ -55,6 +55,8 @@ function ProductModal({
   );
   // "" means no color: the dashboard falls back to its default palette.
   const [color, setColor] = useState(product?.color ?? "");
+  const [sizeOz, setSizeOz] = useState(String(product?.sizeOz ?? 12));
+  const [caffeineMg, setCaffeineMg] = useState(String(product?.caffeineMg ?? 0));
   const [error, setError] = useState("");
   const queryClient = useQueryClient();
 
@@ -65,8 +67,10 @@ function ProductModal({
         name,
         ...(description ? { description } : {}),
         ...(costPerCan ? { costPerCan: Number(costPerCan) } : {}),
-        // Always sent: saving is an upsert, so leaving it out would clear it.
+        // Always sent: saving is an upsert, so leaving them out would clear them.
         color,
+        sizeOz: Number(sizeOz) || 12,
+        caffeineMg: Number(caffeineMg) || 0,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -115,6 +119,26 @@ function ProductModal({
             onChange={(e) => setCostPerCan(e.target.value)}
             placeholder="0.35"
           />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Size (fl oz)"
+              type="number"
+              step="0.1"
+              min="0"
+              value={sizeOz}
+              onChange={(e) => setSizeOz(e.target.value)}
+              placeholder="12"
+            />
+            <Input
+              label="Caffeine (mg/can)"
+              type="number"
+              step="1"
+              min="0"
+              value={caffeineMg}
+              onChange={(e) => setCaffeineMg(e.target.value)}
+              placeholder="0"
+            />
+          </div>
           <div>
             <label
               htmlFor="product-color"

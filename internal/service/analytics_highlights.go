@@ -26,7 +26,24 @@ type HighlightsAnalytics struct {
 	LongestStreak    int            `json:"longestStreak" example:"12"`
 	CurrentStreak    int            `json:"currentStreak" example:"4"`
 	FirstCanProducts []ProductCount `json:"firstCanProducts"`
+
+	// Totals for the window, from each product's can size and caffeine.
+	Ounces     float64 `json:"ounces" example:"1092"`
+	CaffeineMg float64 `json:"caffeineMg" example:"4120"`
+	// AluminumLb is the cans' aluminum, as if every one is recycled.
+	AluminumLb float64 `json:"aluminumLb" example:"2.8"`
+
+	// EarliestEver and LatestEver are the earliest and latest time of day a
+	// can has ever been dispensed, over all history whatever the window.
+	EarliestEver *string `json:"earliestEver" example:"2026-09-14T06:58:00-05:00"`
+	LatestEver   *string `json:"latestEver" example:"2026-09-22T19:41:00-05:00"`
 }
+
+// aluminumGPer12oz is the aluminum in a 12 oz can, about 32 cans to the
+// pound; other sizes scale with volume.
+const aluminumGPer12oz = 14.2
+
+const gramsPerLb = 453.59237
 
 // TimeOfDay summarises one dispense per active day (the first or the last).
 // AvgMinute is minutes after local midnight; Record is the earliest first can
@@ -83,17 +100,49 @@ func (s *Service) GetHighlightsAnalytics(ctx context.Context, q AnalyticsQuery) 
 		}
 		hours[time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, loc)]++
 	}
-	if len(inWindow) == 0 {
-		return out, nil
-	}
-
-	out.ActiveDays = len(days)
-	out.PerActiveDay = round1(float64(len(inWindow)) / float64(len(days)))
 
 	minuteOf := func(i int) int {
 		t := a.dispenses[i].Timestamp.In(loc)
 		return t.Hour()*60 + t.Minute()
 	}
+	// All-time time-of-day records, whatever the window.
+	if len(a.dispenses) > 0 {
+		lo, hi := 0, 0
+		for i := range a.dispenses {
+			if minuteOf(i) < minuteOf(lo) {
+				lo = i
+			}
+			if minuteOf(i) > minuteOf(hi) {
+				hi = i
+			}
+		}
+		e := a.dispenses[lo].Timestamp.In(loc).Format(time.RFC3339)
+		l := a.dispenses[hi].Timestamp.In(loc).Format(time.RFC3339)
+		out.EarliestEver, out.LatestEver = &e, &l
+	}
+
+	if len(inWindow) == 0 {
+		return out, nil
+	}
+
+	var alumG float64
+	for _, i := range inWindow {
+		p := a.product(a.dispenses[i])
+		size := p.SizeOz
+		if size <= 0 {
+			size = 12
+		}
+		out.Ounces += size
+		out.CaffeineMg += p.CaffeineMg
+		alumG += aluminumGPer12oz * size / 12
+	}
+	out.Ounces = round1(out.Ounces)
+	out.CaffeineMg = math.Round(out.CaffeineMg)
+	out.AluminumLb = round2(alumG / gramsPerLb)
+
+	out.ActiveDays = len(days)
+	out.PerActiveDay = round1(float64(len(inWindow)) / float64(len(days)))
+
 	var firstSum, lastSum int
 	firstRec, lastRec := -1, -1
 	byProduct := map[string]*ProductCount{}

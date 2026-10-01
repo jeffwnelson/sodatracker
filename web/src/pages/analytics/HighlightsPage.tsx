@@ -97,6 +97,42 @@ function Highlights({
       </StatGrid>
       <StatGrid>
         <StatTile
+          label="Soda consumed"
+          value={`${Math.round(data.ounces).toLocaleString()} oz`}
+          sub={`${(data.ounces / 128).toFixed(1)} gallons`}
+          compare={c && <Delta current={data.ounces} previous={c.ounces} format={(n) => `${Math.round(n).toLocaleString()} oz`} />}
+        />
+        <StatTile
+          label="Caffeine"
+          value={data.caffeineMg >= 10_000 ? `${(data.caffeineMg / 1000).toFixed(1)} g` : `${Math.round(data.caffeineMg).toLocaleString()} mg`}
+          sub={`About ${Math.round(data.caffeineMg / 95).toLocaleString()} cups of coffee`}
+          compare={c && <Delta current={data.caffeineMg} previous={c.caffeineMg} format={(n) => `${Math.round(n).toLocaleString()} mg`} />}
+        />
+        <StatTile
+          label="Aluminum to recycle"
+          value={`${data.aluminumLb.toFixed(1)} lb`}
+          sub="If every can is recycled"
+          compare={c && <Delta current={data.aluminumLb} previous={c.aluminumLb} format={(n) => `${n.toFixed(1)} lb`} />}
+        />
+        <StatTile
+          label="Days with dispenses"
+          value={data.activeDays}
+          sub={`${data.perActiveDay.toFixed(1)} cans on each`}
+          compare={c && <Delta current={data.activeDays} previous={c.activeDays} />}
+        />
+      </StatGrid>
+      <StatGrid>
+        <StatTile
+          label="Earliest can ever"
+          value={data.earliestEver ? clock(data.earliestEver) : "—"}
+          sub={data.earliestEver ? `${day(data.earliestEver)}, ${new Date(data.earliestEver).getFullYear()} · all time` : "All time"}
+        />
+        <StatTile
+          label="Latest can ever"
+          value={data.latestEver ? clock(data.latestEver) : "—"}
+          sub={data.latestEver ? `${day(data.latestEver)}, ${new Date(data.latestEver).getFullYear()} · all time` : "All time"}
+        />
+        <StatTile
           label="Weekday streak"
           value={data.currentStreak}
           sub={`Weekdays in a row with a dispense. Longest: ${data.longestStreak}`}
@@ -110,12 +146,6 @@ function Highlights({
             longestGap &&
             `${day(longestGap.from)} ${clock(longestGap.from)} to ${day(longestGap.to)} ${clock(longestGap.to)}`
           }
-        />
-        <StatTile
-          label="Days with dispenses"
-          value={data.activeDays}
-          sub={`${data.perActiveDay.toFixed(1)} cans on each`}
-          compare={c && <Delta current={data.activeDays} previous={c.activeDays} />}
         />
       </StatGrid>
 

@@ -12,6 +12,10 @@ export interface Product {
   imageUrl?: string;
   /** "#rrggbb", or absent to use the default palette. */
   color?: string;
+  /** US fl oz per can; the server defaults it to 12. */
+  sizeOz?: number;
+  /** Caffeine per can; 0 for caffeine-free or unknown. */
+  caffeineMg?: number;
 }
 
 export interface Machine {
@@ -295,6 +299,12 @@ export interface HighlightsAnalytics {
   longestStreak: number;
   currentStreak: number;
   firstCanProducts: { productId: string; name: string; count: number }[];
+  ounces: number;
+  caffeineMg: number;
+  aluminumLb: number;
+  /** All-time time-of-day records, whatever the range. */
+  earliestEver: string | null;
+  latestEver: string | null;
 }
 
 export interface UptimeAnalytics {

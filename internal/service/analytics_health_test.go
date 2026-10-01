@@ -94,8 +94,8 @@ func TestHighlightsAnalytics(t *testing.T) {
 	svc, st := setupService(t)
 	ctx := context.Background()
 	st.CreateMachine(ctx, &domain.Machine{ID: "m1", Name: "Test", SlotCount: 2})
-	st.CreateProduct(ctx, &domain.Product{ID: "p1", Name: "Cola"})
-	st.CreateProduct(ctx, &domain.Product{ID: "p2", Name: "Diet"})
+	st.CreateProduct(ctx, &domain.Product{ID: "p1", Name: "Cola", SizeOz: 12, CaffeineMg: 34})
+	st.CreateProduct(ctx, &domain.Product{ID: "p2", Name: "Diet", CaffeineMg: 46}) // size unset: 12
 
 	// Thu 5 – Wed 11 March 2026, UTC.
 	from := time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)
@@ -110,6 +110,7 @@ func TestHighlightsAnalytics(t *testing.T) {
 	// Weekend and Monday empty; Monday breaks the streak.
 	addDispense(t, st, "p1", 1, at(10, 9, 0)) // Tue
 	addDispense(t, st, "p1", 1, at(11, 9, 0)) // Wed (today)
+	addDispense(t, st, "p1", 1, time.Date(2026, 2, 2, 6, 30, 0, 0, time.UTC)) // long before the window
 
 	h, err := svc.GetHighlightsAnalytics(ctx, AnalyticsQuery{MachineID: "m1", From: from, To: to, Location: time.UTC})
 	if err != nil {
@@ -136,6 +137,14 @@ func TestHighlightsAnalytics(t *testing.T) {
 	}
 	if h.LongestStreak != 2 || h.CurrentStreak != 2 {
 		t.Errorf("streaks longest %d current %d, want 2 and 2", h.LongestStreak, h.CurrentStreak)
+	}
+	// 6 Cola + 2 Diet, all 12 oz.
+	if h.Ounces != 96 || h.CaffeineMg != 6*34+2*46 || h.AluminumLb != 0.25 {
+		t.Errorf("totals oz %v caffeine %v aluminum %v", h.Ounces, h.CaffeineMg, h.AluminumLb)
+	}
+	// All-time records reach outside the window.
+	if h.EarliestEver == nil || *h.EarliestEver != "2026-02-02T06:30:00Z" || h.LatestEver == nil || *h.LatestEver != "2026-03-06T18:00:00Z" {
+		t.Errorf("ever: %v %v", h.EarliestEver, h.LatestEver)
 	}
 	if len(h.FirstCanProducts) != 2 || h.FirstCanProducts[0].Name != "Cola" || h.FirstCanProducts[0].Count != 3 {
 		t.Errorf("first can products %+v", h.FirstCanProducts)

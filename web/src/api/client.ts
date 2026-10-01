@@ -171,6 +171,8 @@ export function createProduct(product: {
   description?: string;
   costPerCan?: number;
   color?: string;
+  sizeOz?: number;
+  caffeineMg?: number;
 }): Promise<Product> {
   return postJSONAuth("/products", product);
 }

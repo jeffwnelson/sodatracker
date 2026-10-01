@@ -129,6 +129,9 @@ func (s *SQLiteStore) migrate() error {
 	// Schema evolution: product color. After the UPC migration, which rebuilds
 	// the table without it; errors here just mean the column already exists.
 	s.db.Exec(`ALTER TABLE products ADD COLUMN color TEXT DEFAULT ''`)
+	// Schema evolution: can size and caffeine, for the Highlights totals.
+	s.db.Exec(`ALTER TABLE products ADD COLUMN size_oz REAL DEFAULT 12`)
+	s.db.Exec(`ALTER TABLE products ADD COLUMN caffeine_mg REAL DEFAULT 0`)
 
 	return nil
 }
@@ -177,24 +180,24 @@ func (s *SQLiteStore) migrateProductsDropUPCUnique() error {
 
 func (s *SQLiteStore) CreateProduct(ctx context.Context, p *domain.Product) error {
 	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO products (id, upc, name, cost_per_can, image_url, description, color) VALUES (?, ?, ?, ?, ?, ?, ?)
-		 ON CONFLICT(id) DO UPDATE SET upc=excluded.upc, name=excluded.name, cost_per_can=excluded.cost_per_can, image_url=excluded.image_url, description=excluded.description, color=excluded.color`,
-		p.ID, p.UPC, p.Name, p.CostPerCan, p.ImageURL, p.Description, p.Color)
+		`INSERT INTO products (id, upc, name, cost_per_can, image_url, description, color, size_oz, caffeine_mg) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET upc=excluded.upc, name=excluded.name, cost_per_can=excluded.cost_per_can, image_url=excluded.image_url, description=excluded.description, color=excluded.color, size_oz=excluded.size_oz, caffeine_mg=excluded.caffeine_mg`,
+		p.ID, p.UPC, p.Name, p.CostPerCan, p.ImageURL, p.Description, p.Color, p.SizeOz, p.CaffeineMg)
 	return err
 }
 
 func (s *SQLiteStore) GetProduct(ctx context.Context, id string) (*domain.Product, error) {
-	row := s.db.QueryRowContext(ctx, `SELECT id, upc, name, cost_per_can, image_url, description, COALESCE(color, '') FROM products WHERE id = ?`, id)
+	row := s.db.QueryRowContext(ctx, `SELECT id, upc, name, cost_per_can, image_url, description, COALESCE(color, ''), COALESCE(size_oz, 12), COALESCE(caffeine_mg, 0) FROM products WHERE id = ?`, id)
 	return scanProduct(row)
 }
 
 func (s *SQLiteStore) GetProductByUPC(ctx context.Context, upc string) (*domain.Product, error) {
-	row := s.db.QueryRowContext(ctx, `SELECT id, upc, name, cost_per_can, image_url, description, COALESCE(color, '') FROM products WHERE upc = ?`, upc)
+	row := s.db.QueryRowContext(ctx, `SELECT id, upc, name, cost_per_can, image_url, description, COALESCE(color, ''), COALESCE(size_oz, 12), COALESCE(caffeine_mg, 0) FROM products WHERE upc = ?`, upc)
 	return scanProduct(row)
 }
 
 func (s *SQLiteStore) ListProducts(ctx context.Context) ([]domain.Product, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, upc, name, cost_per_can, image_url, description, COALESCE(color, '') FROM products ORDER BY name`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, upc, name, cost_per_can, image_url, description, COALESCE(color, ''), COALESCE(size_oz, 12), COALESCE(caffeine_mg, 0) FROM products ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +205,7 @@ func (s *SQLiteStore) ListProducts(ctx context.Context) ([]domain.Product, error
 	var products []domain.Product
 	for rows.Next() {
 		var p domain.Product
-		if err := rows.Scan(&p.ID, &p.UPC, &p.Name, &p.CostPerCan, &p.ImageURL, &p.Description, &p.Color); err != nil {
+		if err := rows.Scan(&p.ID, &p.UPC, &p.Name, &p.CostPerCan, &p.ImageURL, &p.Description, &p.Color, &p.SizeOz, &p.CaffeineMg); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -217,7 +220,7 @@ func (s *SQLiteStore) DeleteProduct(ctx context.Context, id string) error {
 
 func scanProduct(row *sql.Row) (*domain.Product, error) {
 	var p domain.Product
-	if err := row.Scan(&p.ID, &p.UPC, &p.Name, &p.CostPerCan, &p.ImageURL, &p.Description, &p.Color); err != nil {
+	if err := row.Scan(&p.ID, &p.UPC, &p.Name, &p.CostPerCan, &p.ImageURL, &p.Description, &p.Color, &p.SizeOz, &p.CaffeineMg); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
