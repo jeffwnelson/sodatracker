@@ -1,0 +1,209 @@
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import type { UptimeAnalytics } from "../../api/types";
+import { Card } from "../../components/Card";
+import { DataTable } from "../../components/DataTable";
+import {
+  OTHER_COLOR,
+  axisProps,
+  formatBucket,
+  formatBucketLong,
+  formatDateTime,
+  formatHours,
+  useAnalytics,
+} from "./analytics";
+import {
+  BreakdownPie,
+  ChartCard,
+  ChartTooltip,
+  Legend,
+  Loaded,
+  NoData,
+  StatGrid,
+  StatTile,
+} from "./components";
+
+const ONLINE = "var(--color-status-ok)";
+const OFFLINE = "var(--color-status-empty)";
+const UNTRACKED = OTHER_COLOR;
+
+export function UptimePage() {
+  const query = useAnalytics("uptime");
+  return <Loaded query={query}>{(data) => <Uptime data={data} />}</Loaded>;
+}
+
+function Uptime({ data }: { data: UptimeAnalytics }) {
+  const bucket = data.range.bucket;
+  if (!data.trackingSince) {
+    return (
+      <NoData message="No heartbeats from the Pi agent yet. They started with v0.4.0." />
+    );
+  }
+  const statuses = [
+    { key: "onlineHours", label: "Online", color: ONLINE },
+    { key: "offlineHours", label: "Offline", color: OFFLINE },
+    { key: "untrackedHours", label: "Not tracked yet", color: UNTRACKED },
+  ] as const;
+  // Time before the first heartbeat would swamp the pie for weeks after
+  // tracking began; the bar chart still shows it.
+  const tracked = statuses.filter((s) => s.key !== "untrackedHours");
+
+  return (
+    <>
+      <StatGrid>
+        <StatTile
+          label="Uptime"
+          value={data.uptime === null ? "—" : `${(data.uptime * 100).toFixed(1)}%`}
+          sub="Of the tracked time in this range"
+        />
+        <StatTile
+          label="Outages"
+          value={data.outages}
+          sub={
+            data.outages
+              ? `Longest: ${formatHours(data.longestOutageHours)}`
+              : "None in this range"
+          }
+        />
+        <StatTile
+          label="Time offline"
+          value={data.offlineHours ? formatHours(data.offlineHours) : "0"}
+          sub="Dispenses in this time weren't counted"
+        />
+        <StatTile
+          label="Tracked since"
+          value={new Date(data.trackingSince).toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+          })}
+          sub="First heartbeat from the Pi agent"
+        />
+      </StatGrid>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ChartCard
+          title="Breakdown"
+          subtitle="Tracked time in this range by agent status"
+          table={
+            <DataTable
+              columns={[
+                { header: "Status", accessor: (r) => r.label },
+                {
+                  header: "Time",
+                  accessor: (r) => formatHours(data[r.key]),
+                  className: "text-right tabular-nums",
+                  headerClassName: "text-right",
+                },
+              ]}
+              data={tracked}
+              keyFn={(r) => r.key}
+            />
+          }
+        >
+          <BreakdownPie
+            slices={tracked.map((s) => ({ ...s, value: data[s.key] }))}
+            format={formatHours}
+          />
+        </ChartCard>
+
+        <Card>
+          <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-4">
+            Outages
+          </p>
+          {data.outageList.length === 0 ? (
+            <NoData message="No outages in this range." />
+          ) : (
+            <DataTable
+              columns={[
+                { header: "From", accessor: (r) => formatDateTime(r.from) },
+                {
+                  header: "To",
+                  accessor: (r) =>
+                    r.ongoing ? (
+                      <span className="text-status-empty font-medium">Still offline</span>
+                    ) : (
+                      formatDateTime(r.to)
+                    ),
+                },
+                {
+                  header: "Length",
+                  accessor: (r) => formatHours(r.hours),
+                  className: "text-right tabular-nums",
+                  headerClassName: "text-right",
+                },
+              ]}
+              data={data.outageList}
+              keyFn={(r) => r.from}
+            />
+          )}
+        </Card>
+      </div>
+
+      <ChartCard
+        title="Over time"
+        subtitle={`Hours per ${bucket} by agent status`}
+        legend={<Legend items={statuses.map((s) => ({ ...s }))} />}
+        table={
+          <DataTable
+            columns={[
+              {
+                header: bucket,
+                accessor: (r) => formatBucketLong(r.bucket, bucket),
+                headerClassName: "capitalize",
+              },
+              ...statuses.map((s) => ({
+                header: s.label,
+                accessor: (r: UptimeAnalytics["series"][number]) => formatHours(r[s.key]),
+                className: "text-right tabular-nums",
+                headerClassName: "text-right",
+              })),
+            ]}
+            data={[...data.series].reverse()}
+            keyFn={(r) => r.bucket}
+          />
+        }
+      >
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={data.series} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="bucket"
+              tickFormatter={(v: string) => formatBucket(v, bucket)}
+              minTickGap={24}
+              {...axisProps}
+            />
+            <YAxis {...axisProps} />
+            <Tooltip
+              cursor={{ fill: "var(--color-surface-tertiary)" }}
+              content={(p) => (
+                <ChartTooltip
+                  {...p}
+                  title={(l) => formatBucketLong(l, bucket)}
+                  value={(v) => formatHours(v)}
+                />
+              )}
+            />
+            {statuses.map((s) => (
+              <Bar
+                key={s.key}
+                isAnimationActive={false}
+                dataKey={s.key}
+                name={s.label}
+                stackId="status"
+                fill={s.color}
+                maxBarSize={28}
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartCard>
+    </>
+  );
+}

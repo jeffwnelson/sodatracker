@@ -104,6 +104,13 @@ func (s *SQLiteStore) migrate() error {
 			cleared_at DATETIME
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_alert_events_machine_cleared_ts ON alert_events(machine_id, cleared, timestamp)`,
+		`CREATE TABLE IF NOT EXISTS agent_sessions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			machine_id TEXT NOT NULL,
+			started_at DATETIME NOT NULL,
+			last_seen DATETIME NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_agent_sessions_machine ON agent_sessions(machine_id, started_at)`,
 	}
 	for _, m := range migrations {
 		if _, err := s.db.Exec(m); err != nil {
@@ -267,6 +274,7 @@ func (s *SQLiteStore) DeleteMachine(ctx context.Context, id string) error {
 
 	tables := []string{
 		`DELETE FROM alert_events WHERE machine_id = ?`,
+		`DELETE FROM agent_sessions WHERE machine_id = ?`,
 		`DELETE FROM alert_configs WHERE machine_id = ?`,
 		`DELETE FROM restocks WHERE machine_id = ?`,
 		`DELETE FROM dispenses WHERE machine_id = ?`,
@@ -586,4 +594,52 @@ func scanRestock(row scanner) (*domain.Restock, error) {
 		return nil, err
 	}
 	return &r, nil
+}
+
+// --- Agent sessions ---
+
+func (s *SQLiteStore) LatestAgentSession(ctx context.Context, machineID string) (*domain.AgentSession, error) {
+	var a domain.AgentSession
+	err := s.db.QueryRowContext(ctx,
+		`SELECT id, machine_id, started_at, last_seen FROM agent_sessions
+		 WHERE machine_id = ? ORDER BY started_at DESC, id DESC LIMIT 1`, machineID).
+		Scan(&a.ID, &a.MachineID, &a.StartedAt, &a.LastSeen)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+func (s *SQLiteStore) StartAgentSession(ctx context.Context, machineID string, at time.Time) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO agent_sessions (machine_id, started_at, last_seen) VALUES (?, ?, ?)`,
+		machineID, at.UTC(), at.UTC())
+	return err
+}
+
+func (s *SQLiteStore) TouchAgentSession(ctx context.Context, id int64, at time.Time) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE agent_sessions SET last_seen = ? WHERE id = ?`, at.UTC(), id)
+	return err
+}
+
+func (s *SQLiteStore) ListAgentSessions(ctx context.Context, machineID string) ([]domain.AgentSession, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, machine_id, started_at, last_seen FROM agent_sessions
+		 WHERE machine_id = ? ORDER BY started_at, id`, machineID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.AgentSession
+	for rows.Next() {
+		var a domain.AgentSession
+		if err := rows.Scan(&a.ID, &a.MachineID, &a.StartedAt, &a.LastSeen); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
 }

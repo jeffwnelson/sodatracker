@@ -142,7 +142,13 @@ export interface StockPrediction {
 
 // --- Analytics ---
 
-export type AnalyticsKind = "consumption" | "products" | "inventory" | "spend";
+export type AnalyticsKind =
+  | "consumption"
+  | "products"
+  | "inventory"
+  | "spend"
+  | "highlights"
+  | "uptime";
 export type Bucket = "day" | "week" | "month";
 
 export interface AnalyticsRange {
@@ -259,4 +265,50 @@ export interface AnalyticsByKind {
   products: ProductAnalytics;
   inventory: InventoryAnalytics;
   spend: SpendAnalytics;
+  highlights: HighlightsAnalytics;
+  uptime: UptimeAnalytics;
+}
+
+export interface TimeOfDay {
+  /** Minutes after local midnight. */
+  avgMinute: number;
+  /** The earliest first can, or the latest last can. */
+  record: string;
+}
+
+export interface CountAt {
+  at: string;
+  count: number;
+}
+
+export interface HighlightsAnalytics {
+  range: AnalyticsRange;
+  activeDays: number;
+  perActiveDay: number;
+  firstCan: TimeOfDay | null;
+  lastCan: TimeOfDay | null;
+  busiestDay: CountAt | null;
+  busiestHour: CountAt | null;
+  longestGap: { from: string; to: string; hours: number } | null;
+  longestStreak: number;
+  currentStreak: number;
+  firstCanProducts: { productId: string; name: string; count: number }[];
+}
+
+export interface UptimeAnalytics {
+  range: AnalyticsRange;
+  trackingSince: string | null;
+  onlineHours: number;
+  offlineHours: number;
+  untrackedHours: number;
+  uptime: number | null;
+  outages: number;
+  longestOutageHours: number;
+  series: {
+    bucket: string;
+    onlineHours: number;
+    offlineHours: number;
+    untrackedHours: number;
+  }[];
+  outageList: { from: string; to: string; hours: number; ongoing: boolean }[];
 }

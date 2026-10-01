@@ -52,6 +52,12 @@ type Store interface {
 	ClearAlertEvents(ctx context.Context, machineID string, slotPosition int) error
 	GetActiveAlert(ctx context.Context, machineID string, slotPosition int, alertType string) (*domain.AlertEvent, error)
 
+	// Agent sessions (heartbeat history), oldest first
+	LatestAgentSession(ctx context.Context, machineID string) (*domain.AgentSession, error)
+	StartAgentSession(ctx context.Context, machineID string, at time.Time) error
+	TouchAgentSession(ctx context.Context, id int64, at time.Time) error
+	ListAgentSessions(ctx context.Context, machineID string) ([]domain.AgentSession, error)
+
 	// Admin
 	ResetAllData(ctx context.Context) error
 

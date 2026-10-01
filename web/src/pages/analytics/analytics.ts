@@ -186,6 +186,24 @@ export function percent(n: number): string {
   return `${Math.round(n * 100)}%`;
 }
 
+/** Minutes after midnight as a clock time, e.g. 495 → "8:15am". */
+export function formatMinuteOfDay(min: number): string {
+  const h = Math.floor(min / 60) % 24;
+  const m = String(min % 60).padStart(2, "0");
+  const suffix = h < 12 ? "am" : "pm";
+  return `${h % 12 === 0 ? 12 : h % 12}:${m}${suffix}`;
+}
+
+/** A length of time in the largest sensible units: 40 min, 5.5h, 3d 4h. */
+export function formatHours(h: number): string {
+  if (h <= 0) return "0h";
+  if (h < 1) return `${Math.max(1, Math.round(h * 60))} min`;
+  if (h < 48) return `${Math.round(h * 10) / 10}h`;
+  const d = Math.floor(h / 24);
+  const rest = Math.round(h - d * 24);
+  return rest ? `${d}d ${rest}h` : `${d}d`;
+}
+
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
     month: "short",

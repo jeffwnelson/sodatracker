@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Card } from "../../components/Card";
@@ -249,6 +250,71 @@ export function NoData({ message }: { message: string }) {
   return (
     <div className="flex items-center justify-center h-40 text-sm text-text-tertiary">
       {message}
+    </div>
+  );
+}
+
+export type Slice = { key: string; label: string; value: number; color: string };
+
+/**
+ * A donut beside a legend that lists each slice's value and share, so the
+ * numbers are readable without hovering. Zero slices are left out.
+ */
+export function BreakdownPie({
+  slices,
+  format = (n) => String(n),
+}: {
+  slices: Slice[];
+  format?: (n: number) => string;
+}) {
+  const shown = slices.filter((s) => s.value > 0);
+  const total = shown.reduce((sum, s) => sum + s.value, 0);
+  return (
+    <div className="flex flex-col sm:flex-row items-center gap-6">
+      <div className="w-56 h-56 shrink-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              isAnimationActive={false}
+              data={shown}
+              dataKey="value"
+              nameKey="label"
+              innerRadius="58%"
+              outerRadius="100%"
+              paddingAngle={shown.length > 1 ? 1.5 : 0}
+              stroke="none"
+            >
+              {shown.map((s) => (
+                <Cell key={s.key} fill={s.color} />
+              ))}
+            </Pie>
+            <Tooltip
+              content={(p) => (
+                <ChartTooltip
+                  {...p}
+                  label={p.payload?.[0]?.name}
+                  title={(l) => l}
+                  value={(v) => `${format(v)} (${Math.round((v / total) * 100)}%)`}
+                />
+              )}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <ul className="w-full max-w-sm space-y-2 text-sm">
+        {shown.map((s) => (
+          <li key={s.key} className="flex items-center gap-2">
+            <Swatch color={s.color} />
+            <span className="text-text-secondary">{s.label}</span>
+            <span className="ml-auto font-medium text-text-primary tabular-nums">
+              {format(s.value)}
+            </span>
+            <span className="w-12 text-right text-text-tertiary tabular-nums">
+              {Math.round((s.value / total) * 100)}%
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

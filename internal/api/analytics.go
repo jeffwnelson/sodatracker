@@ -144,3 +144,42 @@ func (h *handlers) getInventoryAnalytics(w http.ResponseWriter, r *http.Request)
 func (h *handlers) getSpendAnalytics(w http.ResponseWriter, r *http.Request) {
 	serveAnalytics(w, r, h.svc.GetSpendAnalytics)
 }
+
+// getHighlightsAnalytics godoc
+// @Summary      Highlights
+// @Description  Records and habits: average and record first/last can of the day, busiest day and hour, longest gap between sales, weekday streaks, and which product is bought first each day.
+// @Tags         Analytics
+// @Produce      json
+// @Param        machineId  query     string  true   "Machine ID"
+// @Param        from       query     string  false  "RFC3339 start (default: 30 days before to)"
+// @Param        to         query     string  false  "RFC3339 end (default and maximum: now)"
+// @Param        tz         query     string  false  "IANA timezone for days and hours (default: UTC)"
+// @Success      200        {object}  service.HighlightsAnalytics
+// @Failure      400        {object}  ErrorResponse
+// @Failure      404        {object}  ErrorResponse
+// @Failure      500        {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /analytics/highlights [get]
+func (h *handlers) getHighlightsAnalytics(w http.ResponseWriter, r *http.Request) {
+	serveAnalytics(w, r, h.svc.GetHighlightsAnalytics)
+}
+
+// getUptimeAnalytics godoc
+// @Summary      Pi agent uptime
+// @Description  Hours the Pi agent was heartbeating (online), silent (offline: dispenses not counted) or not yet tracked, per bucket and in total, with the list of outages.
+// @Tags         Analytics
+// @Produce      json
+// @Param        machineId  query     string  true   "Machine ID"
+// @Param        from       query     string  false  "RFC3339 start (default: 30 days before to)"
+// @Param        to         query     string  false  "RFC3339 end (default and maximum: now)"
+// @Param        tz         query     string  false  "IANA timezone for buckets (default: UTC)"
+// @Param        bucket     query     string  false  "day, week or month (default: from window length)"
+// @Success      200        {object}  service.UptimeAnalytics
+// @Failure      400        {object}  ErrorResponse
+// @Failure      404        {object}  ErrorResponse
+// @Failure      500        {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /analytics/uptime [get]
+func (h *handlers) getUptimeAnalytics(w http.ResponseWriter, r *http.Request) {
+	serveAnalytics(w, r, h.svc.GetUptimeAnalytics)
+}

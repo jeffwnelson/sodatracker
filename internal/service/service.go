@@ -21,11 +21,12 @@ type Service struct {
 	store     store.Store
 	jwtSecret string
 	bus       events.EventBus
-	agents    agentTracker
+	// now is the clock for heartbeats and agent status; tests replace it.
+	now func() time.Time
 }
 
 func New(s store.Store, jwtSecret string, bus events.EventBus) *Service {
-	return &Service{store: s, jwtSecret: jwtSecret, bus: bus, agents: agentTracker{lastSeen: map[string]time.Time{}, now: time.Now}}
+	return &Service{store: s, jwtSecret: jwtSecret, bus: bus, now: time.Now}
 }
 
 // GetMachineStatus computes the current stock status for every slot in a machine.
@@ -85,10 +86,14 @@ func (s *Service) GetMachineStatus(ctx context.Context, machineID string) (*doma
 		statuses[i] = ss
 	}
 
+	agent, err := s.agentStatus(ctx, machineID)
+	if err != nil {
+		return nil, err
+	}
 	return &domain.MachineStatus{
 		Machine: *machine,
 		Slots:   statuses,
-		Agent:   s.agents.status(machineID),
+		Agent:   agent,
 	}, nil
 }
 

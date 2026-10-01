@@ -67,9 +67,17 @@ type MachineStatus struct {
 	Agent   AgentStatus  `json:"agent"`
 }
 
+// AgentSession is one unbroken run of Pi agent heartbeats: no two
+// consecutive beats more than the offline threshold apart.
+type AgentSession struct {
+	ID        int64     `json:"id"`
+	MachineID string    `json:"machineId"`
+	StartedAt time.Time `json:"startedAt"`
+	LastSeen  time.Time `json:"lastSeen"`
+}
+
 // AgentStatus is what the server knows about the machine's Pi agent from its
-// heartbeats. LastSeen is nil when no heartbeat has arrived since the server
-// started; it is kept in memory only.
+// heartbeats. LastSeen is nil when the agent has never sent one.
 type AgentStatus struct {
 	Online   bool       `json:"online"`
 	LastSeen *time.Time `json:"lastSeen"`

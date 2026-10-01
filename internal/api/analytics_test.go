@@ -24,7 +24,7 @@ func TestAnalyticsEndpoints(t *testing.T) {
 		return w
 	}
 
-	for _, kind := range []string{"consumption", "products", "inventory", "spend"} {
+	for _, kind := range []string{"consumption", "products", "inventory", "spend", "highlights", "uptime"} {
 		base := "/api/v1/analytics/" + kind
 		if w := get(base+"?machineId=m1", false); w.Code != http.StatusUnauthorized {
 			t.Errorf("%s without auth: %d, want 401", kind, w.Code)

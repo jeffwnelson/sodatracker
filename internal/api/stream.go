@@ -167,6 +167,9 @@ func (h *handlers) agentHeartbeat(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "machine not found")
 		return
 	}
-	h.svc.RecordAgentHeartbeat(r.Context(), req.MachineID)
+	if err := h.svc.RecordAgentHeartbeat(r.Context(), req.MachineID); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
