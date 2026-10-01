@@ -102,8 +102,18 @@ func TestSlashCommandIsAnsweredInTheAck(t *testing.T) {
 // come straight back rather than wait out a backoff.
 func TestReconnectsAfterDisconnect(t *testing.T) {
 	srv, dials := fakeSlack(t, "xapp-test", func(ctx context.Context, conn *websocket.Conn) {
-		writeJSON(t, ctx, conn, map[string]any{"type": "hello"})
-		writeJSON(t, ctx, conn, map[string]any{"type": "disconnect", "reason": "refresh_requested"})
+		// The client drops the connection as soon as it reads "disconnect"
+		// and keeps redialling after the test returns, so a failed write
+		// here is expected rather than a test failure.
+		for _, msg := range []map[string]any{
+			{"type": "hello"},
+			{"type": "disconnect", "reason": "refresh_requested"},
+		} {
+			data, _ := json.Marshal(msg)
+			if conn.Write(ctx, websocket.MessageText, data) != nil {
+				return
+			}
+		}
 		conn.Read(ctx) // wait for the client to close
 	})
 
