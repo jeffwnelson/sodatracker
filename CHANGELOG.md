@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.7.0](https://github.com/jeffwnelson/sodatracker/compare/7755336eb64bcc905f0fef13aa662b20091e9003..v0.7.0) - 2026-10-01
+#### Features
+- (**analytics**) soda, caffeine and aluminum totals and all-time can records - ([528405a](https://github.com/jeffwnelson/sodatracker/commit/528405a61d02b73c9b31a91851a1b4588dedf231)) - Jeff Nelson
+#### Refactoring
+- (**web**) rename Setup to Settings; /admin/setup redirects - ([7755336](https://github.com/jeffwnelson/sodatracker/commit/7755336eb64bcc905f0fef13aa662b20091e9003)) - Jeff Nelson
+
+- - -
+
 ## [v0.6.0](https://github.com/jeffwnelson/sodatracker/compare/0e348a6d13b3c161b3dc8783ae12f4c99a33ee7a..v0.6.0) - 2026-10-01
 #### Features
 - (**analytics**) date range picker with comparison - ([d7b10b6](https://github.com/jeffwnelson/sodatracker/commit/d7b10b62192b18fbb7206adfe50bdc01b6f791cc)) - Jeff Nelson
