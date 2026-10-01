@@ -26,6 +26,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"github.com/jeffwnelson/sodatracker/internal/auth"
+	"github.com/jeffwnelson/sodatracker/internal/events"
 	"github.com/jeffwnelson/sodatracker/internal/service"
 	"github.com/jeffwnelson/sodatracker/internal/slackcmd"
 	"github.com/jeffwnelson/sodatracker/internal/store"
@@ -41,6 +42,12 @@ type RouterConfig struct {
 	JWTSecret          string
 	StaticDir          string
 	SlackSigningSecret string
+
+	// Bus feeds GET /events. Without one the route isn't registered.
+	Bus events.EventBus
+	// StreamsDone, when closed, ends every open event stream. The server
+	// closes it on shutdown, which would otherwise wait on them.
+	StreamsDone <-chan struct{}
 }
 
 func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux {
@@ -63,6 +70,10 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 		jwtSecret:          cfg.JWTSecret,
 		slackSigningSecret: cfg.SlackSigningSecret,
 		slackCmds:          slackcmd.New(st, svc),
+		streamsDone:        cfg.StreamsDone,
+	}
+	if cfg.Bus != nil {
+		h.broker = newBroker(cfg.Bus)
 	}
 
 	r.Route("/api/v1", func(r chi.Router) {
@@ -86,6 +97,7 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 		r.Group(func(r chi.Router) {
 			r.Use(auth.APIKeyMiddleware(cfg.APIKey))
 			r.Post("/dispenses", h.createDispense)
+			r.Post("/agents/heartbeat", h.agentHeartbeat)
 		})
 
 		// Admin (API key or JWT)
@@ -108,6 +120,10 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 			r.Delete("/alerts/{id}", h.deleteAlertConfig)
 			r.Get("/machines/{id}/alert-events", h.listAlertEvents)
 			r.Get("/machines/{id}/predictions", h.getStockPredictions)
+
+			if h.broker != nil {
+				r.Get("/events", h.streamEvents)
+			}
 		})
 
 		// JWT-only admin endpoints

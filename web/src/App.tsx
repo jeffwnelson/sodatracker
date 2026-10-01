@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { LiveUpdatesProvider } from "./context/LiveUpdates";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminLayout } from "./components/AdminLayout";
 import { CustomerDashboard } from "./pages/CustomerDashboard";
@@ -30,6 +31,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <LiveUpdatesProvider>
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<CustomerDashboard />} />
@@ -61,6 +63,7 @@ function App() {
               </Route>
             </Routes>
           </BrowserRouter>
+        </LiveUpdatesProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

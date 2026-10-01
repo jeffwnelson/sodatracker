@@ -168,6 +168,7 @@ environment variables, which is what the compose file does:
 | `PIAGENT_DB_PATH` | `dbPath` |
 | `PIAGENT_POLL_MS` | `pollMs` |
 | `PIAGENT_RETRY_MS` | `retryMs` |
+| `PIAGENT_HEARTBEAT_MS` | `heartbeatMs` |
 
 Pin mappings are YAML-only; there is no environment override for them.
 

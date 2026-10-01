@@ -79,11 +79,14 @@ func main() {
 		slog.Info("Slack commands enabled (Socket Mode)")
 	}
 
+	streamsDone := make(chan struct{})
 	router := api.NewRouter(st, svc, api.RouterConfig{
 		APIKey:             cfg.APIKey,
 		JWTSecret:          cfg.JWTSecret,
 		StaticDir:          cfg.StaticDir,
 		SlackSigningSecret: cfg.SlackSigningSecret,
+		Bus:                bus,
+		StreamsDone:        streamsDone,
 	})
 
 	srv := &http.Server{
@@ -93,6 +96,9 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
+	// Shutdown waits for active requests, and event streams never finish on
+	// their own.
+	srv.RegisterOnShutdown(func() { close(streamsDone) })
 
 	// Graceful shutdown
 	done := make(chan os.Signal, 1)

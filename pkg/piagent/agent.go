@@ -73,6 +73,10 @@ func (a *Agent) Run(ctx context.Context) error {
 	retryTicker := time.NewTicker(retryInterval)
 	defer retryTicker.Stop()
 
+	// Heartbeats run on their own goroutine so a slow server never stalls
+	// GPIO polling.
+	go a.heartbeatLoop(ctx, time.Duration(a.cfg.HeartbeatMs)*time.Millisecond)
+
 	slog.Info("Pi agent started", "version", buildinfo.Version, "machine", a.cfg.MachineID, "pollMs", a.cfg.PollMs,
 		"minClosedMs", a.cfg.MinClosedMs, "minOpenMs", a.cfg.MinOpenMs, "pins", len(a.pins))
 
@@ -145,6 +149,42 @@ func (a *Agent) sendDispense(evt CachedEvent) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("API returned %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// heartbeatLoop tells the server the agent is alive, at once and then every
+// interval, so dashboards can flag a dead agent instead of showing no sales.
+func (a *Agent) heartbeatLoop(ctx context.Context, interval time.Duration) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		if err := a.sendHeartbeat(ctx); err != nil {
+			slog.Warn("heartbeat failed", "error", err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
+}
+
+func (a *Agent) sendHeartbeat(ctx context.Context) error {
+	body, _ := json.Marshal(map[string]string{"machineId": a.cfg.MachineID})
+	req, err := http.NewRequestWithContext(ctx, "POST", a.cfg.APIURL+"/api/v1/agents/heartbeat", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", a.cfg.APIKey)
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("API returned %d", resp.StatusCode)
 	}

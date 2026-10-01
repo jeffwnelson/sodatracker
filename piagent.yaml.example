@@ -3,6 +3,7 @@ apiKey: dev-api-key
 machineId: machine-1
 pollMs: 100
 retryMs: 30000
+heartbeatMs: 30000
 # Debounce: a contact must read closed this long to count as a vend, then
 # read open this long before the vend is reported.
 minClosedMs: 100

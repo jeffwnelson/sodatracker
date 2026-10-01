@@ -64,6 +64,15 @@ type SlotStatus struct {
 type MachineStatus struct {
 	Machine Machine      `json:"machine"`
 	Slots   []SlotStatus `json:"slots"`
+	Agent   AgentStatus  `json:"agent"`
+}
+
+// AgentStatus is what the server knows about the machine's Pi agent from its
+// heartbeats. LastSeen is nil when no heartbeat has arrived since the server
+// started; it is kept in memory only.
+type AgentStatus struct {
+	Online   bool       `json:"online"`
+	LastSeen *time.Time `json:"lastSeen"`
 }
 
 type User struct {

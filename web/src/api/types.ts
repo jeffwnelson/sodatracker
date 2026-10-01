@@ -40,6 +40,21 @@ export interface SlotStatus {
 export interface MachineStatus {
   machine: Machine;
   slots: SlotStatus[];
+  agent: AgentStatus;
+}
+
+/** The Pi agent's heartbeat state. lastSeen is null until its first heartbeat
+ * since the server started. */
+export interface AgentStatus {
+  online: boolean;
+  lastSeen: string | null;
+}
+
+/** A message from GET /events. data always carries machineId. */
+export interface LiveEvent {
+  type: string;
+  timestamp: string;
+  data: { machineId?: string } & Record<string, unknown>;
 }
 
 export interface Dispense {

@@ -9,6 +9,9 @@ const (
 	EventLowStock     EventType = "low_stock"
 	EventOutOfStock   EventType = "out_of_stock"
 	EventStockCleared EventType = "stock_cleared"
+	// EventAgentOnline fires when a machine's Pi agent heartbeats after
+	// being offline (or for the first time since the server started).
+	EventAgentOnline EventType = "agent_online"
 )
 
 type Event struct {

@@ -1,6 +1,7 @@
 package piagent
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -67,5 +68,43 @@ func TestAgentReportsOneDispensePerBouncyVend(t *testing.T) {
 	}
 	if want := base.Add(time.Second); !got[0].Timestamp.Equal(want) {
 		t.Errorf("timestamp %v, want closure start %v", got[0].Timestamp, want)
+	}
+}
+
+func TestAgentHeartbeats(t *testing.T) {
+	beats := make(chan string, 10)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/agents/heartbeat" || r.Header.Get("X-API-Key") != "k" {
+			t.Errorf("unexpected request %s key=%q", r.URL.Path, r.Header.Get("X-API-Key"))
+		}
+		var body map[string]string
+		json.NewDecoder(r.Body).Decode(&body)
+		beats <- body["machineId"]
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	a, err := New(&Config{
+		APIURL: srv.URL, APIKey: "k", MachineID: "machine-1",
+		PollMs: 20, RetryMs: 60000, HeartbeatMs: 50,
+		DBPath: filepath.Join(t.TempDir(), "cache.db"),
+	}, gpio.NewMockProvider())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go a.Run(ctx)
+
+	// One at startup, then one per interval.
+	for i := 0; i < 3; i++ {
+		select {
+		case id := <-beats:
+			if id != "machine-1" {
+				t.Fatalf("heartbeat for %q", id)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("got %d heartbeats, want 3", i)
+		}
 	}
 }

@@ -10,12 +10,14 @@ import { EmptyState } from "../components/EmptyState";
 import { AppShell } from "../components/AppShell";
 import { headerItemClass } from "../components/headerItemClass";
 import { PageHeader } from "../components/PageHeader";
+import { AgentStatusBadge } from "../components/AgentStatusBadge";
+import { usePollInterval } from "../context/LiveUpdates";
 
 function MachineCard({ machineId }: { machineId: string }) {
   const { data, isLoading, error } = useQuery<MachineStatus>({
     queryKey: ["machineStatus", machineId],
     queryFn: () => getMachineStatus(machineId),
-    refetchInterval: 10_000,
+    refetchInterval: usePollInterval(10_000),
   });
 
   if (isLoading) return <SkeletonCard />;
@@ -43,6 +45,7 @@ function MachineCard({ machineId }: { machineId: string }) {
             </p>
           )}
         </div>
+        <AgentStatusBadge agent={data.agent} />
       </div>
       <StockGrid slots={data.slots} />
     </Card>

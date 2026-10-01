@@ -1,5 +1,6 @@
 import type {
   HealthResponse,
+  LiveEvent,
   Machine,
   MachineStatus,
   Product,
@@ -36,7 +37,7 @@ const LOGIN_PATH = "/admin/login";
 // authFetch sends the stored token. A 401 means the token has expired (24h)
 // or was signed with a different secret, so drop it and go back to login
 // instead of leaving every admin page showing "API error: 401".
-async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
+export async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const token = getToken();
   const res = await fetch(`${BASE}${path}`, {
     ...init,
@@ -94,6 +95,57 @@ async function postJSONAuth<T>(path: string, body: unknown): Promise<T> {
     throw new Error(err.error || `API error: ${res.status}`);
   }
   return res.json();
+}
+
+/**
+ * streamEvents reads the server's event stream until it ends, the request
+ * fails, or signal aborts. It uses fetch rather than EventSource because
+ * EventSource can't send the Authorization header. onOpen runs once the
+ * server accepts the stream.
+ */
+export async function streamEvents({
+  signal,
+  onOpen,
+  onEvent,
+}: {
+  signal: AbortSignal;
+  onOpen: () => void;
+  onEvent: (evt: LiveEvent) => void;
+}): Promise<void> {
+  const res = await authFetch("/events", {
+    signal,
+    headers: { Accept: "text/event-stream" },
+  });
+  if (!res.ok || !res.body) {
+    throw new Error(`event stream: HTTP ${res.status}`);
+  }
+  onOpen();
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return;
+    buf += value;
+    let end;
+    while ((end = buf.indexOf("\n\n")) >= 0) {
+      const block = buf.slice(0, end);
+      buf = buf.slice(end + 2);
+      // Comment lines (":") are keepalives. Only data matters; the event
+      // name is repeated in the JSON as type.
+      const data = block
+        .split("\n")
+        .filter((l) => l.startsWith("data:"))
+        .map((l) => l.slice(5).trimStart())
+        .join("\n");
+      if (data) {
+        try {
+          onEvent(JSON.parse(data));
+        } catch {
+          // ignore a malformed message
+        }
+      }
+    }
+  }
 }
 
 // Public

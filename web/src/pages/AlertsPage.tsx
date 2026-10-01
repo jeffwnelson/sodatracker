@@ -8,6 +8,7 @@ import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Select } from "../components/Select";
 import { EmptyState } from "../components/EmptyState";
+import { usePollInterval } from "../context/LiveUpdates";
 
 export function AlertsPage() {
   const { data: machines } = useQuery({
@@ -18,11 +19,12 @@ export function AlertsPage() {
   const [selectedMachine, setSelectedMachine] = useState<string>("");
   const machineId = selectedMachine || machines?.[0]?.id || "";
 
+  const pollInterval = usePollInterval(10_000);
   const { data: alertEvents } = useQuery({
     queryKey: ["alertEvents", machineId],
     queryFn: () => listAlertEvents(machineId, true, 50),
     enabled: !!machineId,
-    refetchInterval: 10_000,
+    refetchInterval: pollInterval,
   });
 
   return (

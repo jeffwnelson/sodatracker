@@ -26,6 +26,8 @@ type handlers struct {
 	jwtSecret          string
 	slackSigningSecret string
 	slackCmds          *slackcmd.Commands
+	broker             *broker
+	streamsDone        <-chan struct{}
 }
 
 // health godoc

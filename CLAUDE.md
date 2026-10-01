@@ -230,7 +230,7 @@ local `docker compose up --build` works on an Intel host; it just finds no pins.
 Pin mappings are YAML-only. Deployment-specific fields have env overrides
 (`applyEnvOverrides` in `pkg/piagent/config.go`): `PIAGENT_API_URL`,
 `PIAGENT_API_KEY`, `PIAGENT_MACHINE_ID`, `PIAGENT_DB_PATH`, `PIAGENT_POLL_MS`,
-`PIAGENT_RETRY_MS`, `PIAGENT_MIN_CLOSED_MS`, `PIAGENT_MIN_OPEN_MS`.
+`PIAGENT_RETRY_MS`, `PIAGENT_HEARTBEAT_MS`, `PIAGENT_MIN_CLOSED_MS`, `PIAGENT_MIN_OPEN_MS`.
 
 ## Key Configuration
 
@@ -263,6 +263,8 @@ Pin mappings are YAML-only. Deployment-specific fields have env overrides
 | GET | `/api/v1/machines/:id/status` | None | Machine stock status | Done |
 | POST | `/api/v1/auth/login` | None | Login (returns JWT) | Done |
 | POST | `/api/v1/dispenses` | API Key | Register dispense (from Pi) | Done |
+| POST | `/api/v1/agents/heartbeat` | API Key | Pi agent liveness (every 30s) | Done |
+| GET | `/api/v1/events` | API Key or JWT | Live event stream (SSE) | Done |
 | POST | `/api/v1/machines` | API Key or JWT | Create machine | Done |
 | POST | `/api/v1/machines/:id/slots` | API Key or JWT | Configure slots | Done |
 | POST | `/api/v1/machines/:id/restock` | API Key or JWT | Log restock | Done |
@@ -315,23 +317,27 @@ Pin mappings are YAML-only. Deployment-specific fields have env overrides
 - **Structured logging** — All Go code uses `log/slog` (no `log` package). `internal/logging/Setup()` configures JSON or text handler based on `LOG_FORMAT` env var (default `"text"`, Docker sets `"json"`). Custom request logging middleware replaces chi's `middleware.Logger`, logs method/path/status/duration/requestId via slog. `middleware.RequestID` generates unique request IDs for tracing.
 - **Dispense report export** — `GET /api/v1/reports/dispenses?machineId=X&format=csv|pdf` exports dispense history. CSV uses stdlib `encoding/csv`. PDF uses `go-pdf/fpdf` (pure Go, no CGO). Both enrich dispenses with product name/UPC/cost from a product lookup map. PDF includes title, date range, table, and summary footer.
 - **Analytics dashboards** — `/admin/analytics/{consumption,products,inventory,spend}` in the web app, backed by `internal/service/analytics.go` and `internal/api/analytics.go`. All four endpoints take `machineId` (required), `from`/`to` (RFC3339; default last 30 days, `to` capped at now), `tz` (IANA name, default UTC) and `bucket` (`day|week|month`, default chosen from window length: ≤62d day, ≤366d week, else month). Each request loads the machine's **full** dispense and restock history and aggregates in Go (same in-memory approach as `GetDispenseStats`). `from` is clamped to the start of the day tracking began, so averages aren't diluted by pre-tracking days; the response's `range` echoes the effective window. Previous-period comparisons (`previousTotal`, `previousRank`) are `null` unless tracking covers the whole preceding window of equal length. Inventory replays restocks (set level) and dispenses (−1, floored at 0) per slot — the same model as `GetMachineStatus` — and reports dispenses recorded at computed zero stock as `untrackedDispenses`. Buckets and hours are computed in `tz`; `cmd/server` imports `time/tzdata` because the Alpine image has no zoneinfo. Frontend keeps machine and range in the URL query (`?machine=&range=`) so tabs share them, and uses a fixed, CVD-validated categorical palette in `web/src/pages/analytics/analytics.ts` with colors keyed by product ID (not rank); `productColorMap` lets a product's own `color` (set on the Setup page, also shown as a `ProductDot` in the stock grid and machine detail) override its palette slot. Every chart has a table view.
+- **Live updates (SSE)** — `GET /api/v1/events` (`internal/api/stream.go`) streams bus events (`dispense`, `low_stock`, `out_of_stock`, `stock_cleared`, `agent_online`) as Server-Sent Events, behind `APIKeyOrJWT`. A `broker` subscribes to the bus once and fans out to per-connection buffered channels, dropping rather than blocking, because the bus calls subscribers synchronously from the publishing request. The handler clears the server's 15s `WriteTimeout` with `http.ResponseController`, sends a keepalive comment every 20s, ends a JWT stream when the token expires, and ends all streams when `RouterConfig.StreamsDone` closes (`cmd/server` closes it via `RegisterOnShutdown`, or `Shutdown` would wait on them). The browser reads it with `fetch` (`streamEvents` in `web/src/api/client.ts`), not `EventSource`, which can't send the Authorization header. `LiveUpdatesProvider` (`web/src/context/LiveUpdates.tsx`) holds one stream while logged in, reconnects with backoff, invalidates every query whose key contains the event's `machineId`, and refetches everything after a reconnect. `usePollInterval(ms)` slows polling to 60s while the stream is up; logged-out visitors poll as before. The header shows Live/Reconnecting.
+- **Pi agent heartbeat** — the agent POSTs `/agents/heartbeat` every `heartbeatMs` (30s) from its own goroutine. `internal/service/agents.go` keeps the last beat per machine **in memory** (a restart forgets it until the next beat) and publishes `agent_online` when an agent comes back after `AgentOfflineAfter` (90s). `GET /machines/:id/status` includes `agent: {online, lastSeen}`, shown by `AgentStatusBadge` on the public page and machine detail. There's no offline event: pages notice through the 60s backstop poll.
 - **Swagger/OpenAPI** — Generated by `swaggo/swag` v2 from Go comment annotations. `internal/api/router.go` has the general API info block (title, version, security definitions). Each handler in `handlers.go` has `@Summary`, `@Description`, `@Tags`, `@Param`, `@Success`/`@Failure`, `@Security`, and `@Router` annotations. `internal/api/dto.go` defines named response types (`ErrorResponse`, `HealthResponse`, `LoginRequest`, `LoginResponse`, `DeleteResponse`, `CostResponse`) for swag reference. Domain and service types have `example` struct tags. Generated docs (`internal/api/docs/`) are committed. Swagger UI served at `/swagger/*` via `swaggo/http-swagger/v2`. Regenerate with `make swagger`.
 
 ## Test Structure
 
-Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **63 tests total** across 9 packages, all run by `go test ./...` with no build tags or external services.
+Tests use **in-memory SQLite** (`:memory:`) — no external dependencies needed. **67 tests total** across 9 packages, all run by `go test ./...` with no build tags or external services.
 
 - `internal/events/local/local_test.go` — EventBus tests (5): `TestPublishSubscribe`, `TestMultipleSubscribers`, `TestUnsubscribe`, `TestPublishNoSubscribers`, `TestDifferentEventTypes`
 - `internal/store/sqlite/sqlite_test.go` — Store CRUD tests (6): `TestProductCRUD`, `TestMachineSlotsAndStatus`, `TestUserCRUD`, `TestAlertConfigCRUD`, `TestAlertEventCRUD`, `TestDispenseAndRestock`
 - `internal/auth/jwt_test.go` — JWT tests (4): `TestGenerateAndValidateToken`, `TestJWTMiddleware_MissingToken`, `TestJWTMiddleware_InvalidToken`, `TestJWTMiddleware_ValidToken`
 - `internal/service/service_test.go` — Service logic tests (6): `TestLogin` (success + bad password + non-existent user), `TestGetDispenseStats`, `TestGetMachineCost`, `TestEvaluateStockAlert`, `TestCreateRestockClearsAlerts`, `TestGetStockPredictions`
 - `internal/api/handlers_test.go` — API integration tests (17) using `httptest.NewRecorder()` against the real chi router with EventBus wired: `TestHealth`, `TestCreateAndListMachines`, `TestDispenseRequiresAPIKey`, `TestLoginSuccess`, `TestLoginBadPassword`, `TestAdminStatsRequiresAuth`, `TestFullWorkflow`, `TestFullWorkflowWithJWT`, `TestAlertConfigCRUD`, `TestPredictionsEndpoint`, `TestFullWorkflowWithAlerts`, `TestExportDispensesCSV`, `TestExportDispensesPDF`, `TestDeleteProduct`, `TestDeleteProductInUse`, `TestDeleteMachine`, `TestExportRequiresAuth`
+- `internal/api/stream_test.go` — Event stream auth, delivery past `WriteTimeout`, close on shutdown; heartbeat endpoint (2)
+- `internal/service/agents_test.go` — Online/offline transitions and `agent_online` dedup (1)
 - `internal/export/export_test.go` — Export unit tests (3): `TestWriteDispensesCSV`, `TestWriteDispensesPDF`, `TestEmptyExport`
 - `internal/service/analytics_test.go` — Analytics tests (5): `TestConsumptionAnalytics` (includes a DST-spanning window), `TestAnalyticsClampsToTrackingStart`, `TestProductAnalytics`, `TestInventoryAnalytics`, `TestSpendAnalytics`
 - `internal/api/analytics_test.go` — Analytics endpoint auth, 404 and parameter validation (1): `TestAnalyticsEndpoints`
 - `internal/api/slack_test.go` — Slack slash command signature checks (5)
 - `internal/notify/slack_test.go` — Slack notifier (3)
-- `pkg/piagent/debounce_test.go`, `agent_test.go` — Debounce against recorded bounce patterns, and one dispense per bouncy vend end to end (4)
+- `pkg/piagent/debounce_test.go`, `agent_test.go` — Debounce against recorded bounce patterns, one dispense per bouncy vend end to end, and heartbeats (5)
 
 ## Key Business Logic
 

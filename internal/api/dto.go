@@ -34,3 +34,8 @@ type DeleteResponse struct {
 type CostResponse struct {
 	Cost float64 `json:"cost" example:"42.50"`
 }
+
+// HeartbeatRequest is the Pi agent's heartbeat body.
+type HeartbeatRequest struct {
+	MachineID string `json:"machineId" example:"machine-1"`
+}

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { AppFooter } from "./AppFooter";
+import { LiveIndicator } from "./LiveIndicator";
 
 /**
  * The one page frame every screen uses, so moving between the public page,
@@ -34,7 +35,10 @@ export function AppShell({
             </Link>
             {nav}
           </div>
-          {actions && <div className="flex items-center gap-1">{actions}</div>}
+          <div className="flex items-center gap-1">
+            <LiveIndicator />
+            {actions}
+          </div>
         </div>
       </header>
       <main

@@ -17,6 +17,8 @@ import { SkeletonCard } from "../components/Skeleton";
 import { EmptyState } from "../components/EmptyState";
 import type { Dispense, Restock } from "../api/types";
 import { ProductDot } from "../components/ProductDot";
+import { AgentStatusBadge } from "../components/AgentStatusBadge";
+import { usePollInterval } from "../context/LiveUpdates";
 
 const statusBarColor: Record<string, string> = {
   ok: "bg-status-ok",
@@ -37,7 +39,7 @@ export function MachineDetailPage() {
   const { data: status, isLoading: statusLoading } = useQuery({
     queryKey: ["machineStatus", machineId],
     queryFn: () => getMachineStatus(machineId),
-    refetchInterval: 10_000,
+    refetchInterval: usePollInterval(10_000),
   });
 
   const { data: costData } = useQuery({
@@ -129,9 +131,12 @@ export function MachineDetailPage() {
         title={status.machine.name}
         subtitle={status.machine.location || undefined}
         actions={
-          <Link to={`/admin/machines/${machineId}/restock`}>
-            <Button>Restock Machine</Button>
-          </Link>
+          <>
+            <AgentStatusBadge agent={status.agent} />
+            <Link to={`/admin/machines/${machineId}/restock`}>
+              <Button>Restock Machine</Button>
+            </Link>
+          </>
         }
       />
 
