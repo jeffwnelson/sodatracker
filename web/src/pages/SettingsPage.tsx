@@ -12,6 +12,7 @@ import {
 } from "../api/client";
 import type { Product, Machine } from "../api/types";
 import { useMachine } from "../api/machine";
+import { RestockSection } from "./RestockSection";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ProductDot } from "../components/ProductDot";
 import { PageHeader } from "../components/PageHeader";
@@ -25,6 +26,7 @@ export function SettingsPage() {
   return (
     <div className="space-y-8">
       <PageHeader title="Settings" />
+      <RestockSection />
       <ProductsSection />
       <MachineSection />
       <SlotConfigSection />

@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -14,7 +13,6 @@ import { useMachine } from "../api/machine";
 import type { DispenseStats } from "../api/types";
 import { PageHeader } from "../components/PageHeader";
 import { Card } from "../components/Card";
-import { Button } from "../components/Button";
 import { DataTable } from "../components/DataTable";
 import type { Column } from "../components/DataTable";
 import { SkeletonCard } from "../components/Skeleton";
@@ -79,12 +77,6 @@ export function AdminDashboard() {
     <div className="space-y-8">
       <PageHeader
         title="Dashboard"
-        subtitle={[machine.name, machine.location].filter(Boolean).join(" · ")}
-        actions={
-          <Link to={`/admin/machines/${machineId}`}>
-            <Button variant="secondary">Machine details</Button>
-          </Link>
-        }
       />
 
       {statsLoading ? (

@@ -7,8 +7,6 @@ import { AdminLayout } from "./components/AdminLayout";
 import { CustomerDashboard } from "./pages/CustomerDashboard";
 import { LoginPage } from "./pages/LoginPage";
 import { AdminDashboard } from "./pages/AdminDashboard";
-import { MachineDetailPage } from "./pages/MachineDetailPage";
-import { RestockPage } from "./pages/RestockPage";
 import { AlertsPage } from "./pages/AlertsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AnalyticsLayout } from "./pages/analytics/AnalyticsLayout";
@@ -47,11 +45,9 @@ function App() {
                 }
               >
                 <Route index element={<AdminDashboard />} />
-                <Route path="machines/:id" element={<MachineDetailPage />} />
-                <Route
-                  path="machines/:id/restock"
-                  element={<RestockPage />}
-                />
+                <Route path="restock" element={<Navigate to="/admin/settings" replace />} />
+                {/* Old machine detail and restock links */}
+                <Route path="machines/*" element={<Navigate to="/admin" replace />} />
                 <Route path="analytics" element={<AnalyticsLayout />}>
                   <Route index element={<Navigate to="consumption" replace />} />
                   <Route path="consumption" element={<ConsumptionPage />} />
