@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.8.0](https://github.com/jeffwnelson/sodatracker/compare/69dcf85628310cab32ac4f17ab4fa02b684ecb52..v0.8.0) - 2026-10-01
+#### Features
+- (**web**) one machine, no selectors; alert count on the Alerts tab - ([f46c431](https://github.com/jeffwnelson/sodatracker/commit/f46c4317dd79790254892e67a90fc0ae33b2e87b)) - Jeff Nelson
+#### Refactoring
+- (**analytics**) trim Highlights to averages, range records and totals - ([69dcf85](https://github.com/jeffwnelson/sodatracker/commit/69dcf85628310cab32ac4f17ab4fa02b684ecb52)) - Jeff Nelson
+
+- - -
+
 ## [v0.7.0](https://github.com/jeffwnelson/sodatracker/compare/7755336eb64bcc905f0fef13aa662b20091e9003..v0.7.0) - 2026-10-01
 #### Features
 - (**analytics**) soda, caffeine and aluminum totals and all-time can records - ([528405a](https://github.com/jeffwnelson/sodatracker/commit/528405a61d02b73c9b31a91851a1b4588dedf231)) - Jeff Nelson
