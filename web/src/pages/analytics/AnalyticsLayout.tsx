@@ -1,6 +1,5 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { PageHeader } from "../../components/PageHeader";
-import { Select } from "../../components/Select";
 import { SkeletonCard } from "../../components/Skeleton";
 import { EmptyState } from "../../components/EmptyState";
 import {
@@ -23,12 +22,10 @@ const tabs = [
 export function AnalyticsLayout() {
   const {
     machines,
-    machineId,
     range,
     days,
     compare,
     compareRange,
-    setMachine,
     setRange,
     apply,
   } = useAnalyticsFilters();
@@ -43,7 +40,7 @@ export function AnalyticsLayout() {
     );
   }
   if (!machines.data || machines.data.length === 0) {
-    return <EmptyState message="No machines configured yet." />;
+    return <EmptyState message="No machine configured yet." />;
   }
 
   return (
@@ -53,19 +50,6 @@ export function AnalyticsLayout() {
       {/* One filter row scopes every chart on every tab. It anchors the date
           picker's popover, which is wider than the space right of its button. */}
       <div className="relative flex flex-wrap items-center gap-3">
-        <Select
-          value={machineId}
-          onChange={(e) => setMachine(e.target.value)}
-          className="w-full sm:w-52"
-          aria-label="Machine"
-        >
-          {machines.data.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-              {m.location ? ` — ${m.location}` : ""}
-            </option>
-          ))}
-        </Select>
         <div
           className="inline-flex flex-wrap rounded-xl border border-border-primary bg-surface-primary p-1"
           role="group"

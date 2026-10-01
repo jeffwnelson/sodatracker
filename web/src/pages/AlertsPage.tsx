@@ -1,72 +1,29 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { listMachines, listAlertEvents } from "../api/client";
+import { useActiveAlerts, useMachine } from "../api/machine";
 import type { AlertEvent } from "../api/types";
 import { PageHeader } from "../components/PageHeader";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
-import { Select } from "../components/Select";
 import { EmptyState } from "../components/EmptyState";
-import { usePollInterval } from "../context/LiveUpdates";
 
 export function AlertsPage() {
-  const { data: machines } = useQuery({
-    queryKey: ["machines"],
-    queryFn: listMachines,
-  });
-
-  const [selectedMachine, setSelectedMachine] = useState<string>("");
-  const machineId = selectedMachine || machines?.[0]?.id || "";
-
-  const pollInterval = usePollInterval(10_000);
-  const { data: alertEvents } = useQuery({
-    queryKey: ["alertEvents", machineId],
-    queryFn: () => listAlertEvents(machineId, true, 50),
-    enabled: !!machineId,
-    refetchInterval: pollInterval,
-  });
+  const { machineId } = useMachine();
+  const { data: alertEvents } = useActiveAlerts();
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title="Alerts"
-        actions={
-          machines && machines.length > 1 ? (
-            <Select
-              value={machineId}
-              onChange={(e) => setSelectedMachine(e.target.value)}
-              className="w-48"
-            >
-              {machines.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </Select>
-          ) : undefined
-        }
-      />
+      <PageHeader title="Alerts" />
 
-      {!machineId && <EmptyState message="No machines configured." />}
+      {!machineId && <EmptyState message="No machine configured." />}
 
       {machineId && (
         <>
           {/* Active Alerts */}
           <Card>
-            <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
+            <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-4">
               Active Alerts
             </p>
             {/* Alert configs (alerts API) still exist server-side but have no
                 UI; with none defined, each slot's own Low Threshold applies. */}
-            <p className="text-xs text-text-muted mt-1 mb-4">
-              A slot alerts when its stock reaches its Low Threshold, set per
-              slot on the{" "}
-              <Link to="/admin/settings" className="text-accent hover:underline">
-                Settings
-              </Link>{" "}
-              page. Stock predictions are under Analytics.
-            </p>
             {alertEvents && alertEvents.length > 0 ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {alertEvents.map((ae: AlertEvent) => (

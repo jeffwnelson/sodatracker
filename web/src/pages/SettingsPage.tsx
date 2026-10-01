@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  listMachines,
   listProducts,
   createProduct,
   createMachine,
@@ -12,12 +11,12 @@ import {
   resetAllData,
 } from "../api/client";
 import type { Product, Machine } from "../api/types";
+import { useMachine } from "../api/machine";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ProductDot } from "../components/ProductDot";
 import { PageHeader } from "../components/PageHeader";
 import { Card } from "../components/Card";
 import { Input } from "../components/Input";
-import { Select } from "../components/Select";
 import { Button } from "../components/Button";
 import { DataTable } from "../components/DataTable";
 import type { Column } from "../components/DataTable";
@@ -27,7 +26,7 @@ export function SettingsPage() {
     <div className="space-y-8">
       <PageHeader title="Settings" />
       <ProductsSection />
-      <MachinesSection />
+      <MachineSection />
       <SlotConfigSection />
       <DangerZoneSection />
     </div>
@@ -431,102 +430,78 @@ function ProductsSection() {
   );
 }
 
-/* ── Machines Section ───────────────────────────────────── */
+/* ── Machine Section ────────────────────────────────────── */
 
-function MachinesSection() {
+// SodaTracker tracks one machine: this edits it, or adds it on a fresh install.
+function MachineSection() {
   const queryClient = useQueryClient();
-  const { data: machines } = useQuery({
-    queryKey: ["machines"],
-    queryFn: listMachines,
-  });
+  const { machine } = useMachine();
 
-  const [showModal, setShowModal] = useState(false);
-  const [editTarget, setEditTarget] = useState<Machine | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
+  const [modal, setModal] = useState<"add" | "edit" | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState("");
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteMachine(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["machines"] });
-      setDeleteTarget(null);
-      setEditTarget(null);
+      setConfirmDelete(false);
+      setModal(null);
     },
     onError: (err: Error) => setError(err.message),
   });
 
-  const machineColumns: Column<Machine>[] = [
-    {
-      header: "Name",
-      accessor: (row) => (
-        <span className="font-medium text-text-primary">{row.name}</span>
-      ),
-    },
-    {
-      header: "Location",
-      accessor: (row) => row.location || "\u2014",
-    },
-    {
-      header: "Slots",
-      accessor: (row) => row.slotCount,
-      headerClassName: "text-right",
-      className: "text-right",
-    },
-  ];
+  const field = (label: string, value: string | number) => (
+    <div>
+      <dt className="text-xs text-text-tertiary">{label}</dt>
+      <dd className="mt-0.5 text-sm font-medium text-text-primary">{value}</dd>
+    </div>
+  );
 
   return (
     <Card>
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
-          Machines
+          Machine
         </p>
-        <Button onClick={() => setShowModal(true)} className="text-xs px-3 py-1.5">
-          Add Machine
+        <Button
+          variant={machine ? "secondary" : "primary"}
+          onClick={() => setModal(machine ? "edit" : "add")}
+          className="text-xs px-3 py-1.5"
+        >
+          {machine ? "Edit" : "Add Machine"}
         </Button>
       </div>
 
-      {machines && machines.length > 0 ? (
-        <DataTable
-          columns={machineColumns}
-          data={machines}
-          keyFn={(m) => m.id}
-          onRowClick={(m) => setEditTarget(m)}
-        />
+      {machine ? (
+        <dl className="grid grid-cols-3 gap-4">
+          {field("Name", machine.name)}
+          {field("Location", machine.location || "\u2014")}
+          {field("Slots", machine.slotCount)}
+        </dl>
       ) : (
         <p className="text-sm text-text-tertiary text-center py-6">
-          No machines yet.
+          No machine yet.
         </p>
       )}
 
       {error && <p className="text-sm text-status-empty mt-2">{error}</p>}
 
-      {showModal && (
+      {modal && (
         <MachineModal
-          onClose={() => setShowModal(false)}
-          onSaved={() => setShowModal(false)}
-        />
-      )}
-
-      {editTarget && (
-        <MachineModal
-          machine={editTarget}
-          onClose={() => setEditTarget(null)}
-          onSaved={() => setEditTarget(null)}
-          onDeleteClick={() =>
-            setDeleteTarget({ id: editTarget.id, name: editTarget.name })
-          }
+          machine={modal === "edit" ? machine : undefined}
+          onClose={() => setModal(null)}
+          onSaved={() => setModal(null)}
+          onDeleteClick={modal === "edit" ? () => setConfirmDelete(true) : undefined}
         />
       )}
 
       <ConfirmDialog
-        open={deleteTarget !== null}
+        open={confirmDelete}
         title="Delete Machine"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? All slots, dispenses, restocks, and alerts for this machine will be permanently deleted.`}
-        onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}
-        onCancel={() => setDeleteTarget(null)}
+        message={`Are you sure you want to delete "${machine?.name}"? All slots, dispenses, restocks, and alerts for this machine will be permanently deleted.`}
+        onConfirm={() => machine && deleteMut.mutate(machine.id)}
+        onCancel={() => setConfirmDelete(false)}
         isPending={deleteMut.isPending}
       />
     </Card>
@@ -537,18 +512,11 @@ function MachinesSection() {
 
 function SlotConfigSection() {
   const queryClient = useQueryClient();
-  const { data: machines } = useQuery({
-    queryKey: ["machines"],
-    queryFn: listMachines,
-  });
+  const { machine, machineId } = useMachine();
   const { data: products } = useQuery({
     queryKey: ["products"],
     queryFn: listProducts,
   });
-
-  const [selectedMachine, setSelectedMachine] = useState("");
-  const machineId = selectedMachine || machines?.[0]?.id || "";
-  const machine = machines?.find((m) => m.id === machineId);
 
   const { data: status } = useQuery({
     queryKey: ["machineStatus", machineId],
@@ -569,12 +537,6 @@ function SlotConfigSection() {
     >
   >({});
   const [error, setError] = useState("");
-
-  const initSlots = (id: string) => {
-    setSelectedMachine(id);
-    setSlotConfigs({});
-    setError("");
-  };
 
   const getSlotConfig = (pos: number) => {
     if (slotConfigs[pos]) return slotConfigs[pos];
@@ -628,24 +590,11 @@ function SlotConfigSection() {
         <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
           Slot Configuration
         </p>
-        {machines && machines.length > 0 && (
-          <Select
-            value={machineId}
-            onChange={(e) => initSlots(e.target.value)}
-            className="w-48"
-          >
-            {machines.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </Select>
-        )}
       </div>
 
       {!machineId && (
         <p className="text-sm text-text-tertiary">
-          Add a machine above to configure slots.
+          Add the machine above to configure slots.
         </p>
       )}
 
@@ -785,7 +734,7 @@ function DangerZoneSection() {
             Reset All Data
           </p>
           <p className="text-xs text-text-tertiary mt-0.5">
-            Permanently delete all machines, products, dispenses, restocks, and
+            Permanently delete the machine, products, dispenses, restocks, and
             alerts. You will need to log in again.
           </p>
         </div>
@@ -796,7 +745,7 @@ function DangerZoneSection() {
       <ConfirmDialog
         open={showConfirm}
         title="Reset All Data"
-        message="This will permanently delete ALL data including machines, products, dispenses, restocks, alerts, and user accounts. This action cannot be undone. Are you sure?"
+        message="This will permanently delete ALL data including the machine, products, dispenses, restocks, alerts, and user accounts. This action cannot be undone. Are you sure?"
         onConfirm={() => resetMut.mutate()}
         onCancel={() => setShowConfirm(false)}
         isPending={resetMut.isPending}

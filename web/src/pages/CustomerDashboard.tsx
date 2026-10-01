@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { listMachines, getMachineStatus } from "../api/client";
+import { getMachineStatus } from "../api/client";
+import { useMachine } from "../api/machine";
 import { useAuth } from "../context/AuthContext";
 import type { MachineStatus } from "../api/types";
 import { StockGrid } from "../components/StockGrid";
@@ -9,8 +10,6 @@ import { SkeletonCard } from "../components/Skeleton";
 import { EmptyState } from "../components/EmptyState";
 import { AppShell } from "../components/AppShell";
 import { headerItemClass } from "../components/headerItemClass";
-import { PageHeader } from "../components/PageHeader";
-import { AgentStatusBadge } from "../components/AgentStatusBadge";
 import { usePollInterval } from "../context/LiveUpdates";
 
 function MachineCard({ machineId }: { machineId: string }) {
@@ -45,7 +44,6 @@ function MachineCard({ machineId }: { machineId: string }) {
             </p>
           )}
         </div>
-        <AgentStatusBadge agent={data.agent} />
       </div>
       <StockGrid slots={data.slots} />
     </Card>
@@ -54,15 +52,7 @@ function MachineCard({ machineId }: { machineId: string }) {
 
 export function CustomerDashboard() {
   const { isAuthenticated } = useAuth();
-  const {
-    data: machines,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["machines"],
-    queryFn: listMachines,
-    refetchInterval: 30_000,
-  });
+  const { machine, isLoading } = useMachine();
 
   return (
     <AppShell
@@ -75,30 +65,13 @@ export function CustomerDashboard() {
         </Link>
       }
     >
-      <div className="space-y-6">
-        <PageHeader title="Inventory" subtitle="Live stock status" />
-
-        {isLoading && (
-          <div className="space-y-6">
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
-        )}
-
-        {error && (
-          <Card>
-            <p className="text-sm text-status-empty">
-              Failed to load machines. Is the API running?
-            </p>
-          </Card>
-        )}
-
-        {machines?.length === 0 && (
-          <EmptyState message="No machines configured yet." />
-        )}
-
-        {machines?.map((m) => <MachineCard key={m.id} machineId={m.id} />)}
-      </div>
+      {isLoading ? (
+        <SkeletonCard />
+      ) : machine ? (
+        <MachineCard machineId={machine.id} />
+      ) : (
+        <EmptyState message="No machine configured yet." />
+      )}
     </AppShell>
   );
 }

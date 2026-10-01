@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -10,26 +9,20 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { listMachines, getAdminStats } from "../api/client";
+import { getAdminStats } from "../api/client";
+import { useMachine } from "../api/machine";
 import type { DispenseStats } from "../api/types";
 import { PageHeader } from "../components/PageHeader";
 import { Card } from "../components/Card";
-import { Select } from "../components/Select";
+import { Button } from "../components/Button";
 import { DataTable } from "../components/DataTable";
 import type { Column } from "../components/DataTable";
 import { SkeletonCard } from "../components/Skeleton";
 import { EmptyState } from "../components/EmptyState";
-import type { ProductRanking, Machine } from "../api/types";
+import type { ProductRanking } from "../api/types";
 
 export function AdminDashboard() {
-  const navigate = useNavigate();
-  const { data: machines, isLoading: machinesLoading } = useQuery({
-    queryKey: ["machines"],
-    queryFn: listMachines,
-  });
-
-  const [selectedMachineId, setSelectedMachineId] = useState<string>("");
-  const machineId = selectedMachineId || machines?.[0]?.id || "";
+  const { machine, machineId, isLoading: machinesLoading } = useMachine();
 
   const { data: stats, isLoading: statsLoading } = useQuery<DispenseStats>({
     queryKey: ["adminStats", machineId],
@@ -47,8 +40,8 @@ export function AdminDashboard() {
     );
   }
 
-  if (!machines || machines.length === 0) {
-    return <EmptyState message="No machines configured yet." />;
+  if (!machine) {
+    return <EmptyState message="No machine configured yet." />;
   }
 
   const productColumns: Column<ProductRanking>[] = [
@@ -81,44 +74,16 @@ export function AdminDashboard() {
     },
   ];
 
-  const machineColumns: Column<Machine>[] = [
-    {
-      header: "Name",
-      accessor: (row) => (
-        <span className="font-medium text-text-primary">
-          {row.name}
-        </span>
-      ),
-    },
-    {
-      header: "Location",
-      accessor: (row) => row.location || "\u2014",
-    },
-    {
-      header: "Slots",
-      accessor: (row) => row.slotCount,
-      headerClassName: "text-right",
-      className: "text-right",
-    },
-  ];
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Dashboard"
+        subtitle={[machine.name, machine.location].filter(Boolean).join(" · ")}
         actions={
-          <Select
-            value={machineId}
-            onChange={(e) => setSelectedMachineId(e.target.value)}
-            className="w-52"
-          >
-            {machines.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-                {m.location ? ` \u2014 ${m.location}` : ""}
-              </option>
-            ))}
-          </Select>
+          <Link to={`/admin/machines/${machineId}`}>
+            <Button variant="secondary">Machine details</Button>
+          </Link>
         }
       />
 
@@ -209,19 +174,6 @@ export function AdminDashboard() {
         </>
       ) : null}
 
-      {/* Machine list */}
-      <Card>
-        <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-4">
-          Machines
-        </p>
-        <DataTable
-          columns={machineColumns}
-          data={machines}
-          keyFn={(m) => m.id}
-          emptyMessage="No machines configured."
-          onRowClick={(m) => navigate(`/admin/machines/${m.id}`)}
-        />
-      </Card>
     </div>
   );
 }

@@ -136,14 +136,15 @@ export function formatDayRange(r: DayRange): string {
 }
 
 /**
- * Machine, range and comparison live in the URL so every tab shares them:
- * ?machine=&range=<preset|custom>&from=&to= (custom days) and
+ * Range and comparison live in the URL so every tab shares them:
+ * ?range=<preset|custom>&from=&to= (custom days) and
  * &compare=<previous|year|custom>&cfrom=&cto= (custom comparison).
  */
 export function useAnalyticsFilters() {
   const [params, setParams] = useSearchParams();
   const machines = useQuery({ queryKey: ["machines"], queryFn: listMachines });
-  const machineId = params.get("machine") || machines.data?.[0]?.id || "";
+  // One machine: the app never asks which.
+  const machineId = machines.data?.[0]?.id || "";
 
   const rangeParam = params.get("range");
   const fromParam = params.get("from");
@@ -194,7 +195,6 @@ export function useAnalyticsFilters() {
     compare,
     compareRange,
     comparePeriod,
-    setMachine: (id: string) => update({ machine: id }),
     /** A preset keeps the comparison mode, except All time. */
     setRange: (r: PresetId) =>
       update({
