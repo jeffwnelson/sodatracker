@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.4.0](https://github.com/jeffwnelson/sodatracker/compare/5e854ba18afd9f858fb0d60726907364d39da6b1..v0.4.0) - 2026-10-01
+#### Features
+- real-time dashboards over SSE and a Pi agent heartbeat - ([5e854ba](https://github.com/jeffwnelson/sodatracker/commit/5e854ba18afd9f858fb0d60726907364d39da6b1)) - Jeff Nelson
+
+- - -
+
 ## [v0.3.1](https://github.com/jeffwnelson/sodatracker/compare/4c8e583c04ac27fc5443ca16abf981d8e62e1632..v0.3.1) - 2026-09-30
 #### Bug Fixes
 - (**web**) use one page frame so the header stays the same everywhere - ([d34168e](https://github.com/jeffwnelson/sodatracker/commit/d34168ebff9c0b2441f8b1efd4f44da65855b1e3)) - Jeff Nelson
