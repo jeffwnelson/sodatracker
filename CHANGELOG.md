@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.6.0](https://github.com/jeffwnelson/sodatracker/compare/0e348a6d13b3c161b3dc8783ae12f4c99a33ee7a..v0.6.0) - 2026-10-01
+#### Features
+- (**analytics**) date range picker with comparison - ([d7b10b6](https://github.com/jeffwnelson/sodatracker/commit/d7b10b62192b18fbb7206adfe50bdc01b6f791cc)) - Jeff Nelson
+#### Refactoring
+- drop sales wording; nothing in the office machine is sold - ([0e348a6](https://github.com/jeffwnelson/sodatracker/commit/0e348a6d13b3c161b3dc8783ae12f4c99a33ee7a)) - Jeff Nelson
+
+- - -
+
 ## [v0.5.1](https://github.com/jeffwnelson/sodatracker/compare/8e59d37562d5c15bc2f8c0d72378fd9f54722463..v0.5.1) - 2026-10-01
 #### Bug Fixes
 - (**analytics**) report uptime from unrounded hours so a short tracked span isn't null - ([8e59d37](https://github.com/jeffwnelson/sodatracker/commit/8e59d37562d5c15bc2f8c0d72378fd9f54722463)) - Jeff Nelson
