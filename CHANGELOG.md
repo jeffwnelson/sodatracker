@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.11.0](https://github.com/jeffwnelson/sodatracker/compare/7a4aaf64ddbb2d7b5232ffc0c384407aeb3e7f78..v0.11.0) - 2026-10-02
+#### Features
+- (**alerts**) alert when a slot or the machine stops registering - ([71db6d4](https://github.com/jeffwnelson/sodatracker/commit/71db6d466f84df756d2505b363323a8f731f48bc)) - Jeff Nelson
+- (**analytics**) who closes the day and lunch favorite highlights - ([a04fe24](https://github.com/jeffwnelson/sodatracker/commit/a04fe24250aff7293e9240982f3b9496ef95eb03)) - Jeff Nelson
+- (**web**) recent dispenses log on the dashboard - ([b5cf5fe](https://github.com/jeffwnelson/sodatracker/commit/b5cf5fe8fe6207a717bcaf51bb8cf918e1e2d5f2)) - Jeff Nelson
+#### Bug Fixes
+- (**store**) actually enable WAL and the busy timeout - ([7a4aaf6](https://github.com/jeffwnelson/sodatracker/commit/7a4aaf64ddbb2d7b5232ffc0c384407aeb3e7f78)) - Jeff Nelson
+
+- - -
+
 ## [v0.10.0](https://github.com/jeffwnelson/sodatracker/compare/e2a10b89e65f259523500d86b4d87e0c306cfc4b..v0.10.0) - 2026-10-02
 #### Features
 - alert on backup failures over Slack and the live stream - ([e2a10b8](https://github.com/jeffwnelson/sodatracker/commit/e2a10b89e65f259523500d86b4d87e0c306cfc4b)) - Jeff Nelson
