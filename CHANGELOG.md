@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.14.0](https://github.com/jeffwnelson/sodatracker/compare/0fc8910a599e8c91b343f142f057635ad80b9fd7..v0.14.0) - 2026-10-02
+#### Features
+- (**deploy**) serve the dashboard only over HTTPS - ([3b15a90](https://github.com/jeffwnelson/sodatracker/commit/3b15a90c39bacfa7b1f7f6844f4f282b6c01ec07)) - Jeff Nelson
+#### Documentation
+- HTTPS for the dashboard through Tailscale serve - ([0fc8910](https://github.com/jeffwnelson/sodatracker/commit/0fc8910a599e8c91b343f142f057635ad80b9fd7)) - Jeff Nelson
+
+- - -
+
 ## [v0.13.0](https://github.com/jeffwnelson/sodatracker/compare/f2a6aff11ea2e4e699c815b9c40eafa24ffb2c1f..v0.13.0) - 2026-10-02
 #### Features
 - (**web**) iPhone-ready layout and Add to Home Screen - ([f2a6aff](https://github.com/jeffwnelson/sodatracker/commit/f2a6aff11ea2e4e699c815b9c40eafa24ffb2c1f)) - Jeff Nelson
