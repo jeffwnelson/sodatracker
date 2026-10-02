@@ -12,6 +12,12 @@ const (
 	// EventAgentOnline fires when a machine's Pi agent heartbeats after
 	// being offline (or for the first time since the server started).
 	EventAgentOnline EventType = "agent_online"
+	// EventBackupFailed fires when backups become stale: a snapshot or push
+	// failed, or nothing has been pushed in backup.StaleAfter.
+	// EventBackupRecovered fires when they stop being stale. Neither carries
+	// a machineId.
+	EventBackupFailed    EventType = "backup_failed"
+	EventBackupRecovered EventType = "backup_recovered"
 )
 
 type Event struct {

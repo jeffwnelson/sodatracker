@@ -55,6 +55,10 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
               connectedBefore = true;
             },
             onEvent: (evt) => {
+              if (evt.type.startsWith("backup_")) {
+                queryClient.invalidateQueries({ queryKey: ["backup"] });
+                return;
+              }
               const id = evt.data?.machineId;
               if (id) {
                 queryClient.invalidateQueries({

@@ -22,6 +22,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jeffwnelson/sodatracker/internal/events"
 )
 
 // StaleAfter is how old the last successful push can get, with pushing on,
@@ -70,6 +72,9 @@ type Config struct {
 	Dir string
 	// APIBase is the GitHub API root. Empty means https://api.github.com.
 	APIBase string
+	// Bus, when set, gets EventBackupFailed when backups become stale and
+	// EventBackupRecovered when they stop being stale.
+	Bus events.EventBus
 }
 
 // settings are edited from the Settings page and stored in the database.
@@ -135,6 +140,9 @@ type state struct {
 	LastPushedFile string     `json:"lastPushedFile,omitempty"`
 	LastError      string     `json:"lastError,omitempty"`
 	LastErrorAt    *time.Time `json:"lastErrorAt,omitempty"`
+	// Alerting records that backup_failed was published and
+	// backup_recovered hasn't been yet, so a restart doesn't repeat either.
+	Alerting bool `json:"alerting,omitempty"`
 }
 
 type Manager struct {
@@ -143,9 +151,53 @@ type Manager struct {
 	client *http.Client
 	now    func() time.Time
 
-	mu  sync.Mutex // serializes snapshots, pushes, set and st
+	mu  sync.Mutex // serializes snapshots, pushes, set, st and pending
 	set settings
 	st  state
+	// pending events are published by unlock, after the lock is released,
+	// because the bus runs subscribers (a Slack post) synchronously.
+	pending []events.Event
+}
+
+// unlock releases mu, then publishes the events queued while it was held.
+func (m *Manager) unlock() {
+	evs := m.pending
+	m.pending = nil
+	m.mu.Unlock()
+	if m.cfg.Bus == nil {
+		return
+	}
+	for _, evt := range evs {
+		if err := m.cfg.Bus.Publish(context.Background(), evt); err != nil {
+			slog.Warn("publish backup event", "type", evt.Type, "error", err)
+		}
+	}
+}
+
+// evaluateLocked queues an event when backups go from healthy to stale or
+// back. Only the transitions are published, so a push that keeps failing
+// every hour alerts once.
+func (m *Manager) evaluateLocked() {
+	stale := m.staleLocked()
+	if stale == m.st.Alerting {
+		return
+	}
+	m.st.Alerting = stale
+	m.save()
+	evt := events.Event{
+		Type:      events.EventBackupRecovered,
+		Timestamp: m.now().UTC().Format(time.RFC3339),
+		Data:      map[string]any{"repo": m.set.Repo},
+	}
+	if stale {
+		evt.Type = events.EventBackupFailed
+		evt.Data["error"] = m.st.LastError
+	}
+	if m.st.LastPushAt != nil {
+		evt.Data["lastPushAt"] = m.st.LastPushAt.Format(time.RFC3339)
+	}
+	slog.Info("backup health changed", "stale", stale, "error", m.st.LastError)
+	m.pending = append(m.pending, evt)
 }
 
 func New(ctx context.Context, cfg Config, st Store) (*Manager, error) {
@@ -227,7 +279,7 @@ func (m *Manager) Configure(ctx context.Context, u Update) (Status, error) {
 	}
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlock()
 
 	for _, kv := range []struct {
 		key, value string
@@ -258,6 +310,7 @@ func (m *Manager) Configure(ctx context.Context, u Update) (Status, error) {
 	}
 	slog.Info("backup settings changed", "repo", next.Repo, "push", m.pushEnabled(),
 		"intervalHours", next.IntervalHours, "keep", next.Keep)
+	m.evaluateLocked()
 	return m.statusLocked(), nil
 }
 
@@ -282,7 +335,10 @@ func (m *Manager) Run(ctx context.Context) {
 
 func (m *Manager) tick(ctx context.Context) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlock()
+	// Last, after any snapshot or push, and also on quiet hours: that's
+	// what notices a push growing older than StaleAfter.
+	defer m.evaluateLocked()
 	files, err := m.list()
 	if err != nil {
 		slog.Error("list backups", "error", err)
@@ -313,8 +369,9 @@ func (m *Manager) tick(ctx context.Context) {
 // pushing is on. The returned status reflects the outcome either way.
 func (m *Manager) BackupNow(ctx context.Context) (Status, error) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlock()
 	err := m.backupLocked(ctx)
+	m.evaluateLocked()
 	return m.statusLocked(), err
 }
 
@@ -379,9 +436,13 @@ func (m *Manager) statusLocked() Status {
 		LastErrorAt:    m.st.LastErrorAt,
 		Snapshots:      files,
 	}
-	s.Stale = s.LastError != "" ||
-		(s.PushEnabled && s.LastPushAt != nil && m.now().Sub(*s.LastPushAt) > StaleAfter)
+	s.Stale = m.staleLocked()
 	return s
+}
+
+func (m *Manager) staleLocked() bool {
+	return m.st.LastError != "" ||
+		(m.pushEnabled() && m.st.LastPushAt != nil && m.now().Sub(*m.st.LastPushAt) > StaleAfter)
 }
 
 // rawSnapshot writes an uncompressed snapshot to a temporary file in Dir and

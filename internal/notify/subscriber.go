@@ -54,6 +54,34 @@ func RegisterSlack(bus events.EventBus, st store.Store, c *SlackClient) {
 		})
 	})
 
+	// Backup events arrive only on a change of health, not per failed retry.
+	bus.Subscribe(events.EventBackupFailed, func(ctx context.Context, evt events.Event) error {
+		reason, _ := evt.Data["error"].(string)
+		if reason == "" {
+			reason = "nothing pushed to GitHub in over 36 hours"
+			if at, ok := evt.Data["lastPushAt"].(string); ok && at != "" {
+				reason = "nothing pushed to GitHub since " + at
+			}
+		}
+		return post(ctx, Message{
+			Text: "Backups failing: " + reason,
+			Blocks: []Block{
+				{Type: "section", Text: mrkdwn(":warning: *Backups failing* — %s", reason)},
+				{Type: "context", Elements: []TextObject{
+					{Type: "mrkdwn", Text: "Settings → Backups has the details. Failed pushes retry hourly."},
+				}},
+			},
+		})
+	})
+	bus.Subscribe(events.EventBackupRecovered, func(ctx context.Context, evt events.Event) error {
+		return post(ctx, Message{
+			Text: "Backups recovered",
+			Blocks: []Block{
+				{Type: "section", Text: mrkdwn(":white_check_mark: *Backups recovered*")},
+			},
+		})
+	})
+
 	// EventStockCleared is deliberately not subscribed: CreateRestock publishes
 	// it once per slot, so a five-slot refill would post five messages. A single
 	// "restocked" notification would need the event to carry the whole slot list.

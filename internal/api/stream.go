@@ -13,15 +13,18 @@ import (
 	"github.com/jeffwnelson/sodatracker/internal/events"
 )
 
-// streamedEvents are the bus events forwarded to dashboards. Each carries a
-// machineId, and the browser refetches that machine's data when one arrives,
-// so the stream never has to carry the data itself.
+// streamedEvents are the bus events forwarded to dashboards. The stock and
+// agent events carry a machineId, and the browser refetches that machine's
+// data when one arrives, so the stream never has to carry the data itself.
+// Backup events carry none; the browser refetches backup status on those.
 var streamedEvents = []events.EventType{
 	events.EventDispense,
 	events.EventLowStock,
 	events.EventOutOfStock,
 	events.EventStockCleared,
 	events.EventAgentOnline,
+	events.EventBackupFailed,
+	events.EventBackupRecovered,
 }
 
 // streamKeepalive is short enough that proxies don't close an idle stream.

@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/jeffwnelson/sodatracker/internal/domain"
+	"github.com/jeffwnelson/sodatracker/internal/events"
 	"github.com/jeffwnelson/sodatracker/internal/store/sqlite"
 )
 
@@ -319,5 +320,88 @@ func TestSnapshotLeavesOutToken(t *testing.T) {
 	}
 	if !bytes.Contains(raw, []byte("owner/sodatracker-backups")) {
 		t.Fatal("snapshot lost the non-secret settings")
+	}
+}
+
+// recordingBus is a minimal EventBus that records published events.
+type recordingBus struct {
+	mu  sync.Mutex
+	evs []events.Event
+}
+
+func (b *recordingBus) Publish(_ context.Context, evt events.Event) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.evs = append(b.evs, evt)
+	return nil
+}
+func (b *recordingBus) Subscribe(events.EventType, events.Handler) func() { return func() {} }
+func (b *recordingBus) Close() error                                      { return nil }
+
+func (b *recordingBus) types() []events.EventType {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	var out []events.EventType
+	for _, e := range b.evs {
+		out = append(out, e.Type)
+	}
+	return out
+}
+
+func TestBackupHealthEvents(t *testing.T) {
+	ctx := context.Background()
+	m, st, gh, c, cfg := setup(t, 30)
+	bus := &recordingBus{}
+	m.cfg.Bus = bus
+
+	// Healthy run: nothing published.
+	if _, err := m.BackupNow(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got := bus.types(); len(got) != 0 {
+		t.Fatalf("healthy backup published %v", got)
+	}
+
+	// Failing pushes alert once, however many retries fail.
+	gh.set(http.StatusUnauthorized, `{"message":"Bad credentials"}`)
+	c.t = c.t.Add(24 * time.Hour)
+	m.tick(ctx)
+	for i := 0; i < 3; i++ {
+		c.t = c.t.Add(time.Hour)
+		m.tick(ctx)
+	}
+	if got := bus.types(); len(got) != 1 || got[0] != events.EventBackupFailed {
+		t.Fatalf("after failures: %v", got)
+	}
+	if e := bus.evs[0].Data["error"]; e != "push to owner/sodatracker-backups: GitHub 401: Bad credentials" {
+		t.Errorf("error = %v", e)
+	}
+
+	// A restart while failing doesn't alert again.
+	m2, err := New(ctx, cfg, st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m2.now, m2.cfg.Bus, m2.cfg.APIBase = c.now, bus, m.cfg.APIBase
+	c.t = c.t.Add(time.Hour)
+	m2.tick(ctx)
+	if got := bus.types(); len(got) != 1 {
+		t.Fatalf("restart re-alerted: %v", got)
+	}
+
+	// The retry that succeeds recovers.
+	gh.set(0, "")
+	c.t = c.t.Add(time.Hour)
+	m2.tick(ctx)
+	if got := bus.types(); len(got) != 2 || got[1] != events.EventBackupRecovered {
+		t.Fatalf("after recovery: %v", got)
+	}
+
+	// With the schedule off, the hourly check alone notices a push going stale.
+	m2.set.IntervalHours = 0
+	c.t = c.t.Add(StaleAfter + time.Hour)
+	m2.tick(ctx)
+	if got := bus.types(); len(got) != 3 || got[2] != events.EventBackupFailed || bus.evs[2].Data["error"] != "" {
+		t.Fatalf("stale by age: %v %v", got, bus.evs[len(bus.evs)-1].Data)
 	}
 }

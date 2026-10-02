@@ -85,7 +85,7 @@ func main() {
 	backupCtx, stopBackups := context.WithCancel(context.Background())
 	defer stopBackups()
 	// Settings (repo, token, schedule) are edited on the Settings page.
-	backups, err := backup.New(backupCtx, backup.Config{Dir: cfg.BackupDir}, st)
+	backups, err := backup.New(backupCtx, backup.Config{Dir: cfg.BackupDir, Bus: bus}, st)
 	if err != nil {
 		slog.Error("backups disabled", "error", err)
 	} else {

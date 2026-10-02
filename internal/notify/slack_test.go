@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jeffwnelson/sodatracker/internal/domain"
 	"github.com/jeffwnelson/sodatracker/internal/events"
@@ -105,5 +106,28 @@ func TestNilClientIsNoOp(t *testing.T) {
 	}
 	if err := NewSlack("").Post(context.Background(), Message{Text: "x"}); err != nil {
 		t.Errorf("posting on a nil client should be a no-op, got %v", err)
+	}
+}
+
+func TestBackupEventsPostToSlack(t *testing.T) {
+	received := make(chan Message, 2)
+	srv := fakeSlack(t, received)
+	bus := local.New()
+	t.Cleanup(func() { bus.Close() })
+	RegisterSlack(bus, nil, NewSlack(srv.URL))
+
+	ctx := context.Background()
+	bus.Publish(ctx, events.Event{Type: events.EventBackupFailed, Data: map[string]any{"error": "push to o/r: GitHub 401: Bad credentials"}})
+	bus.Publish(ctx, events.Event{Type: events.EventBackupRecovered, Data: map[string]any{}})
+
+	for _, want := range []string{"Backups failing: push to o/r: GitHub 401: Bad credentials", "Backups recovered"} {
+		select {
+		case m := <-received:
+			if m.Text != want {
+				t.Errorf("text = %q, want %q", m.Text, want)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("no Slack message for %q", want)
+		}
 	}
 }
