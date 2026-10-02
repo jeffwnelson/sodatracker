@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.17.1](https://github.com/jeffwnelson/sodatracker/compare/8e8731cc8d0eb2181a207c05449eb6c5993cfb79..v0.17.1) - 2026-10-02
+#### Bug Fixes
+- (**web**) show active alerts right under the status banner - ([8e8731c](https://github.com/jeffwnelson/sodatracker/commit/8e8731cc8d0eb2181a207c05449eb6c5993cfb79)) - Jeff Nelson
+
+- - -
+
 ## [v0.17.0](https://github.com/jeffwnelson/sodatracker/compare/94095c6790ddca3f94cd924a66640bbbfa48e4b0..v0.17.0) - 2026-10-02
 #### Features
 - (**web**) Status tab replaces Alerts; drop not-registering alerts - ([94095c6](https://github.com/jeffwnelson/sodatracker/commit/94095c6790ddca3f94cd924a66640bbbfa48e4b0)) - Jeff Nelson
