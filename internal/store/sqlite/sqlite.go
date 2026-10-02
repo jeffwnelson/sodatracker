@@ -17,7 +17,11 @@ type SQLiteStore struct {
 }
 
 func New(dbPath string) (*SQLiteStore, error) {
-	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
+	// modernc.org/sqlite takes pragmas as _pragma=name(value), applied to
+	// every pooled connection. (mattn/go-sqlite3's _journal_mode and
+	// _busy_timeout are silently ignored here, which until v0.11 left the
+	// database in rollback-journal mode with no busy timeout.)
+	db, err := sql.Open("sqlite", dbPath+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)")
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
