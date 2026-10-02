@@ -58,12 +58,7 @@ func main() {
 			slotPos = int(v)
 		}
 		if machineID != "" && slotPos > 0 {
-			if err := svc.EvaluateStockAlert(ctx, machineID, slotPos); err != nil {
-				return err
-			}
-			// A dispense clears the quiet alerts it disproves, and may make
-			// another slot quiet.
-			return svc.EvaluateQuiet(ctx, machineID)
+			return svc.EvaluateStockAlert(ctx, machineID, slotPos)
 		}
 		return nil
 	})
@@ -97,10 +92,6 @@ func main() {
 			"keep", s.Keep, "repo", s.Repo, "push", s.PushEnabled)
 		go backups.Run(backupCtx)
 	}
-
-	// Quiet alerts: dispenses re-evaluate them at once; this notices time
-	// passing with none.
-	go svc.RunQuietChecks(backupCtx, 15*time.Minute)
 
 	streamsDone := make(chan struct{})
 	router := api.NewRouter(st, svc, api.RouterConfig{

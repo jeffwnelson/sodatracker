@@ -16,7 +16,6 @@ import type {
   AnalyticsByKind,
   BackupStatus,
   BackupUpdate,
-  QuietSettings,
   SlackStatus,
   SlackUpdate,
 } from "./types";
@@ -344,15 +343,6 @@ export function updateSlackSettings(u: SlackUpdate): Promise<SlackStatus> {
 
 export function testSlack(): Promise<SlackStatus> {
   return postJSONAuth("/admin/slack/test", {});
-}
-
-// Quiet alert settings
-export function getAlertSettings(): Promise<QuietSettings> {
-  return fetchJSONAuth("/admin/alert-settings");
-}
-
-export function updateAlertSettings(q: QuietSettings): Promise<QuietSettings> {
-  return putJSONAuth("/admin/alert-settings", q);
 }
 
 // Backups

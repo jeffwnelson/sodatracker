@@ -35,11 +35,10 @@ const navLinks = [
     icon: icon(<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />),
   },
   {
-    to: "/admin/alerts",
-    label: "Alerts",
-    icon: icon(
-      <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16ZM10 21h4" />,
-    ),
+    to: "/admin/status",
+    label: "Status",
+    // A heartbeat line.
+    icon: icon(<path d="M2 12h4l2.5-6 4 12 2.5-6H22" />),
   },
   {
     to: "/admin/settings",
@@ -69,7 +68,7 @@ export function AdminLayout() {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  // A failing backup counts as an alert too; the Alerts page shows it.
+  // A failing backup counts as an alert too; the Status page shows it.
   const alertCount =
     (useActiveAlerts().data?.length ?? 0) + (useBackupStatus().data?.stale ? 1 : 0);
 
@@ -94,7 +93,7 @@ export function AdminLayout() {
               className={`${headerItemClass(isActive(link.to, link.end))} inline-flex items-center gap-1.5`}
             >
               {link.label}
-              {link.to === "/admin/alerts" && <AlertBadge count={alertCount} />}
+              {link.to === "/admin/status" && <AlertBadge count={alertCount} />}
             </Link>
           ))}
         </nav>
@@ -119,7 +118,7 @@ export function AdminLayout() {
               >
                 {link.icon}
                 {link.label}
-                {link.to === "/admin/alerts" && (
+                {link.to === "/admin/status" && (
                   <AlertBadge count={alertCount} className="absolute top-1 left-1/2 ml-1.5" />
                 )}
               </Link>

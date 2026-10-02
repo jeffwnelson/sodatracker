@@ -23,9 +23,6 @@ var streamedEvents = []events.EventType{
 	events.EventOutOfStock,
 	events.EventStockCleared,
 	events.EventAgentOnline,
-	events.EventQuietSlot,
-	events.EventQuietMachine,
-	events.EventQuietCleared,
 	events.EventBackupFailed,
 	events.EventBackupRecovered,
 }

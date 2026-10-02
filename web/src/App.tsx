@@ -7,7 +7,7 @@ import { AdminLayout } from "./components/AdminLayout";
 import { CustomerDashboard } from "./pages/CustomerDashboard";
 import { LoginPage } from "./pages/LoginPage";
 import { AdminDashboard } from "./pages/AdminDashboard";
-import { AlertsPage } from "./pages/AlertsPage";
+import { StatusPage } from "./pages/StatusPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AnalyticsLayout } from "./pages/analytics/AnalyticsLayout";
 import { ConsumptionPage } from "./pages/analytics/ConsumptionPage";
@@ -16,7 +16,6 @@ import { InventoryPage } from "./pages/analytics/InventoryPage";
 import { SpendPage } from "./pages/analytics/SpendPage";
 import { PredictionsPage } from "./pages/analytics/PredictionsPage";
 import { HighlightsPage } from "./pages/analytics/HighlightsPage";
-import { UptimePage } from "./pages/analytics/UptimePage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,9 +55,11 @@ function App() {
                   <Route path="spend" element={<SpendPage />} />
                   <Route path="predictions" element={<PredictionsPage />} />
                   <Route path="highlights" element={<HighlightsPage />} />
-                  <Route path="uptime" element={<UptimePage />} />
+                  {/* Uptime moved to the Status tab. */}
+                  <Route path="uptime" element={<Navigate to="/admin/status" replace />} />
                 </Route>
-                <Route path="alerts" element={<AlertsPage />} />
+                <Route path="status" element={<StatusPage />} />
+                <Route path="alerts" element={<Navigate to="/admin/status" replace />} />
                 <Route path="settings" element={<SettingsPage />} />
                 {/* Old bookmarks */}
                 <Route path="setup" element={<Navigate to="/admin/settings" replace />} />

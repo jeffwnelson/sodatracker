@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getAnalytics, getMachineStatus, getSlackSettings } from "../../api/client";
-import type { UptimeAnalytics } from "../../api/types";
-import { useActiveAlerts } from "../../api/machine";
-import { useBackupStatus } from "../../api/backup";
-import { Card } from "../../components/Card";
+import { getMachineStatus, getSlackSettings } from "../api/client";
+import { useUptime, useUptime90 } from "../api/uptime";
+import type { UptimeAnalytics } from "../api/types";
+import { useMachine } from "../api/machine";
+import { useBackupStatus } from "../api/backup";
+import { Card } from "../components/Card";
 import {
   addDays,
   addMonths,
@@ -13,9 +14,7 @@ import {
   formatHours,
   monthStart,
   parseDay,
-  timezone,
-  useAnalyticsFilters,
-} from "./analytics";
+} from "./analytics/analytics";
 
 // A status page in the manner of githubstatus.com: the overall state, each
 // component's current state, and the Pi agent's last 90 days, day by day.
@@ -56,29 +55,12 @@ function uptimeOf(days: (Day | undefined)[]): number | null {
 
 const pct = (u: number | null) => (u === null ? "—" : `${(u * 100).toFixed(2)}%`);
 
-/** Daily online/offline hours for [start, end], keyed by day. */
-function useUptimeDays(machineId: string, start: string, end: string) {
-  return useQuery({
-    queryKey: ["analytics", "uptime-days", machineId, start, end, timezone],
-    queryFn: () =>
-      getAnalytics("uptime", {
-        machineId,
-        from: parseDay(start).toISOString(),
-        // The server caps this at now.
-        to: parseDay(addDays(end, 1)).toISOString(),
-        tz: timezone,
-        bucket: "day",
-      }),
-    enabled: !!machineId,
-    staleTime: 60_000,
-    select: (u: UptimeAnalytics) => {
-      const out: Record<string, Day> = {};
-      for (const p of u.series) {
-        out[dayKey(new Date(p.bucket))] = { online: p.onlineHours, offline: p.offlineHours };
-      }
-      return out;
-    },
-  });
+function byDay(u: UptimeAnalytics | undefined): Record<string, Day> {
+  const out: Record<string, Day> = {};
+  for (const p of u?.series ?? []) {
+    out[dayKey(new Date(p.bucket))] = { online: p.onlineHours, offline: p.offlineHours };
+  }
+  return out;
 }
 
 function dayLabel(key: string): string {
@@ -99,26 +81,22 @@ function dayDetail(key: string, d: Day | undefined): string {
 type ComponentState = { name: string; status: Health; detail: string; link?: string };
 
 export function StatusOverview() {
-  const { machineId } = useAnalyticsFilters();
+  const { machineId } = useMachine();
   const today = dayKey(new Date());
   const start = addDays(today, -89);
-  const days = useUptimeDays(machineId, start, today);
+  const days = useUptime90(machineId);
 
   const machine = useQuery({
     queryKey: ["machineStatus", machineId],
     queryFn: () => getMachineStatus(machineId),
     enabled: !!machineId,
   });
-  const alerts = useActiveAlerts();
   const backup = useBackupStatus();
   const slack = useQuery({ queryKey: ["slack"], queryFn: getSlackSettings });
 
   const [active, setActive] = useState<string | null>(null);
 
   const agent = machine.data?.agent;
-  const quiet = (alerts.data ?? []).filter(
-    (a) => a.alertType === "quiet_slot" || a.alertType === "quiet_machine",
-  );
   const components: ComponentState[] = [
     {
       name: "Pi agent",
@@ -130,16 +108,6 @@ export function StatusOverview() {
           : agent.lastSeen
             ? `Offline since ${new Date(agent.lastSeen).toLocaleString()}`
             : "No heartbeat yet",
-    },
-    {
-      name: "Dispense sensors",
-      status: !alerts.data ? "none" : quiet.length ? "minor" : "ok",
-      detail: !alerts.data
-        ? "Checking…"
-        : quiet.length
-          ? `${quiet.length} not registering. See Alerts`
-          : "Every slot is registering",
-      link: quiet.length ? "/admin/alerts" : undefined,
     },
     {
       name: "Backups",
@@ -187,7 +155,7 @@ export function StatusOverview() {
   }[worst];
 
   const keys = Array.from({ length: 90 }, (_, i) => addDays(start, i));
-  const map = days.data ?? {};
+  const map = byDay(days.data);
   const uptime90 = uptimeOf(keys.map((k) => map[k]));
   const uptime30 = uptimeOf(keys.slice(60).map((k) => map[k]));
 
@@ -279,8 +247,8 @@ function UptimeCalendar({ machineId, today }: { machineId: string; today: string
   const last = addMonths(monthStart(today), -3 * offset);
   const months = [addMonths(last, -2), addMonths(last, -1), last];
   const end = addDays(addMonths(last, 1), -1);
-  const days = useUptimeDays(machineId, months[0], end < today ? end : today);
-  const map = days.data ?? {};
+  const days = useUptime(machineId, months[0], end < today ? end : today);
+  const map = byDay(days.data);
   const [active, setActive] = useState<string | null>(null);
 
   const title = (m: string) =>

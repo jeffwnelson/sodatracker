@@ -76,29 +76,3 @@ func TestBackupEndpoints(t *testing.T) {
 		t.Fatalf("download not gzip: %v", err)
 	}
 }
-
-func TestAlertSettingsEndpoints(t *testing.T) {
-	r := setup(t)
-	do := func(method, body string, authed bool) *httptest.ResponseRecorder {
-		req := httptest.NewRequest(method, "/api/v1/admin/alert-settings", strings.NewReader(body))
-		if authed {
-			req.Header.Set("X-API-Key", "test-key")
-		}
-		w := httptest.NewRecorder()
-		r.ServeHTTP(w, req)
-		return w
-	}
-	if w := do("GET", "", false); w.Code != http.StatusUnauthorized {
-		t.Errorf("GET without auth: %d", w.Code)
-	}
-	if w := do("PUT", `{"quietSlotCans":-1}`, true); w.Code != http.StatusBadRequest {
-		t.Errorf("invalid PUT: %d %s", w.Code, w.Body)
-	}
-	w := do("PUT", `{"quietSlotCans":20,"quietMachineHours":0,"quietMachineWeekdaysOnly":false,"timezone":"UTC"}`, true)
-	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"quietSlotCans":20`) {
-		t.Fatalf("PUT: %d %s", w.Code, w.Body)
-	}
-	if w := do("GET", "", true); !strings.Contains(w.Body.String(), `"quietSlotCans":20`) {
-		t.Errorf("GET after PUT: %s", w.Body)
-	}
-}

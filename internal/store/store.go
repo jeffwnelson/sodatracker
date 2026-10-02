@@ -49,9 +49,7 @@ type Store interface {
 	// Alert Events
 	CreateAlertEvent(ctx context.Context, ae *domain.AlertEvent) error
 	ListAlertEvents(ctx context.Context, machineID string, activeOnly bool, limit int) ([]domain.AlertEvent, error)
-	// ClearAlertEvents clears a slot's stock alerts (low/out of stock only).
 	ClearAlertEvents(ctx context.Context, machineID string, slotPosition int) error
-	ClearAlert(ctx context.Context, id string) error
 	GetActiveAlert(ctx context.Context, machineID string, slotPosition int, alertType string) (*domain.AlertEvent, error)
 
 	// Agent sessions (heartbeat history), oldest first

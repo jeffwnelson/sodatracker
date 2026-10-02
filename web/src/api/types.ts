@@ -126,11 +126,7 @@ export interface AlertEvent {
   machineId: string;
   slotPosition: number;
   productId: string;
-  /**
-   * quiet_slot: currentStock is the cans other slots dispensed, threshold the
-   * setting. quiet_machine (slotPosition 0): currentStock is quiet hours.
-   */
-  alertType: "low_stock" | "out_of_stock" | "quiet_slot" | "quiet_machine";
+  alertType: "low_stock" | "out_of_stock";
   currentStock: number;
   threshold: number;
   cleared: boolean;
@@ -358,13 +354,6 @@ export interface BackupUpdate {
   keep: number;
 }
 
-/** GET/PUT /admin/alert-settings. 0 turns either alert off. */
-export interface QuietSettings {
-  quietSlotCans: number;
-  quietMachineHours: number;
-  quietMachineWeekdaysOnly: boolean;
-  timezone: string;
-}
 
 export interface ProductCount {
   productId: string;

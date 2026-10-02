@@ -135,8 +135,6 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 			r.Delete("/alerts/{id}", h.deleteAlertConfig)
 			r.Get("/machines/{id}/alert-events", h.listAlertEvents)
 			r.Get("/machines/{id}/predictions", h.getStockPredictions)
-			r.Get("/admin/alert-settings", h.getAlertSettings)
-			r.Put("/admin/alert-settings", h.updateAlertSettings)
 
 			if h.broker != nil {
 				r.Get("/events", h.streamEvents)
