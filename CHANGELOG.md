@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.10.0](https://github.com/jeffwnelson/sodatracker/compare/e2a10b89e65f259523500d86b4d87e0c306cfc4b..v0.10.0) - 2026-10-02
+#### Features
+- alert on backup failures over Slack and the live stream - ([e2a10b8](https://github.com/jeffwnelson/sodatracker/commit/e2a10b89e65f259523500d86b4d87e0c306cfc4b)) - Jeff Nelson
+
+- - -
+
 ## [v0.9.0](https://github.com/jeffwnelson/sodatracker/compare/a0fc5cb601b72ba8370ea0338b7a5e3f5d493780..v0.9.0) - 2026-10-02
 #### Features
 - database backups to a GitHub repo - ([4bd5efa](https://github.com/jeffwnelson/sodatracker/commit/4bd5efac51d7a903de959227e2c0c152ee5b551a)) - Jeff Nelson
