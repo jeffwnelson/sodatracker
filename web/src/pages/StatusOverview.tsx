@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getMachineStatus, getSlackSettings } from "../api/client";
@@ -80,7 +81,9 @@ function dayDetail(key: string, d: Day | undefined): string {
 
 type ComponentState = { name: string; status: Health; detail: string; link?: string };
 
-export function StatusOverview() {
+/** afterBanner renders between the banner and the components, e.g. the
+ * active alerts. */
+export function StatusOverview({ afterBanner }: { afterBanner?: ReactNode }) {
   const { machineId } = useMachine();
   const today = dayKey(new Date());
   const start = addDays(today, -89);
@@ -164,6 +167,8 @@ export function StatusOverview() {
       <div className={`rounded-2xl px-5 py-4 text-base font-semibold ${banner.cls}`} role="status">
         {banner.text}
       </div>
+
+      {afterBanner}
 
       <Card padding="none">
         <ul className="divide-y divide-border-primary">

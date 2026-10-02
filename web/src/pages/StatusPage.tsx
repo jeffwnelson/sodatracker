@@ -29,8 +29,7 @@ export function StatusPage() {
         <EmptyState message="No machine configured." />
       ) : (
         <>
-          <StatusOverview />
-          <ActiveAlerts machineId={machineId} />
+          <StatusOverview afterBanner={<ActiveAlerts machineId={machineId} />} />
           <RecentUptime machineId={machineId} />
         </>
       )}
