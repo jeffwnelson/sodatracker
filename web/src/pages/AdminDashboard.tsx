@@ -8,9 +8,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { getAdminStats } from "../api/client";
+import { getAdminStats, listDispenses, listProducts } from "../api/client";
+import { usePollInterval } from "../context/LiveUpdates";
+import { ProductDot } from "../components/ProductDot";
 import { useMachine } from "../api/machine";
-import type { DispenseStats } from "../api/types";
+import type { Dispense, DispenseStats } from "../api/types";
 import { PageHeader } from "../components/PageHeader";
 import { Card } from "../components/Card";
 import { DataTable } from "../components/DataTable";
@@ -166,6 +168,70 @@ export function AdminDashboard() {
         </>
       ) : null}
 
+      <RecentDispenses machineId={machineId} />
     </div>
+  );
+}
+
+const RECENT_DISPENSES = 10;
+
+/** The last few dispenses, newest first. Live updates refetch it on each one. */
+function RecentDispenses({ machineId }: { machineId: string }) {
+  const { data: dispenses } = useQuery({
+    queryKey: ["recentDispenses", machineId],
+    queryFn: () => listDispenses(machineId, RECENT_DISPENSES),
+    refetchInterval: usePollInterval(10_000),
+  });
+  const { data: products } = useQuery({ queryKey: ["products"], queryFn: listProducts });
+  const byId = new Map((products ?? []).map((p) => [p.id, p]));
+
+  const columns: Column<Dispense>[] = [
+    {
+      header: "When",
+      accessor: (d) => (
+        <span className="tabular-nums text-text-secondary">
+          {new Date(d.timestamp).toLocaleString(undefined, {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          })}
+        </span>
+      ),
+    },
+    {
+      header: "Product",
+      accessor: (d) => {
+        const p = byId.get(d.productId);
+        return (
+          <span className="inline-flex items-center gap-2 font-medium text-text-primary">
+            <ProductDot color={p?.color} />
+            {p?.name ?? "Unknown product"}
+          </span>
+        );
+      },
+    },
+    {
+      header: "Slot",
+      accessor: (d) => d.slotPosition,
+      className: "text-right tabular-nums",
+      headerClassName: "text-right",
+    },
+  ];
+
+  return (
+    <Card>
+      <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-4">
+        Recent Dispenses
+      </p>
+      {dispenses && dispenses.length > 0 ? (
+        <DataTable columns={columns} data={dispenses} keyFn={(d) => d.id} />
+      ) : (
+        <p className="text-sm text-text-tertiary">
+          {dispenses ? "No dispenses yet." : "Loading…"}
+        </p>
+      )}
+    </Card>
   );
 }
