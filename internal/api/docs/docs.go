@@ -2590,6 +2590,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.TimeOfDay"
                 },
                 "firstCanProducts": {
+                    "description": "FirstCanProducts and LastCanProducts count days by the product of\ntheir first and last can. LunchProducts counts cans dispensed from\nLunchStartHour to LunchEndHour, local time.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductCount"
@@ -2597,6 +2598,18 @@ const docTemplate = `{
                 },
                 "lastCan": {
                     "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.TimeOfDay"
+                },
+                "lastCanProducts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductCount"
+                    }
+                },
+                "lunchProducts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductCount"
+                    }
                 },
                 "ounces": {
                     "description": "Totals for the window, from each product's can size and caffeine.",

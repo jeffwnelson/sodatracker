@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { listProducts } from "../../api/client";
-import type { HighlightsAnalytics } from "../../api/types";
+import type { HighlightsAnalytics, ProductCount } from "../../api/types";
 import type { Comparison } from "./analytics";
 import { DataTable } from "../../components/DataTable";
 import {
@@ -54,7 +54,9 @@ function Highlights({
   const catalog = useQuery({ queryKey: ["products"], queryFn: listProducts });
   const colors = productColorMap(
     catalog.data ?? [],
-    data.firstCanProducts.map((p) => p.productId),
+    [...data.firstCanProducts, ...data.lastCanProducts, ...data.lunchProducts].map(
+      (p) => p.productId,
+    ),
   );
 
   if (!data.firstCan) {
@@ -128,35 +130,78 @@ function Highlights({
         />
       </StatGrid>
 
-      <ChartCard
+      <ProductPieCard
         title="Who opens the day"
         subtitle="Product of each day's first can"
-        table={
-          <DataTable
-            columns={[
-              { header: "Product", accessor: (r) => r.name },
-              {
-                header: "Days",
-                accessor: (r) => r.count,
-                className: "text-right tabular-nums",
-                headerClassName: "text-right",
-              },
-            ]}
-            data={data.firstCanProducts}
-            keyFn={(r) => r.productId}
-          />
-        }
-      >
+        products={data.firstCanProducts}
+        colors={colors}
+        unit="day"
+      />
+      <ProductPieCard
+        title="Who closes the day"
+        subtitle="Product of each day's last can"
+        products={data.lastCanProducts}
+        colors={colors}
+        unit="day"
+      />
+      <ProductPieCard
+        title="Lunch favorite"
+        subtitle="Cans taken from 11 AM to 2 PM"
+        products={data.lunchProducts}
+        colors={colors}
+        unit="can"
+      />
+    </>
+  );
+}
+
+function ProductPieCard({
+  title,
+  subtitle,
+  products,
+  colors,
+  unit,
+}: {
+  title: string;
+  subtitle: string;
+  products: ProductCount[];
+  colors: Record<string, string>;
+  unit: "day" | "can";
+}) {
+  const label = unit === "day" ? "Days" : "Cans";
+  return (
+    <ChartCard
+      title={title}
+      subtitle={subtitle}
+      table={
+        <DataTable
+          columns={[
+            { header: "Product", accessor: (r) => r.name },
+            {
+              header: label,
+              accessor: (r) => r.count,
+              className: "text-right tabular-nums",
+              headerClassName: "text-right",
+            },
+          ]}
+          data={products}
+          keyFn={(r) => r.productId}
+        />
+      }
+    >
+      {products.length === 0 ? (
+        <NoData message={unit === "can" ? "No cans taken at lunch in this range." : "No dispenses in this range."} />
+      ) : (
         <BreakdownPie
-          slices={data.firstCanProducts.map((p) => ({
+          slices={products.map((p) => ({
             key: p.productId,
             label: p.name,
             value: p.count,
             color: colors[p.productId],
           }))}
-          format={(n) => `${n} ${n === 1 ? "day" : "days"}`}
+          format={(n) => `${n} ${n === 1 ? unit : `${unit}s`}`}
         />
-      </ChartCard>
-    </>
+      )}
+    </ChartCard>
   );
 }

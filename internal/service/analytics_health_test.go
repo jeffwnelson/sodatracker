@@ -141,5 +141,40 @@ func TestHighlightsAnalytics(t *testing.T) {
 	if len(h.FirstCanProducts) != 2 || h.FirstCanProducts[0].Name != "Cola" || h.FirstCanProducts[0].Count != 3 {
 		t.Errorf("first can products %+v", h.FirstCanProducts)
 	}
+	// Last cans: Thu Diet, then Cola Fri, Tue and Wed.
+	if len(h.LastCanProducts) != 2 || h.LastCanProducts[0].Name != "Cola" || h.LastCanProducts[0].Count != 3 ||
+		h.LastCanProducts[1].Name != "Diet" || h.LastCanProducts[1].Count != 1 {
+		t.Errorf("last can products %+v", h.LastCanProducts)
+	}
+	// Nothing went between 11:00 and 14:00 (14:05 is after lunch).
+	if len(h.LunchProducts) != 0 {
+		t.Errorf("lunch products %+v", h.LunchProducts)
+	}
 
+}
+
+func TestHighlightsLunch(t *testing.T) {
+	svc, st := setupService(t)
+	ctx := context.Background()
+	st.CreateMachine(ctx, &domain.Machine{ID: "m1", Name: "Test", SlotCount: 2})
+	st.CreateProduct(ctx, &domain.Product{ID: "p1", Name: "Cola"})
+	st.CreateProduct(ctx, &domain.Product{ID: "p2", Name: "Diet"})
+	chicago, _ := time.LoadLocation("America/Chicago")
+	at := func(h, m int) time.Time { return time.Date(2026, 3, 5, h, m, 0, 0, chicago) }
+	addDispense(t, st, "p1", 1, at(10, 59)) // before lunch
+	addDispense(t, st, "p2", 2, at(11, 0))
+	addDispense(t, st, "p2", 2, at(12, 30))
+	addDispense(t, st, "p1", 1, at(13, 59))
+	addDispense(t, st, "p1", 1, at(14, 0)) // after lunch
+
+	h, err := svc.GetHighlightsAnalytics(ctx, AnalyticsQuery{MachineID: "m1",
+		From: at(0, 0), To: at(23, 0), Location: chicago})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Lunch is local time: 11:00 to 13:59 in Chicago.
+	if len(h.LunchProducts) != 2 || h.LunchProducts[0].Name != "Diet" || h.LunchProducts[0].Count != 2 ||
+		h.LunchProducts[1].Name != "Cola" || h.LunchProducts[1].Count != 1 {
+		t.Errorf("lunch products %+v", h.LunchProducts)
+	}
 }

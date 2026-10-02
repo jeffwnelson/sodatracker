@@ -9,15 +9,21 @@ import (
 
 // HighlightsAnalytics are records and habits from the window's dispenses:
 // when the first and last cans of the day go, the busiest day and hour,
-// totals for soda, caffeine and aluminum, and which product people reach for
-// first. Null fields mean there were no dispenses.
+// totals for soda, caffeine and aluminum, which product opens and closes
+// the day, and what goes at lunch. Null fields mean there were no
+// dispenses.
 type HighlightsAnalytics struct {
 	Range            AnalyticsRange `json:"range"`
 	FirstCan         *TimeOfDay     `json:"firstCan"`
 	LastCan          *TimeOfDay     `json:"lastCan"`
 	BusiestDay       *CountAt       `json:"busiestDay"`
 	BusiestHour      *CountAt       `json:"busiestHour"`
+	// FirstCanProducts and LastCanProducts count days by the product of
+	// their first and last can. LunchProducts counts cans dispensed from
+	// LunchStartHour to LunchEndHour, local time.
 	FirstCanProducts []ProductCount `json:"firstCanProducts"`
+	LastCanProducts  []ProductCount `json:"lastCanProducts"`
+	LunchProducts    []ProductCount `json:"lunchProducts"`
 
 	// Totals for the window, from each product's can size and caffeine.
 	Ounces     float64 `json:"ounces" example:"1092"`
@@ -31,6 +37,12 @@ type HighlightsAnalytics struct {
 const aluminumGPer12oz = 14.2
 
 const gramsPerLb = 453.59237
+
+// Lunch is 11:00 to 14:00 local time.
+const (
+	LunchStartHour = 11
+	LunchEndHour   = 14
+)
 
 // TimeOfDay summarises one dispense per active day (the first or the last).
 // AvgMinute is minutes after local midnight; Record is the earliest first can
@@ -57,7 +69,12 @@ func (s *Service) GetHighlightsAnalytics(ctx context.Context, q AnalyticsQuery) 
 		return nil, err
 	}
 	loc := a.q.Location
-	out := &HighlightsAnalytics{Range: a.rangeInfo(), FirstCanProducts: []ProductCount{}}
+	out := &HighlightsAnalytics{
+		Range:            a.rangeInfo(),
+		FirstCanProducts: []ProductCount{},
+		LastCanProducts:  []ProductCount{},
+		LunchProducts:    []ProductCount{},
+	}
 
 	type day struct {
 		first, last int // indexes into the window's dispenses
@@ -91,8 +108,12 @@ func (s *Service) GetHighlightsAnalytics(ctx context.Context, q AnalyticsQuery) 
 	}
 
 	var alumG float64
+	lunch := productCounter{}
 	for _, i := range inWindow {
 		p := a.product(a.dispenses[i])
+		if h := a.dispenses[i].Timestamp.In(loc).Hour(); h >= LunchStartHour && h < LunchEndHour {
+			lunch.add(p.ID, p.Name)
+		}
 		size := p.SizeOz
 		if size <= 0 {
 			size = 12
@@ -107,7 +128,7 @@ func (s *Service) GetHighlightsAnalytics(ctx context.Context, q AnalyticsQuery) 
 
 	var firstSum, lastSum int
 	firstRec, lastRec := -1, -1
-	byProduct := map[string]*ProductCount{}
+	opens, closes := productCounter{}, productCounter{}
 	var busiestDay time.Time
 	for key, dd := range days {
 		firstSum += minuteOf(dd.first)
@@ -119,10 +140,9 @@ func (s *Service) GetHighlightsAnalytics(ctx context.Context, q AnalyticsQuery) 
 			lastRec = dd.last
 		}
 		p := a.product(a.dispenses[dd.first])
-		if byProduct[p.ID] == nil {
-			byProduct[p.ID] = &ProductCount{ProductID: p.ID, Name: p.Name}
-		}
-		byProduct[p.ID].Count++
+		opens.add(p.ID, p.Name)
+		p = a.product(a.dispenses[dd.last])
+		closes.add(p.ID, p.Name)
 		// Ties go to the earlier day, so the answer is stable.
 		if b := days[busiestDay]; b == nil || dd.count > b.count || (dd.count == b.count && key.Before(busiestDay)) {
 			busiestDay = key
@@ -147,15 +167,33 @@ func (s *Service) GetHighlightsAnalytics(ctx context.Context, q AnalyticsQuery) 
 	}
 	out.BusiestHour = &CountAt{At: busiestHour.Format(time.RFC3339), Count: hours[busiestHour]}
 
-	for _, p := range byProduct {
-		out.FirstCanProducts = append(out.FirstCanProducts, *p)
-	}
-	sort.Slice(out.FirstCanProducts, func(i, j int) bool {
-		pi, pj := out.FirstCanProducts[i], out.FirstCanProducts[j]
-		if pi.Count != pj.Count {
-			return pi.Count > pj.Count
-		}
-		return pi.Name < pj.Name
-	})
+	out.FirstCanProducts = opens.sorted()
+	out.LastCanProducts = closes.sorted()
+	out.LunchProducts = lunch.sorted()
 	return out, nil
+}
+
+// productCounter tallies counts by product.
+type productCounter map[string]*ProductCount
+
+func (c productCounter) add(id, name string) {
+	if c[id] == nil {
+		c[id] = &ProductCount{ProductID: id, Name: name}
+	}
+	c[id].Count++
+}
+
+// sorted returns the counts, largest first, then by name so ties are stable.
+func (c productCounter) sorted() []ProductCount {
+	out := make([]ProductCount, 0, len(c))
+	for _, p := range c {
+		out = append(out, *p)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Count != out[j].Count {
+			return out[i].Count > out[j].Count
+		}
+		return out[i].Name < out[j].Name
+	})
+	return out
 }

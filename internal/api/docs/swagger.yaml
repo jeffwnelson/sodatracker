@@ -448,11 +448,23 @@ definitions:
       firstCan:
         $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.TimeOfDay'
       firstCanProducts:
+        description: |-
+          FirstCanProducts and LastCanProducts count days by the product of
+          their first and last can. LunchProducts counts cans dispensed from
+          LunchStartHour to LunchEndHour, local time.
         items:
           $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductCount'
         type: array
       lastCan:
         $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.TimeOfDay'
+      lastCanProducts:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductCount'
+        type: array
+      lunchProducts:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductCount'
+        type: array
       ounces:
         description: Totals for the window, from each product's can size and caffeine.
         example: 1092

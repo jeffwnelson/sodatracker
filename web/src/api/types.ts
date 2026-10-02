@@ -297,7 +297,12 @@ export interface HighlightsAnalytics {
   lastCan: TimeOfDay | null;
   busiestDay: CountAt | null;
   busiestHour: CountAt | null;
-  firstCanProducts: { productId: string; name: string; count: number }[];
+  /** Days by the product of their first can. */
+  firstCanProducts: ProductCount[];
+  /** Days by the product of their last can. */
+  lastCanProducts: ProductCount[];
+  /** Cans dispensed 11:00–14:00 local time, by product. */
+  lunchProducts: ProductCount[];
   ounces: number;
   caffeineMg: number;
   aluminumLb: number;
@@ -359,4 +364,10 @@ export interface QuietSettings {
   quietMachineHours: number;
   quietMachineWeekdaysOnly: boolean;
   timezone: string;
+}
+
+export interface ProductCount {
+  productId: string;
+  name: string;
+  count: number;
 }
