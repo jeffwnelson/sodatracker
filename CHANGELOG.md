@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.9.0](https://github.com/jeffwnelson/sodatracker/compare/a0fc5cb601b72ba8370ea0338b7a5e3f5d493780..v0.9.0) - 2026-10-02
+#### Features
+- database backups to a GitHub repo - ([4bd5efa](https://github.com/jeffwnelson/sodatracker/commit/4bd5efac51d7a903de959227e2c0c152ee5b551a)) - Jeff Nelson
+#### Refactoring
+- (**web**) drop the machine detail page; restock moves to Settings - ([6ee3a96](https://github.com/jeffwnelson/sodatracker/commit/6ee3a96217c31218d67989e07cafab23eb4d2386)) - Jeff Nelson
+- (**web**) drop the machine name and location from the landing page - ([a0fc5cb](https://github.com/jeffwnelson/sodatracker/commit/a0fc5cb601b72ba8370ea0338b7a5e3f5d493780)) - Jeff Nelson
+
+- - -
+
 ## [v0.8.0](https://github.com/jeffwnelson/sodatracker/compare/69dcf85628310cab32ac4f17ab4fa02b684ecb52..v0.8.0) - 2026-10-01
 #### Features
 - (**web**) one machine, no selectors; alert count on the Alerts tab - ([f46c431](https://github.com/jeffwnelson/sodatracker/commit/f46c4317dd79790254892e67a90fc0ae33b2e87b)) - Jeff Nelson
