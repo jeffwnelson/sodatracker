@@ -48,6 +48,17 @@ export function parseDay(key: string): Date {
   return new Date(y, m - 1, d);
 }
 
+/** The first day of key's month. */
+export function monthStart(key: string): string {
+  return key.slice(0, 8) + "01";
+}
+
+/** The first day of the month n months from key's. */
+export function addMonths(key: string, n: number): string {
+  const d = parseDay(key);
+  return dayKey(new Date(d.getFullYear(), d.getMonth() + n, 1));
+}
+
 export function addDays(key: string, n: number): string {
   const d = parseDay(key);
   d.setDate(d.getDate() + n);

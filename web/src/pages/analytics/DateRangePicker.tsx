@@ -4,6 +4,8 @@ import {
   COMPARE_MODES,
   RANGES,
   addDays,
+  addMonths,
+  monthStart,
   compareDays,
   dayKey,
   formatDayRange,
@@ -21,15 +23,6 @@ type Draft = {
 };
 
 const WEEK = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-
-function monthStart(key: string): string {
-  return key.slice(0, 8) + "01";
-}
-
-function addMonths(key: string, n: number): string {
-  const d = parseDay(key);
-  return dayKey(new Date(d.getFullYear(), d.getMonth() + n, 1));
-}
 
 const inRange = (k: string, r: DayRange | null) => !!r && k >= r.start && k <= r.end;
 

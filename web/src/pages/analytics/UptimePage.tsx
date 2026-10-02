@@ -1,21 +1,10 @@
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import type { UptimeAnalytics } from "../../api/types";
 import type { Comparison } from "./analytics";
 import { Card } from "../../components/Card";
+import { StatusOverview } from "./StatusOverview";
 import { DataTable } from "../../components/DataTable";
 import {
   OTHER_COLOR,
-  axisProps,
-  formatBucket,
-  formatBucketLong,
   formatDateTime,
   formatHours,
   useAnalytics,
@@ -25,8 +14,6 @@ import {
   BreakdownPie,
   ChartCard,
   Delta,
-  ChartTooltip,
-  Legend,
   Loaded,
   NoData,
   StatGrid,
@@ -54,7 +41,6 @@ function Uptime({
   // rather than the dispense-based notice the other tabs show.
   const c = cmp?.data;
   const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
-  const bucket = data.range.bucket;
   if (!data.trackingSince) {
     return (
       <NoData message="No heartbeats from the Pi agent yet. They started with v0.4.0." />
@@ -71,6 +57,11 @@ function Uptime({
 
   return (
     <>
+      <StatusOverview />
+
+      <p className="pt-2 text-xs font-medium uppercase tracking-wider text-text-tertiary">
+        In the selected range
+      </p>
       <StatGrid>
         <StatTile
           label="Uptime"
@@ -163,64 +154,6 @@ function Uptime({
         </Card>
       </div>
 
-      <ChartCard
-        title="Over time"
-        subtitle={`Hours per ${bucket} by agent status`}
-        legend={<Legend items={statuses.map((s) => ({ ...s }))} />}
-        table={
-          <DataTable
-            columns={[
-              {
-                header: bucket,
-                accessor: (r) => formatBucketLong(r.bucket, bucket),
-                headerClassName: "capitalize",
-              },
-              ...statuses.map((s) => ({
-                header: s.label,
-                accessor: (r: UptimeAnalytics["series"][number]) => formatHours(r[s.key]),
-                className: "text-right tabular-nums",
-                headerClassName: "text-right",
-              })),
-            ]}
-            data={[...data.series].reverse()}
-            keyFn={(r) => r.bucket}
-          />
-        }
-      >
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={data.series} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="bucket"
-              tickFormatter={(v: string) => formatBucket(v, bucket)}
-              minTickGap={24}
-              {...axisProps}
-            />
-            <YAxis {...axisProps} />
-            <Tooltip
-              cursor={{ fill: "var(--color-surface-tertiary)" }}
-              content={(p) => (
-                <ChartTooltip
-                  {...p}
-                  title={(l) => formatBucketLong(l, bucket)}
-                  value={(v) => formatHours(v)}
-                />
-              )}
-            />
-            {statuses.map((s) => (
-              <Bar
-                key={s.key}
-                isAnimationActive={false}
-                dataKey={s.key}
-                name={s.label}
-                stackId="status"
-                fill={s.color}
-                maxBarSize={28}
-              />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartCard>
     </>
   );
 }
