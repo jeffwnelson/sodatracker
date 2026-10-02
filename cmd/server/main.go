@@ -14,6 +14,7 @@ import (
 	_ "time/tzdata"
 
 	"github.com/jeffwnelson/sodatracker/internal/api"
+	"github.com/jeffwnelson/sodatracker/internal/backup"
 	"github.com/jeffwnelson/sodatracker/internal/buildinfo"
 	"github.com/jeffwnelson/sodatracker/internal/config"
 	"github.com/jeffwnelson/sodatracker/internal/events"
@@ -79,6 +80,21 @@ func main() {
 		slog.Info("Slack commands enabled (Socket Mode)")
 	}
 
+	// Backups. A failure here is logged, not fatal: the machine should keep
+	// counting cans even if the backup directory is unusable.
+	backupCtx, stopBackups := context.WithCancel(context.Background())
+	defer stopBackups()
+	// Settings (repo, token, schedule) are edited on the Settings page.
+	backups, err := backup.New(backupCtx, backup.Config{Dir: cfg.BackupDir}, st)
+	if err != nil {
+		slog.Error("backups disabled", "error", err)
+	} else {
+		s := backups.Status()
+		slog.Info("backups enabled", "dir", cfg.BackupDir, "intervalHours", s.IntervalHours,
+			"keep", s.Keep, "repo", s.Repo, "push", s.PushEnabled)
+		go backups.Run(backupCtx)
+	}
+
 	streamsDone := make(chan struct{})
 	router := api.NewRouter(st, svc, api.RouterConfig{
 		APIKey:             cfg.APIKey,
@@ -87,6 +103,7 @@ func main() {
 		SlackSigningSecret: cfg.SlackSigningSecret,
 		Bus:                bus,
 		StreamsDone:        streamsDone,
+		Backups:            backups,
 	})
 
 	srv := &http.Server{
@@ -115,6 +132,7 @@ func main() {
 	<-done
 	slog.Info("shutting down")
 	stopSlack()
+	stopBackups()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

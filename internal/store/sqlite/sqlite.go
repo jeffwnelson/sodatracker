@@ -111,6 +111,11 @@ func (s *SQLiteStore) migrate() error {
 			last_seen DATETIME NOT NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_agent_sessions_machine ON agent_sessions(machine_id, started_at)`,
+		`CREATE TABLE IF NOT EXISTS settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL,
+			secret INTEGER NOT NULL DEFAULT 0
+		)`,
 	}
 	for _, m := range migrations {
 		if _, err := s.db.Exec(m); err != nil {
@@ -567,6 +572,46 @@ func (s *SQLiteStore) GetActiveAlert(ctx context.Context, machineID string, slot
 }
 
 // --- Admin ---
+
+// Snapshot uses VACUUM INTO, which copies the database as of one read
+// transaction. Copying the file itself could catch it mid-checkpoint, and
+// would miss whatever is still in the WAL. Secret settings are then deleted
+// from the copy, and it is vacuumed again so their pages don't linger.
+func (s *SQLiteStore) Snapshot(ctx context.Context, dest string) error {
+	if _, err := s.db.ExecContext(ctx, "VACUUM INTO ?", dest); err != nil {
+		return err
+	}
+	cp, err := sql.Open("sqlite", dest)
+	if err != nil {
+		return err
+	}
+	defer cp.Close()
+	if _, err := cp.ExecContext(ctx, "DELETE FROM settings WHERE secret = 1"); err != nil {
+		return fmt.Errorf("scrub secrets: %w", err)
+	}
+	if _, err := cp.ExecContext(ctx, "VACUUM"); err != nil {
+		return fmt.Errorf("scrub secrets: %w", err)
+	}
+	return nil
+}
+
+// GetSetting returns "" for a setting that was never set.
+func (s *SQLiteStore) GetSetting(ctx context.Context, key string) (string, error) {
+	var v string
+	err := s.db.QueryRowContext(ctx, "SELECT value FROM settings WHERE key = ?", key).Scan(&v)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return v, err
+}
+
+func (s *SQLiteStore) SetSetting(ctx context.Context, key, value string, secret bool) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO settings (key, value, secret) VALUES (?, ?, ?)
+		 ON CONFLICT(key) DO UPDATE SET value = excluded.value, secret = excluded.secret`,
+		key, value, secret)
+	return err
+}
 
 func (s *SQLiteStore) ResetAllData(ctx context.Context) error {
 	tables := []string{

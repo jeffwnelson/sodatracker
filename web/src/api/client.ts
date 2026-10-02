@@ -14,6 +14,8 @@ import type {
   StockPrediction,
   AnalyticsKind,
   AnalyticsByKind,
+  BackupStatus,
+  BackupUpdate,
 } from "./types";
 
 const BASE = "/api/v1";
@@ -326,6 +328,37 @@ export function listAlertEvents(
 // Admin
 export function resetAllData(): Promise<{ status: string }> {
   return deleteJSONAuth("/admin/reset");
+}
+
+// Backups
+export function getBackupStatus(): Promise<BackupStatus> {
+  return fetchJSONAuth("/admin/backup");
+}
+
+export function runBackup(): Promise<BackupStatus> {
+  return postJSONAuth("/admin/backup", {});
+}
+
+export function configureBackup(update: BackupUpdate): Promise<BackupStatus> {
+  return putJSONAuth("/admin/backup/config", update);
+}
+
+/** Fetches a fresh snapshot and hands it to the browser as a download. */
+export async function downloadBackup(): Promise<void> {
+  const res = await authFetch("/admin/backup/download");
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(err.error || `API error: ${res.status}`);
+  }
+  const name =
+    res.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ??
+    "sodatracker.db.gz";
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // User Preferences

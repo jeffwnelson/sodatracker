@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 )
 
@@ -20,12 +21,17 @@ type Config struct {
 	SlackWebhookURL    string
 	SlackAppToken      string
 	SlackSigningSecret string
+
+	// BackupDir holds local backup snapshots (default: backups/ beside the
+	// database). The rest of the backup settings are edited in the UI.
+	BackupDir string
 }
 
 func Load() Config {
+	dbPath := getEnv("DB_PATH", "sodatracker.db")
 	return Config{
 		Port:          getEnvInt("PORT", 3000),
-		DBPath:        getEnv("DB_PATH", "sodatracker.db"),
+		DBPath:        dbPath,
 		APIKey:        getEnv("API_KEY", "dev-api-key"),
 		JWTSecret:     getEnv("JWT_SECRET", "dev-jwt-secret"),
 		StaticDir:     getEnv("STATIC_DIR", ""),
@@ -35,6 +41,8 @@ func Load() Config {
 		SlackWebhookURL:    getEnv("SLACK_WEBHOOK_URL", ""),
 		SlackAppToken:      getEnv("SLACK_APP_TOKEN", ""),
 		SlackSigningSecret: getEnv("SLACK_SIGNING_SECRET", ""),
+
+		BackupDir: getEnv("BACKUP_DIR", filepath.Join(filepath.Dir(dbPath), "backups")),
 	}
 }
 

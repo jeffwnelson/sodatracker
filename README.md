@@ -172,6 +172,47 @@ environment variables, which is what the compose file does:
 
 Pin mappings are YAML-only; there is no environment override for them.
 
+## Backups
+
+The server snapshots the database on a schedule (daily by default), keeps the
+last 30 in `/data/backups/`, and, once it's set up, pushes each snapshot to a
+private GitHub repo as `snapshots/<year>/sodatracker-<UTC time>.db.gz`. A copy
+on the Pi's own SD card doesn't survive the card failing, so set up the push.
+
+**Setup.** Create a private repo (`jeffwnelson/sodatracker-backups`) and a
+[fine-grained token](https://github.com/settings/personal-access-tokens/new)
+that can reach only that repo, with **Contents: read and write**. Enter both
+under **Settings → Backups** and save. The server checks them with GitHub
+before saving, then pushes the newest snapshot. The schedule and how many
+snapshots to keep are on the same card.
+
+**How it works.** Snapshots use SQLite's `VACUUM INTO`, which gives a
+consistent copy while the app keeps running. Copying the file itself would
+not, because the database is in WAL mode. The token is stored in the
+database but never returned by the API, and it is removed from every snapshot,
+so a backup in the repo or a downloaded one doesn't contain it. A failed
+snapshot or push, or no push in 36 hours, shows on the Alerts page. Failed
+pushes are retried every hour. **Download** on the same card fetches a fresh
+snapshot to your browser.
+
+**Restore.** On the Pi, with the snapshot (`.db.gz`) in `~/sodatracker`:
+
+```bash
+cd ~/sodatracker
+docker compose stop
+docker run --rm -v sodatracker-data:/data -v "$PWD":/in \
+  --entrypoint sh ghcr.io/jeffwnelson/sodatracker:latest -c '
+    set -e; cd /data
+    mkdir -p pre-restore && mv sodatracker.db sodatracker.db-* pre-restore/ 2>/dev/null || true
+    gunzip -c /in/sodatracker-20261002T030000Z.db.gz > sodatracker.db'
+docker compose start
+```
+
+This moves the current database and its `-wal`/`-shm` files to
+`/data/pre-restore/` instead of deleting them. A WAL file left beside a
+restored database would be replayed into it. Then enter the GitHub token again
+under Settings → Backups, because snapshots don't carry it.
+
 ## Development
 
 All commands from the `sodaTracker/` directory.

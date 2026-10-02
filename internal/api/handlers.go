@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jeffwnelson/sodatracker/internal/backup"
 	"github.com/jeffwnelson/sodatracker/internal/buildinfo"
 	"github.com/jeffwnelson/sodatracker/internal/domain"
 	"github.com/jeffwnelson/sodatracker/internal/export"
@@ -28,6 +29,7 @@ type handlers struct {
 	slackCmds          *slackcmd.Commands
 	broker             *broker
 	streamsDone        <-chan struct{}
+	backups            *backup.Manager
 }
 
 // health godoc

@@ -316,3 +316,35 @@ export interface UptimeAnalytics {
   }[];
   outageList: { from: string; to: string; hours: number; ongoing: boolean }[];
 }
+
+export interface BackupFile {
+  name: string;
+  size: number;
+  createdAt: string;
+}
+
+/** GET /admin/backup. The token itself is never returned, only tokenSet. */
+export interface BackupStatus {
+  pushEnabled: boolean;
+  repo: string;
+  tokenSet: boolean;
+  /** Hours between scheduled snapshots; 0 means off. */
+  intervalHours: number;
+  keep: number;
+  lastPushAt: string | null;
+  lastPushedFile?: string;
+  lastError?: string;
+  lastErrorAt?: string;
+  /** The last snapshot or push failed, or the last push is over 36h old. */
+  stale: boolean;
+  /** Local snapshots, newest first. */
+  snapshots: BackupFile[];
+}
+
+/** PUT /admin/backup/config. Omit token to keep it; "" clears it. */
+export interface BackupUpdate {
+  repo: string;
+  token?: string;
+  intervalHours: number;
+  keep: number;
+}

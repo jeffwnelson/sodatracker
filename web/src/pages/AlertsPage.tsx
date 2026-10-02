@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import { useActiveAlerts, useMachine } from "../api/machine";
+import { useBackupStatus } from "../api/backup";
 import type { AlertEvent } from "../api/types";
 import { PageHeader } from "../components/PageHeader";
 import { Card } from "../components/Card";
@@ -8,10 +10,34 @@ import { EmptyState } from "../components/EmptyState";
 export function AlertsPage() {
   const { machineId } = useMachine();
   const { data: alertEvents } = useActiveAlerts();
+  const { data: backup } = useBackupStatus();
 
   return (
     <div className="space-y-8">
       <PageHeader title="Alerts" />
+
+      {backup?.stale && (
+        <div className="rounded-xl p-4 border-l-4 bg-status-empty-bg border-status-empty">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-medium text-text-primary">
+              Backups are failing
+            </span>
+            <Badge variant="empty">Backup</Badge>
+          </div>
+          <p className="text-xs text-text-tertiary mt-1">
+            {backup.lastError ||
+              (backup.lastPushAt
+                ? `Nothing pushed to GitHub since ${new Date(backup.lastPushAt).toLocaleString()}.`
+                : "No backup has been pushed to GitHub.")}
+          </p>
+          <Link
+            to="/admin/settings"
+            className="text-xs text-accent hover:underline mt-1 inline-block"
+          >
+            Backup settings
+          </Link>
+        </div>
+      )}
 
       {!machineId && <EmptyState message="No machine configured." />}
 

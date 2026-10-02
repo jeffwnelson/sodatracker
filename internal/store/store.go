@@ -60,6 +60,15 @@ type Store interface {
 
 	// Admin
 	ResetAllData(ctx context.Context) error
+	// Snapshot writes a consistent copy of the whole database to dest, which
+	// must not exist, leaving out secret settings. Safe while other
+	// connections read and write.
+	Snapshot(ctx context.Context, dest string) error
+
+	// Settings: app configuration edited from the UI. Secret ones are left
+	// out of snapshots. Reset All Data keeps them.
+	GetSetting(ctx context.Context, key string) (string, error)
+	SetSetting(ctx context.Context, key, value string, secret bool) error
 
 	// Lifecycle
 	Close() error

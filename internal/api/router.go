@@ -26,6 +26,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"github.com/jeffwnelson/sodatracker/internal/auth"
+	"github.com/jeffwnelson/sodatracker/internal/backup"
 	"github.com/jeffwnelson/sodatracker/internal/events"
 	"github.com/jeffwnelson/sodatracker/internal/service"
 	"github.com/jeffwnelson/sodatracker/internal/slackcmd"
@@ -48,6 +49,8 @@ type RouterConfig struct {
 	// StreamsDone, when closed, ends every open event stream. The server
 	// closes it on shutdown, which would otherwise wait on them.
 	StreamsDone <-chan struct{}
+	// Backups serves /admin/backup. Without it those routes aren't registered.
+	Backups *backup.Manager
 }
 
 func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux {
@@ -71,6 +74,7 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 		slackSigningSecret: cfg.SlackSigningSecret,
 		slackCmds:          slackcmd.New(st, svc),
 		streamsDone:        cfg.StreamsDone,
+		backups:            cfg.Backups,
 	}
 	if cfg.Bus != nil {
 		h.broker = newBroker(cfg.Bus)
@@ -140,6 +144,13 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 			r.Get("/analytics/spend", h.getSpendAnalytics)
 			r.Get("/analytics/highlights", h.getHighlightsAnalytics)
 			r.Get("/analytics/uptime", h.getUptimeAnalytics)
+
+			if h.backups != nil {
+				r.Get("/admin/backup", h.getBackupStatus)
+				r.Post("/admin/backup", h.runBackup)
+				r.Put("/admin/backup/config", h.configureBackup)
+				r.Get("/admin/backup/download", h.downloadBackup)
+			}
 		})
 
 		// JWT-only user endpoints

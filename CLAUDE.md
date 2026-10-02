@@ -66,13 +66,14 @@ sodaTracker/
 │   ├── auth/                  # API key middleware + JWT middleware (auth.go, jwt.go)
 │   ├── config/                # Env-based config loading
 │   ├── logging/               # slog setup (JSON/text handler, LOG_FORMAT env)
+│   ├── backup/                # Scheduled SQLite snapshots, pushed to a GitHub repo
 │   └── export/                # Dispense report export (CSV, PDF)
 ├── pkg/
 │   ├── gpio/                  # GPIO interface + mock implementation (rpi build tag for real GPIO)
 │   └── piagent/               # Agent logic, local SQLite cache, YAML config
 ├── web/                       # React frontend (Vite + Tailwind)
 │   └── src/
-│       ├── pages/             # CustomerDashboard, LoginPage, AdminDashboard, AlertsPage, SettingsPage (with RestockSection)
+│       ├── pages/             # CustomerDashboard, LoginPage, AdminDashboard, AlertsPage, SettingsPage (with RestockSection, BackupSection)
 │       │   └── analytics/     # AnalyticsLayout + Consumption/Products/Inventory/Spend/Predictions/Highlights/Uptime dashboards
 │       ├── components/        # AppShell (the one page frame: header with version, main), AdminLayout, StockGrid, ProtectedRoute
 │       ├── context/           # AuthContext (JWT token + user state, localStorage persistence)
@@ -300,6 +301,10 @@ Pin mappings are YAML-only. Deployment-specific fields have env overrides
 | GET | `/api/v1/analytics/spend` | API Key or JWT | Spend over time, by product, projection | Done |
 | GET | `/api/v1/analytics/highlights` | API Key or JWT | First/last can times, records, soda/caffeine/aluminum totals, first-can product | Done |
 | GET | `/api/v1/analytics/uptime` | API Key or JWT | Pi agent online/offline hours, outages | Done |
+| GET | `/api/v1/admin/backup` | API Key or JWT | Backup status and settings (never the token) | Done |
+| POST | `/api/v1/admin/backup` | API Key or JWT | Snapshot now (and push) | Done |
+| PUT | `/api/v1/admin/backup/config` | API Key or JWT | Backup repo, token, schedule, keep | Done |
+| GET | `/api/v1/admin/backup/download` | API Key or JWT | Fresh gzipped snapshot | Done |
 | CRUD | `/api/v1/webhooks` | JWT | Webhook subscriptions | Phase 3 |
 
 **Auth:** API key middleware accepts both `X-API-Key: <key>` and `Authorization: Bearer <key>` headers. The `APIKeyOrJWT` middleware on admin CRUD routes accepts either an API key or a valid JWT token, so both the Pi agent and the admin dashboard can call them.
@@ -333,6 +338,7 @@ Pin mappings are YAML-only. Deployment-specific fields have env overrides
 - **Live updates (SSE)** — `GET /api/v1/events` (`internal/api/stream.go`) streams bus events (`dispense`, `low_stock`, `out_of_stock`, `stock_cleared`, `agent_online`) as Server-Sent Events, behind `APIKeyOrJWT`. A `broker` subscribes to the bus once and fans out to per-connection buffered channels, dropping rather than blocking, because the bus calls subscribers synchronously from the publishing request. The handler clears the server's 15s `WriteTimeout` with `http.ResponseController`, sends a keepalive comment every 20s, ends a JWT stream when the token expires, and ends all streams when `RouterConfig.StreamsDone` closes (`cmd/server` closes it via `RegisterOnShutdown`, or `Shutdown` would wait on them). The browser reads it with `fetch` (`streamEvents` in `web/src/api/client.ts`), not `EventSource`, which can't send the Authorization header. `LiveUpdatesProvider` (`web/src/context/LiveUpdates.tsx`) holds one stream while logged in, reconnects with backoff, invalidates every query whose key contains the event's `machineId`, and refetches everything after a reconnect. `usePollInterval(ms)` slows polling to 60s while the stream is up; logged-out visitors poll as before. The header shows Live/Reconnecting.
 - **Pi agent heartbeat** — the agent POSTs `/agents/heartbeat` every `heartbeatMs` (30s) from its own goroutine. `internal/service/agents.go` stores beats as `agent_sessions` rows (an unbroken run of beats, `started_at`..`last_seen`, updated each beat) and starts a new session, publishing `agent_online`, when a beat comes more than `AgentOfflineAfter` (90s) after the last. `GET /machines/:id/status` includes `agent: {online, lastSeen}`; the web app shows agent history on Analytics → Uptime.
 - **Highlights and uptime analytics** — `/admin/analytics/highlights` and `/uptime`, same query parameters as the other four. Highlights (`analytics_highlights.go`): average time of each day's first and last can, the range's earliest and latest can (the records among those), busiest day and clock hour, totals for ounces, caffeine and aluminum (14.2 g per 12 oz can, scaled by size), and which product is each day's first can (pie). Uptime (`analytics_uptime.go`) replays `agent_sessions`: a session is online from first to last beat, the last one runs to `to` while its beat is recent, the gaps are outages, and time before the first-ever beat is untracked. The pie shows only tracked time; the stacked bars include untracked. Heartbeats began with v0.4.0 (2026-10-01), so earlier time is untracked.
+- **Backups** — `internal/backup.Manager` (started by `cmd/server`) takes a snapshot every `intervalHours` (default 24, 0 = off), checked hourly and at startup, gzips it into `BACKUP_DIR` (default `backups/` beside the DB, i.e. `/data/backups`), keeps `keep` (default 30), and pushes it to `snapshots/<year>/` in a GitHub repo through the Contents API (`PUT /repos/:repo/contents/...`, no git). Repo, token, interval and keep live in the `settings` table (`store.GetSetting/SetSetting`) and are edited on Settings → Backups. `Configure` checks a new repo/token with `GET /repos/:repo` before saving. The token is a **secret** setting: never returned by the API, and `store.Snapshot` (`VACUUM INTO`, then delete secret settings from the copy and vacuum it) leaves it out of every snapshot. Push status (last push, last error) is in `backups/state.json`; failed pushes retry hourly; `stale` (last attempt failed, or no push in 36h) shows on the Alerts page and in the nav badge. Restore procedure is in the README. Reset All Data keeps settings.
 - **Swagger/OpenAPI** — Generated by `swaggo/swag` v2 from Go comment annotations. `internal/api/router.go` has the general API info block (title, version, security definitions). Each handler in `handlers.go` has `@Summary`, `@Description`, `@Tags`, `@Param`, `@Success`/`@Failure`, `@Security`, and `@Router` annotations. `internal/api/dto.go` defines named response types (`ErrorResponse`, `HealthResponse`, `LoginRequest`, `LoginResponse`, `DeleteResponse`, `CostResponse`) for swag reference. Domain and service types have `example` struct tags. Generated docs (`internal/api/docs/`) are committed. Swagger UI served at `/swagger/*` via `swaggo/http-swagger/v2`. Regenerate with `make swagger`.
 
 ## Test Structure

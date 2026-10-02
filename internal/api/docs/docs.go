@@ -16,6 +16,146 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/backup": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Local snapshots, the last push to the backup repo, and whether the backup is stale",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Backup status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_backup.Status"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Takes a snapshot, prunes old ones, and pushes it to the backup repo when one is configured",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Back up now",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_backup.Status"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/backup/config": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sets the GitHub repo and token snapshots are pushed to, the snapshot interval (0 = off) and how many local snapshots to keep. Omit token to keep the stored one, or send \"\" to clear it. A new repo or token is checked against GitHub before it's saved. The token is never returned.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Configure backups",
+                "parameters": [
+                    {
+                        "description": "Backup settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_backup.Update"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_backup.Status"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/backup/download": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a fresh gzipped SQLite snapshot of the whole database. It isn't kept or pushed.",
+                "produces": [
+                    "application/gzip"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Download a backup",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/cost": {
             "get": {
                 "security": [
@@ -157,6 +297,57 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agents/heartbeat": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "The Pi agent calls this every 30s so dashboards can show when it goes offline.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dispenses"
+                ],
+                "summary": "Pi agent heartbeat",
+                "parameters": [
+                    {
+                        "description": "Heartbeat",
+                        "name": "heartbeat",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.HeartbeatRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/internal_api.ErrorResponse"
                         }
@@ -339,6 +530,77 @@ const docTemplate = `{
                 }
             }
         },
+        "/analytics/highlights": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records and habits: average and record first/last can of the day, busiest day and hour, soda, caffeine and aluminum totals, and which product is dispensed first each day.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics"
+                ],
+                "summary": "Highlights",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine ID",
+                        "name": "machineId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 start (default: 30 days before to)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 end (default and maximum: now)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IANA timezone for days and hours (default: UTC)",
+                        "name": "tz",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.HighlightsAnalytics"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/analytics/inventory": {
             "get": {
                 "security": [
@@ -347,7 +609,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Stock levels over time rebuilt from restocks and dispenses, hours each slot sat empty, restock intervals, and sell-through.",
+                "description": "Stock levels over time rebuilt from restocks and dispenses, hours each slot sat empty, restock intervals, and the share of restocked cans dispensed before the next restock.",
                 "produces": [
                     "application/json"
                 ],
@@ -570,6 +832,83 @@ const docTemplate = `{
                 }
             }
         },
+        "/analytics/uptime": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Hours the Pi agent was heartbeating (online), silent (offline: dispenses not counted) or not yet tracked, per bucket and in total, with the list of outages.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics"
+                ],
+                "summary": "Pi agent uptime",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine ID",
+                        "name": "machineId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 start (default: 30 days before to)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 end (default and maximum: now)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IANA timezone for buckets (default: UTC)",
+                        "name": "tz",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "day, week or month (default: from window length)",
+                        "name": "bucket",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.UptimeAnalytics"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Authenticates a user and returns a JWT token",
@@ -673,9 +1012,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/events": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Server-Sent Events stream of dispense, stock alert, restock and agent events. Each event's data is the bus event JSON, including machineId. A JWT stream ends when the token expires.",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Live event stream",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
-                "description": "Returns API health status",
+                "description": "Returns API health status and the running release version",
                 "produces": [
                     "application/json"
                 ],
@@ -1427,7 +1797,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Deletes a product by ID",
+                "description": "Deletes a product by ID. Fails with 409 if a slot still holds the product.",
                 "produces": [
                     "application/json"
                 ],
@@ -1449,6 +1819,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_api.DeleteResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
                         }
                     },
                     "500": {
@@ -1526,6 +1902,100 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "github_com_jeffwnelson_sodatracker_internal_backup.File": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "sodatracker-20261002T030000Z.db.gz"
+                },
+                "size": {
+                    "type": "integer",
+                    "example": 24576
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_backup.Status": {
+            "type": "object",
+            "properties": {
+                "intervalHours": {
+                    "type": "integer",
+                    "example": 24
+                },
+                "keep": {
+                    "type": "integer",
+                    "example": 30
+                },
+                "lastError": {
+                    "type": "string"
+                },
+                "lastErrorAt": {
+                    "type": "string"
+                },
+                "lastPushAt": {
+                    "type": "string"
+                },
+                "lastPushedFile": {
+                    "type": "string"
+                },
+                "pushEnabled": {
+                    "type": "boolean"
+                },
+                "repo": {
+                    "type": "string",
+                    "example": "jeffwnelson/sodatracker-backups"
+                },
+                "snapshots": {
+                    "description": "Snapshots are the local snapshots, newest first.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_backup.File"
+                    }
+                },
+                "stale": {
+                    "description": "Stale means the last snapshot or push failed, or the last push is\nolder than StaleAfter.",
+                    "type": "boolean"
+                },
+                "tokenSet": {
+                    "description": "TokenSet says whether a token is stored. The token itself is never\nreturned.",
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_backup.Update": {
+            "type": "object",
+            "properties": {
+                "intervalHours": {
+                    "type": "integer",
+                    "example": 24
+                },
+                "keep": {
+                    "type": "integer",
+                    "example": 30
+                },
+                "repo": {
+                    "type": "string",
+                    "example": "jeffwnelson/sodatracker-backups"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_domain.AgentStatus": {
+            "type": "object",
+            "properties": {
+                "lastSeen": {
+                    "type": "string"
+                },
+                "online": {
+                    "type": "boolean"
+                }
+            }
+        },
         "github_com_jeffwnelson_sodatracker_internal_domain.AlertConfig": {
             "type": "object",
             "properties": {
@@ -1651,6 +2121,9 @@ const docTemplate = `{
         "github_com_jeffwnelson_sodatracker_internal_domain.MachineStatus": {
             "type": "object",
             "properties": {
+                "agent": {
+                    "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.AgentStatus"
+                },
                 "machine": {
                     "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Machine"
                 },
@@ -1665,6 +2138,15 @@ const docTemplate = `{
         "github_com_jeffwnelson_sodatracker_internal_domain.Product": {
             "type": "object",
             "properties": {
+                "caffeineMg": {
+                    "type": "number",
+                    "example": 34
+                },
+                "color": {
+                    "description": "Color is a \"#rrggbb\" hex used for the product's dot and chart series.\nEmpty means the dashboard picks one from its default palette.",
+                    "type": "string",
+                    "example": "#e4002b"
+                },
                 "costPerCan": {
                     "type": "number",
                     "example": 0.35
@@ -1684,6 +2166,11 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "Coca-Cola"
+                },
+                "sizeOz": {
+                    "description": "SizeOz is the can's volume in US fluid ounces; createProduct defaults\nit to 12. CaffeineMg is per can; 0 for caffeine-free or unknown.",
+                    "type": "number",
+                    "example": 12
                 },
                 "upc": {
                     "type": "string",
@@ -1852,6 +2339,11 @@ const docTemplate = `{
                 "to": {
                     "type": "string",
                     "example": "2026-09-24T12:00:00-05:00"
+                },
+                "trackingSince": {
+                    "description": "TrackingSince is the machine's first dispense or restock, ever; null\nwith neither. Clients use it to tell a quiet range from one before\ntracking began.",
+                    "type": "string",
+                    "example": "2026-09-10T07:12:00-05:00"
                 }
             }
         },
@@ -1928,6 +2420,19 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_jeffwnelson_sodatracker_internal_service.CountAt": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string",
+                    "example": "2026-09-16T00:00:00-05:00"
+                },
+                "count": {
+                    "type": "integer",
+                    "example": 19
+                }
+            }
+        },
         "github_com_jeffwnelson_sodatracker_internal_service.DaypartStat": {
             "type": "object",
             "properties": {
@@ -1981,6 +2486,46 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_jeffwnelson_sodatracker_internal_service.HighlightsAnalytics": {
+            "type": "object",
+            "properties": {
+                "aluminumLb": {
+                    "description": "AluminumLb is the cans' aluminum, as if every one is recycled.",
+                    "type": "number",
+                    "example": 2.8
+                },
+                "busiestDay": {
+                    "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.CountAt"
+                },
+                "busiestHour": {
+                    "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.CountAt"
+                },
+                "caffeineMg": {
+                    "type": "number",
+                    "example": 4120
+                },
+                "firstCan": {
+                    "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.TimeOfDay"
+                },
+                "firstCanProducts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductCount"
+                    }
+                },
+                "lastCan": {
+                    "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.TimeOfDay"
+                },
+                "ounces": {
+                    "description": "Totals for the window, from each product's can size and caffeine.",
+                    "type": "number",
+                    "example": 1092
+                },
+                "range": {
+                    "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange"
+                }
+            }
+        },
         "github_com_jeffwnelson_sodatracker_internal_service.InventoryAnalytics": {
             "type": "object",
             "properties": {
@@ -2026,11 +2571,6 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 4
                 },
-                "sellThrough": {
-                    "description": "SellThrough is the share of cans restocked in the window that were\ndispensed before that slot's next restock. Null with no restocks.",
-                    "type": "number",
-                    "example": 0.82
-                },
                 "stockoutHours": {
                     "type": "number",
                     "example": 41.5
@@ -2043,6 +2583,32 @@ const docTemplate = `{
                     "description": "UntrackedDispenses counts dispenses recorded while computed stock was\nalready zero: the slot held more cans than the last restock logged.",
                     "type": "integer",
                     "example": 2
+                },
+                "usedShare": {
+                    "description": "UsedShare is the share of cans restocked in the window that were\ndispensed before that slot's next restock. Null with no restocks.",
+                    "type": "number",
+                    "example": 0.82
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.Outage": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-03T14:02:00-05:00"
+                },
+                "hours": {
+                    "type": "number",
+                    "example": 0.6
+                },
+                "ongoing": {
+                    "description": "Ongoing means the agent is still offline; To is the end of the window.",
+                    "type": "boolean"
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-09-03T14:40:00-05:00"
                 }
             }
         },
@@ -2069,6 +2635,23 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductSeriesPoint"
                     }
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.ProductCount": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "example": 9
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Diet Coke"
+                },
+                "productId": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
@@ -2251,10 +2834,6 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 2
                 },
-                "sellThrough": {
-                    "type": "number",
-                    "example": 0.79
-                },
                 "stockoutHours": {
                     "type": "number",
                     "example": 12.5
@@ -2266,6 +2845,10 @@ const docTemplate = `{
                 "untrackedDispenses": {
                     "type": "integer",
                     "example": 0
+                },
+                "usedShare": {
+                    "type": "number",
+                    "example": 0.79
                 }
             }
         },
@@ -2361,6 +2944,19 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_jeffwnelson_sodatracker_internal_service.TimeOfDay": {
+            "type": "object",
+            "properties": {
+                "avgMinute": {
+                    "type": "integer",
+                    "example": 512
+                },
+                "record": {
+                    "type": "string",
+                    "example": "2026-09-14T06:58:00-05:00"
+                }
+            }
+        },
         "github_com_jeffwnelson_sodatracker_internal_service.TimeSeriesPoint": {
             "type": "object",
             "properties": {
@@ -2372,6 +2968,78 @@ const docTemplate = `{
                     "description": "RFC3339 truncated to hour",
                     "type": "string",
                     "example": "2026-01-15T10:00:00Z"
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.UptimeAnalytics": {
+            "type": "object",
+            "properties": {
+                "longestOutageHours": {
+                    "type": "number",
+                    "example": 2.5
+                },
+                "offlineHours": {
+                    "type": "number",
+                    "example": 3.1
+                },
+                "onlineHours": {
+                    "type": "number",
+                    "example": 712.4
+                },
+                "outageList": {
+                    "description": "OutageList is newest first, at most 50.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.Outage"
+                    }
+                },
+                "outages": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "range": {
+                    "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange"
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.UptimePoint"
+                    }
+                },
+                "trackingSince": {
+                    "description": "TrackingSince is the agent's first recorded heartbeat, ever.",
+                    "type": "string",
+                    "example": "2026-10-01T01:30:27Z"
+                },
+                "untrackedHours": {
+                    "type": "number",
+                    "example": 0
+                },
+                "uptime": {
+                    "description": "Uptime is online / (online + offline); null when nothing was tracked.",
+                    "type": "number",
+                    "example": 0.996
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.UptimePoint": {
+            "type": "object",
+            "properties": {
+                "bucket": {
+                    "type": "string",
+                    "example": "2026-09-01T00:00:00-05:00"
+                },
+                "offlineHours": {
+                    "type": "number",
+                    "example": 0.5
+                },
+                "onlineHours": {
+                    "type": "number",
+                    "example": 23.5
+                },
+                "untrackedHours": {
+                    "type": "number",
+                    "example": 0
                 }
             }
         },
@@ -2408,6 +3076,19 @@ const docTemplate = `{
                 "status": {
                     "type": "string",
                     "example": "ok"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "v0.2.0"
+                }
+            }
+        },
+        "internal_api.HeartbeatRequest": {
+            "type": "object",
+            "properties": {
+                "machineId": {
+                    "type": "string",
+                    "example": "machine-1"
                 }
             }
         },

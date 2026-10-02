@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { AppShell } from "./AppShell";
 import { headerItemClass } from "./headerItemClass";
 import { useActiveAlerts } from "../api/machine";
+import { useBackupStatus } from "../api/backup";
 
 const navLinks = [
   { to: "/admin", label: "Dashboard", end: true },
@@ -15,7 +16,9 @@ export function AdminLayout() {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const alertCount = useActiveAlerts().data?.length ?? 0;
+  // A failing backup counts as an alert too; the Alerts page shows it.
+  const alertCount =
+    (useActiveAlerts().data?.length ?? 0) + (useBackupStatus().data?.stale ? 1 : 0);
 
   const handleLogout = () => {
     logout();

@@ -1,5 +1,74 @@
 basePath: /api/v1
 definitions:
+  github_com_jeffwnelson_sodatracker_internal_backup.File:
+    properties:
+      createdAt:
+        type: string
+      name:
+        example: sodatracker-20261002T030000Z.db.gz
+        type: string
+      size:
+        example: 24576
+        type: integer
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_backup.Status:
+    properties:
+      intervalHours:
+        example: 24
+        type: integer
+      keep:
+        example: 30
+        type: integer
+      lastError:
+        type: string
+      lastErrorAt:
+        type: string
+      lastPushAt:
+        type: string
+      lastPushedFile:
+        type: string
+      pushEnabled:
+        type: boolean
+      repo:
+        example: jeffwnelson/sodatracker-backups
+        type: string
+      snapshots:
+        description: Snapshots are the local snapshots, newest first.
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_backup.File'
+        type: array
+      stale:
+        description: |-
+          Stale means the last snapshot or push failed, or the last push is
+          older than StaleAfter.
+        type: boolean
+      tokenSet:
+        description: |-
+          TokenSet says whether a token is stored. The token itself is never
+          returned.
+        type: boolean
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_backup.Update:
+    properties:
+      intervalHours:
+        example: 24
+        type: integer
+      keep:
+        example: 30
+        type: integer
+      repo:
+        example: jeffwnelson/sodatracker-backups
+        type: string
+      token:
+        type: string
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_domain.AgentStatus:
+    properties:
+      lastSeen:
+        type: string
+      online:
+        type: boolean
+    type: object
   github_com_jeffwnelson_sodatracker_internal_domain.AlertConfig:
     properties:
       enabled:
@@ -91,6 +160,8 @@ definitions:
     type: object
   github_com_jeffwnelson_sodatracker_internal_domain.MachineStatus:
     properties:
+      agent:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.AgentStatus'
       machine:
         $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_domain.Machine'
       slots:
@@ -100,6 +171,15 @@ definitions:
     type: object
   github_com_jeffwnelson_sodatracker_internal_domain.Product:
     properties:
+      caffeineMg:
+        example: 34
+        type: number
+      color:
+        description: |-
+          Color is a "#rrggbb" hex used for the product's dot and chart series.
+          Empty means the dashboard picks one from its default palette.
+        example: '#e4002b'
+        type: string
       costPerCan:
         example: 0.35
         type: number
@@ -115,6 +195,12 @@ definitions:
       name:
         example: Coca-Cola
         type: string
+      sizeOz:
+        description: |-
+          SizeOz is the can's volume in US fluid ounces; createProduct defaults
+          it to 12. CaffeineMg is per can; 0 for caffeine-free or unknown.
+        example: 12
+        type: number
       upc:
         example: "049000042566"
         type: string
@@ -235,6 +321,13 @@ definitions:
       to:
         example: "2026-09-24T12:00:00-05:00"
         type: string
+      trackingSince:
+        description: |-
+          TrackingSince is the machine's first dispense or restock, ever; null
+          with neither. Clients use it to tell a quiet range from one before
+          tracking began.
+        example: "2026-09-10T07:12:00-05:00"
+        type: string
     type: object
   github_com_jeffwnelson_sodatracker_internal_service.ConsumptionAnalytics:
     properties:
@@ -292,6 +385,15 @@ definitions:
         example: 7.4
         type: number
     type: object
+  github_com_jeffwnelson_sodatracker_internal_service.CountAt:
+    properties:
+      at:
+        example: "2026-09-16T00:00:00-05:00"
+        type: string
+      count:
+        example: 19
+        type: integer
+    type: object
   github_com_jeffwnelson_sodatracker_internal_service.DaypartStat:
     properties:
       counts:
@@ -329,6 +431,34 @@ definitions:
         example: 150
         type: integer
     type: object
+  github_com_jeffwnelson_sodatracker_internal_service.HighlightsAnalytics:
+    properties:
+      aluminumLb:
+        description: AluminumLb is the cans' aluminum, as if every one is recycled.
+        example: 2.8
+        type: number
+      busiestDay:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.CountAt'
+      busiestHour:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.CountAt'
+      caffeineMg:
+        example: 4120
+        type: number
+      firstCan:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.TimeOfDay'
+      firstCanProducts:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductCount'
+        type: array
+      lastCan:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.TimeOfDay'
+      ounces:
+        description: Totals for the window, from each product's can size and caffeine.
+        example: 1092
+        type: number
+      range:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange'
+    type: object
   github_com_jeffwnelson_sodatracker_internal_service.InventoryAnalytics:
     properties:
       range:
@@ -360,12 +490,6 @@ definitions:
       restockCount:
         example: 4
         type: integer
-      sellThrough:
-        description: |-
-          SellThrough is the share of cans restocked in the window that were
-          dispensed before that slot's next restock. Null with no restocks.
-        example: 0.82
-        type: number
       stockoutHours:
         example: 41.5
         type: number
@@ -378,6 +502,28 @@ definitions:
           already zero: the slot held more cans than the last restock logged.
         example: 2
         type: integer
+      usedShare:
+        description: |-
+          UsedShare is the share of cans restocked in the window that were
+          dispensed before that slot's next restock. Null with no restocks.
+        example: 0.82
+        type: number
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.Outage:
+    properties:
+      from:
+        example: "2026-09-03T14:02:00-05:00"
+        type: string
+      hours:
+        example: 0.6
+        type: number
+      ongoing:
+        description: Ongoing means the agent is still offline; To is the end of the
+          window.
+        type: boolean
+      to:
+        example: "2026-09-03T14:40:00-05:00"
+        type: string
     type: object
   github_com_jeffwnelson_sodatracker_internal_service.ProductAnalytics:
     properties:
@@ -395,6 +541,18 @@ definitions:
         items:
           $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductSeriesPoint'
         type: array
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.ProductCount:
+    properties:
+      count:
+        example: 9
+        type: integer
+      name:
+        example: Diet Coke
+        type: string
+      productId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
     type: object
   github_com_jeffwnelson_sodatracker_internal_service.ProductRanking:
     properties:
@@ -530,9 +688,6 @@ definitions:
       restocks:
         example: 2
         type: integer
-      sellThrough:
-        example: 0.79
-        type: number
       stockoutHours:
         example: 12.5
         type: number
@@ -542,6 +697,9 @@ definitions:
       untrackedDispenses:
         example: 0
         type: integer
+      usedShare:
+        example: 0.79
+        type: number
     type: object
   github_com_jeffwnelson_sodatracker_internal_service.SpendAnalytics:
     properties:
@@ -617,6 +775,15 @@ definitions:
           when the slot had not been restocked yet.
         type: object
     type: object
+  github_com_jeffwnelson_sodatracker_internal_service.TimeOfDay:
+    properties:
+      avgMinute:
+        example: 512
+        type: integer
+      record:
+        example: "2026-09-14T06:58:00-05:00"
+        type: string
+    type: object
   github_com_jeffwnelson_sodatracker_internal_service.TimeSeriesPoint:
     properties:
       count:
@@ -626,6 +793,59 @@ definitions:
         description: RFC3339 truncated to hour
         example: "2026-01-15T10:00:00Z"
         type: string
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.UptimeAnalytics:
+    properties:
+      longestOutageHours:
+        example: 2.5
+        type: number
+      offlineHours:
+        example: 3.1
+        type: number
+      onlineHours:
+        example: 712.4
+        type: number
+      outageList:
+        description: OutageList is newest first, at most 50.
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.Outage'
+        type: array
+      outages:
+        example: 2
+        type: integer
+      range:
+        $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.AnalyticsRange'
+      series:
+        items:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.UptimePoint'
+        type: array
+      trackingSince:
+        description: TrackingSince is the agent's first recorded heartbeat, ever.
+        example: "2026-10-01T01:30:27Z"
+        type: string
+      untrackedHours:
+        example: 0
+        type: number
+      uptime:
+        description: Uptime is online / (online + offline); null when nothing was
+          tracked.
+        example: 0.996
+        type: number
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_service.UptimePoint:
+    properties:
+      bucket:
+        example: "2026-09-01T00:00:00-05:00"
+        type: string
+      offlineHours:
+        example: 0.5
+        type: number
+      onlineHours:
+        example: 23.5
+        type: number
+      untrackedHours:
+        example: 0
+        type: number
     type: object
   internal_api.CostResponse:
     properties:
@@ -649,6 +869,15 @@ definitions:
     properties:
       status:
         example: ok
+        type: string
+      version:
+        example: v0.2.0
+        type: string
+    type: object
+  internal_api.HeartbeatRequest:
+    properties:
+      machineId:
+        example: machine-1
         type: string
     type: object
   internal_api.LoginRequest:
@@ -675,6 +904,100 @@ info:
   title: SodaTracker API
   version: "1.0"
 paths:
+  /admin/backup:
+    get:
+      description: Local snapshots, the last push to the backup repo, and whether
+        the backup is stale
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_backup.Status'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Backup status
+      tags:
+      - Admin
+    post:
+      description: Takes a snapshot, prunes old ones, and pushes it to the backup
+        repo when one is configured
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_backup.Status'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Back up now
+      tags:
+      - Admin
+  /admin/backup/config:
+    put:
+      consumes:
+      - application/json
+      description: Sets the GitHub repo and token snapshots are pushed to, the snapshot
+        interval (0 = off) and how many local snapshots to keep. Omit token to keep
+        the stored one, or send "" to clear it. A new repo or token is checked against
+        GitHub before it's saved. The token is never returned.
+      parameters:
+      - description: Backup settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_backup.Update'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_backup.Status'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Configure backups
+      tags:
+      - Admin
+  /admin/backup/download:
+    get:
+      description: Returns a fresh gzipped SQLite snapshot of the whole database.
+        It isn't kept or pushed.
+      produces:
+      - application/gzip
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Download a backup
+      tags:
+      - Admin
   /admin/cost:
     get:
       description: Returns the total cost of dispenses for a machine over a time period
@@ -770,6 +1093,39 @@ paths:
       summary: Get dispense statistics
       tags:
       - Admin
+  /agents/heartbeat:
+    post:
+      consumes:
+      - application/json
+      description: The Pi agent calls this every 30s so dashboards can show when it
+        goes offline.
+      parameters:
+      - description: Heartbeat
+        in: body
+        name: heartbeat
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.HeartbeatRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Pi agent heartbeat
+      tags:
+      - Dispenses
   /alerts/{id}:
     delete:
       description: Deletes an alert configuration by ID
@@ -885,10 +1241,59 @@ paths:
       summary: Consumption analytics
       tags:
       - Analytics
+  /analytics/highlights:
+    get:
+      description: 'Records and habits: average and record first/last can of the day,
+        busiest day and hour, soda, caffeine and aluminum totals, and which product
+        is dispensed first each day.'
+      parameters:
+      - description: Machine ID
+        in: query
+        name: machineId
+        required: true
+        type: string
+      - description: 'RFC3339 start (default: 30 days before to)'
+        in: query
+        name: from
+        type: string
+      - description: 'RFC3339 end (default and maximum: now)'
+        in: query
+        name: to
+        type: string
+      - description: 'IANA timezone for days and hours (default: UTC)'
+        in: query
+        name: tz
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.HighlightsAnalytics'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Highlights
+      tags:
+      - Analytics
   /analytics/inventory:
     get:
       description: Stock levels over time rebuilt from restocks and dispenses, hours
-        each slot sat empty, restock intervals, and sell-through.
+        each slot sat empty, restock intervals, and the share of restocked cans dispensed
+        before the next restock.
       parameters:
       - description: Machine ID
         in: query
@@ -1039,6 +1444,58 @@ paths:
       summary: Spend analytics
       tags:
       - Analytics
+  /analytics/uptime:
+    get:
+      description: 'Hours the Pi agent was heartbeating (online), silent (offline:
+        dispenses not counted) or not yet tracked, per bucket and in total, with the
+        list of outages.'
+      parameters:
+      - description: Machine ID
+        in: query
+        name: machineId
+        required: true
+        type: string
+      - description: 'RFC3339 start (default: 30 days before to)'
+        in: query
+        name: from
+        type: string
+      - description: 'RFC3339 end (default and maximum: now)'
+        in: query
+        name: to
+        type: string
+      - description: 'IANA timezone for buckets (default: UTC)'
+        in: query
+        name: tz
+        type: string
+      - description: 'day, week or month (default: from window length)'
+        in: query
+        name: bucket
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.UptimeAnalytics'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Pi agent uptime
+      tags:
+      - Analytics
   /auth/login:
     post:
       consumes:
@@ -1106,9 +1563,29 @@ paths:
       summary: Register a dispense event
       tags:
       - Dispenses
+  /events:
+    get:
+      description: Server-Sent Events stream of dispense, stock alert, restock and
+        agent events. Each event's data is the bus event JSON, including machineId.
+        A JWT stream ends when the token expires.
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: Live event stream
+      tags:
+      - System
   /health:
     get:
-      description: Returns API health status
+      description: Returns API health status and the running release version
       produces:
       - application/json
       responses:
@@ -1595,7 +2072,8 @@ paths:
       - Products
   /products/{id}:
     delete:
-      description: Deletes a product by ID
+      description: Deletes a product by ID. Fails with 409 if a slot still holds the
+        product.
       parameters:
       - description: Product ID
         in: path
@@ -1609,6 +2087,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/internal_api.DeleteResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
