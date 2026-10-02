@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.15.0](https://github.com/jeffwnelson/sodatracker/compare/179266a051637869c4edc7d8f1db19acbbd70bc4..v0.15.0) - 2026-10-02
+#### Features
+- (**settings**) configure Slack from the Settings page - ([179266a](https://github.com/jeffwnelson/sodatracker/commit/179266a051637869c4edc7d8f1db19acbbd70bc4)) - Jeff Nelson
+
+- - -
+
 ## [v0.14.0](https://github.com/jeffwnelson/sodatracker/compare/0fc8910a599e8c91b343f142f057635ad80b9fd7..v0.14.0) - 2026-10-02
 #### Features
 - (**deploy**) serve the dashboard only over HTTPS - ([3b15a90](https://github.com/jeffwnelson/sodatracker/commit/3b15a90c39bacfa7b1f7f6844f4f282b6c01ec07)) - Jeff Nelson
