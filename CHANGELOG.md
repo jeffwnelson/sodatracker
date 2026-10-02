@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.13.0](https://github.com/jeffwnelson/sodatracker/compare/f2a6aff11ea2e4e699c815b9c40eafa24ffb2c1f..v0.13.0) - 2026-10-02
+#### Features
+- (**web**) iPhone-ready layout and Add to Home Screen - ([f2a6aff](https://github.com/jeffwnelson/sodatracker/commit/f2a6aff11ea2e4e699c815b9c40eafa24ffb2c1f)) - Jeff Nelson
+
+- - -
+
 ## [v0.12.0](https://github.com/jeffwnelson/sodatracker/compare/1b5ec6d37fe4441173c2cb61b1e0ed6200ed9205..v0.12.0) - 2026-10-02
 #### Features
 - (**analytics**) fit the three highlight pies on one row - ([1b5ec6d](https://github.com/jeffwnelson/sodatracker/commit/1b5ec6d37fe4441173c2cb61b1e0ed6200ed9205)) - Jeff Nelson
