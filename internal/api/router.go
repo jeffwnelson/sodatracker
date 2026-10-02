@@ -31,6 +31,7 @@ import (
 	"github.com/jeffwnelson/sodatracker/internal/events"
 	"github.com/jeffwnelson/sodatracker/internal/service"
 	"github.com/jeffwnelson/sodatracker/internal/slackcmd"
+	"github.com/jeffwnelson/sodatracker/internal/slackconf"
 	"github.com/jeffwnelson/sodatracker/internal/store"
 
 	_ "github.com/jeffwnelson/sodatracker/internal/api/docs"
@@ -52,6 +53,8 @@ type RouterConfig struct {
 	StreamsDone <-chan struct{}
 	// Backups serves /admin/backup. Without it those routes aren't registered.
 	Backups *backup.Manager
+	// Slack serves /admin/slack. Without it those routes aren't registered.
+	Slack *slackconf.Manager
 }
 
 // Go's mime table lacks the web app manifest, which it would serve as
@@ -82,6 +85,7 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 		slackCmds:          slackcmd.New(st, svc),
 		streamsDone:        cfg.StreamsDone,
 		backups:            cfg.Backups,
+		slack:              cfg.Slack,
 	}
 	if cfg.Bus != nil {
 		h.broker = newBroker(cfg.Bus)
@@ -153,6 +157,12 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 			r.Get("/analytics/spend", h.getSpendAnalytics)
 			r.Get("/analytics/highlights", h.getHighlightsAnalytics)
 			r.Get("/analytics/uptime", h.getUptimeAnalytics)
+
+			if h.slack != nil {
+				r.Get("/admin/slack", h.getSlackSettings)
+				r.Put("/admin/slack", h.updateSlackSettings)
+				r.Post("/admin/slack/test", h.testSlack)
+			}
 
 			if h.backups != nil {
 				r.Get("/admin/backup", h.getBackupStatus)

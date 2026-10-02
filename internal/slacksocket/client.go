@@ -44,6 +44,17 @@ type Client struct {
 	handle   Handler
 	http     *http.Client
 	apiBase  string // overridden in tests
+
+	// OnState, if set, is told when Slack says hello (connected, nil) and
+	// when a connection attempt fails (false, the error), so a settings
+	// page can show whether commands are live.
+	OnState func(connected bool, err error)
+}
+
+func (c *Client) state(connected bool, err error) {
+	if c.OnState != nil {
+		c.OnState(connected, err)
+	}
 }
 
 func New(appToken string, handle Handler) *Client {
@@ -72,6 +83,7 @@ func (c *Client) Run(ctx context.Context) {
 			continue // routine rotation: reconnect straight away
 		}
 		slog.Warn("slack socket mode connection failed", "error", err, "retryIn", backoff.String())
+		c.state(false, err)
 		select {
 		case <-ctx.Done():
 			return
@@ -129,6 +141,7 @@ func (c *Client) connectOnce(ctx context.Context) (connected bool, err error) {
 		case "hello":
 			connected = true
 			slog.Info("slack socket mode connected")
+			c.state(true, nil)
 		case "disconnect":
 			slog.Info("slack socket mode reconnecting", "reason", env.Reason)
 			conn.Close(websocket.StatusNormalClosure, "")

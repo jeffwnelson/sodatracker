@@ -371,3 +371,18 @@ export interface ProductCount {
   name: string;
   count: number;
 }
+
+/** GET /admin/slack. The webhook and token are never returned. */
+export interface SlackStatus {
+  webhookSet: boolean;
+  appTokenSet: boolean;
+  /** The /soda Socket Mode connection. */
+  commands: "off" | "connecting" | "connected" | "error";
+  commandsError?: string;
+}
+
+/** PUT /admin/slack. Omit a field to keep it; "" clears it. */
+export interface SlackUpdate {
+  webhookUrl?: string;
+  appToken?: string;
+}

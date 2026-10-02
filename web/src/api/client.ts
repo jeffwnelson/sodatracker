@@ -17,6 +17,8 @@ import type {
   BackupStatus,
   BackupUpdate,
   QuietSettings,
+  SlackStatus,
+  SlackUpdate,
 } from "./types";
 
 const BASE = "/api/v1";
@@ -329,6 +331,19 @@ export function listAlertEvents(
 // Admin
 export function resetAllData(): Promise<{ status: string }> {
   return deleteJSONAuth("/admin/reset");
+}
+
+// Slack settings
+export function getSlackSettings(): Promise<SlackStatus> {
+  return fetchJSONAuth("/admin/slack");
+}
+
+export function updateSlackSettings(u: SlackUpdate): Promise<SlackStatus> {
+  return putJSONAuth("/admin/slack", u);
+}
+
+export function testSlack(): Promise<SlackStatus> {
+  return postJSONAuth("/admin/slack/test", {});
 }
 
 // Quiet alert settings

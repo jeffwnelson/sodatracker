@@ -16,12 +16,22 @@ import (
 // while an alert is active and clears it on restock — so a slot that keeps
 // dispensing past its threshold produces one message, not one per can.
 func RegisterSlack(bus events.EventBus, st store.Store, c *SlackClient) {
-	if c == nil || bus == nil {
+	if c == nil {
+		return
+	}
+	RegisterSlackSource(bus, st, func() *SlackClient { return c })
+}
+
+// RegisterSlackSource is RegisterSlack for a webhook that can change while
+// the server runs: each message goes to whatever client source returns,
+// and a nil client (no webhook set) drops it.
+func RegisterSlackSource(bus events.EventBus, st store.Store, source func() *SlackClient) {
+	if bus == nil {
 		return
 	}
 
 	post := func(ctx context.Context, m Message) error {
-		if err := c.Post(ctx, m); err != nil {
+		if err := source().Post(ctx, m); err != nil {
 			// A chat outage must never fail the dispense that triggered it.
 			slog.Error("slack notification failed", "error", err)
 		}

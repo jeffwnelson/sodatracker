@@ -24,7 +24,7 @@ import (
 	"github.com/jeffwnelson/sodatracker/internal/seed"
 	"github.com/jeffwnelson/sodatracker/internal/service"
 	"github.com/jeffwnelson/sodatracker/internal/slackcmd"
-	"github.com/jeffwnelson/sodatracker/internal/slacksocket"
+	"github.com/jeffwnelson/sodatracker/internal/slackconf"
 	"github.com/jeffwnelson/sodatracker/internal/store/sqlite"
 )
 
@@ -67,22 +67,20 @@ func main() {
 		}
 		return nil
 	})
-	// Wire: stock alerts → Slack. No-op unless SLACK_WEBHOOK_URL is set.
-	notify.RegisterSlack(bus, st, notify.NewSlack(cfg.SlackWebhookURL))
-	if cfg.SlackWebhookURL != "" {
-		slog.Info("Slack notifications enabled")
-	}
-
-	// /soda over Socket Mode: the server dials out to Slack, so commands work
-	// without the Pi being reachable from the internet.
+	// Slack: the webhook (alerts) and app token (/soda over Socket Mode,
+	// which dials out, so the Pi needn't be reachable) are edited on the
+	// Settings page. SLACK_WEBHOOK_URL and SLACK_APP_TOKEN are copied in
+	// once, on the first start that has them.
 	slackCtx, stopSlack := context.WithCancel(context.Background())
 	defer stopSlack()
-	if cfg.SlackAppToken != "" {
-		cmds := slackcmd.New(st, svc)
-		go slacksocket.New(cfg.SlackAppToken, func(ctx context.Context, _, text string) any {
-			return cmds.Run(ctx, text)
-		}).Run(slackCtx)
-		slog.Info("Slack commands enabled (Socket Mode)")
+	cmds := slackcmd.New(st, svc)
+	slack, err := slackconf.New(slackCtx, st, func(ctx context.Context, _, text string) any {
+		return cmds.Run(ctx, text)
+	}, cfg.SlackWebhookURL, cfg.SlackAppToken)
+	if err != nil {
+		slog.Error("Slack disabled", "error", err)
+	} else {
+		notify.RegisterSlackSource(bus, st, slack.Client)
 	}
 
 	// Backups. A failure here is logged, not fatal: the machine should keep
@@ -113,6 +111,7 @@ func main() {
 		Bus:                bus,
 		StreamsDone:        streamsDone,
 		Backups:            backups,
+		Slack:              slack,
 	})
 
 	srv := &http.Server{

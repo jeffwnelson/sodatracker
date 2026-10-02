@@ -885,6 +885,28 @@ definitions:
         example: 0
         type: number
     type: object
+  github_com_jeffwnelson_sodatracker_internal_slackconf.Status:
+    properties:
+      appTokenSet:
+        type: boolean
+      commands:
+        description: |-
+          Commands is the Socket Mode connection: off, connecting, connected
+          or error (with CommandsError).
+        example: connected
+        type: string
+      commandsError:
+        type: string
+      webhookSet:
+        type: boolean
+    type: object
+  github_com_jeffwnelson_sodatracker_internal_slackconf.Update:
+    properties:
+      appToken:
+        type: string
+      webhookUrl:
+        type: string
+    type: object
   internal_api.CostResponse:
     properties:
       cost:
@@ -1151,6 +1173,81 @@ paths:
       security:
       - BearerAuth: []
       summary: Reset all data
+      tags:
+      - Admin
+  /admin/slack:
+    get:
+      description: Whether the alert webhook and the Socket Mode app token are set,
+        and the /soda connection's state. The secrets are never returned.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_slackconf.Status'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Slack settings
+      tags:
+      - Admin
+    put:
+      consumes:
+      - application/json
+      description: Sets the incoming webhook URL (alerts) and the app-level token
+        (/soda over Socket Mode). Omit a field to keep it, or send "" to clear it.
+        Changes apply at once.
+      parameters:
+      - description: Slack settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_slackconf.Update'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_slackconf.Status'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Update Slack settings
+      tags:
+      - Admin
+  /admin/slack/test:
+    post:
+      description: Posts a test message to the configured webhook
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_slackconf.Status'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Send a Slack test message
       tags:
       - Admin
   /admin/stats:

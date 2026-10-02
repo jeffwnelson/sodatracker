@@ -13,11 +13,11 @@ import (
 // the day, and what goes at lunch. Null fields mean there were no
 // dispenses.
 type HighlightsAnalytics struct {
-	Range            AnalyticsRange `json:"range"`
-	FirstCan         *TimeOfDay     `json:"firstCan"`
-	LastCan          *TimeOfDay     `json:"lastCan"`
-	BusiestDay       *CountAt       `json:"busiestDay"`
-	BusiestHour      *CountAt       `json:"busiestHour"`
+	Range       AnalyticsRange `json:"range"`
+	FirstCan    *TimeOfDay     `json:"firstCan"`
+	LastCan     *TimeOfDay     `json:"lastCan"`
+	BusiestDay  *CountAt       `json:"busiestDay"`
+	BusiestHour *CountAt       `json:"busiestHour"`
 	// FirstCanProducts and LastCanProducts count days by the product of
 	// their first and last can. LunchProducts counts cans dispensed from
 	// LunchStartHour to LunchEndHour, local time.

@@ -326,6 +326,120 @@
                 }
             }
         },
+        "/admin/slack": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Whether the alert webhook and the Socket Mode app token are set, and the /soda connection's state. The secrets are never returned.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Slack settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_slackconf.Status"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sets the incoming webhook URL (alerts) and the app-level token (/soda over Socket Mode). Omit a field to keep it, or send \"\" to clear it. Changes apply at once.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Update Slack settings",
+                "parameters": [
+                    {
+                        "description": "Slack settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_slackconf.Update"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_slackconf.Status"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/slack/test": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Posts a test message to the configured webhook",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Send a Slack test message",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_slackconf.Status"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/stats": {
             "get": {
                 "security": [
@@ -3153,6 +3267,36 @@
                 "untrackedHours": {
                     "type": "number",
                     "example": 0
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_slackconf.Status": {
+            "type": "object",
+            "properties": {
+                "appTokenSet": {
+                    "type": "boolean"
+                },
+                "commands": {
+                    "description": "Commands is the Socket Mode connection: off, connecting, connected\nor error (with CommandsError).",
+                    "type": "string",
+                    "example": "connected"
+                },
+                "commandsError": {
+                    "type": "string"
+                },
+                "webhookSet": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_slackconf.Update": {
+            "type": "object",
+            "properties": {
+                "appToken": {
+                    "type": "string"
+                },
+                "webhookUrl": {
+                    "type": "string"
                 }
             }
         },

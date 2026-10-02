@@ -14,6 +14,7 @@ import type { Product, Machine } from "../api/types";
 import { useMachine } from "../api/machine";
 import { RestockSection } from "./RestockSection";
 import { BackupSection } from "./BackupSection";
+import { SlackSection } from "./SlackSection";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ProductDot } from "../components/ProductDot";
 import { PageHeader } from "../components/PageHeader";
@@ -31,6 +32,7 @@ export function SettingsPage() {
       <ProductsSection />
       <MachineSection />
       <SlotConfigSection />
+      <SlackSection />
       <BackupSection />
       <DangerZoneSection />
     </div>

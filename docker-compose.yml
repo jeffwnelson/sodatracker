@@ -21,6 +21,8 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-dev-admin-password}
       - STATIC_DIR=/app/static
       - LOG_FORMAT=json
+      # Slack's webhook and app token are set on the Settings page; these
+      # are copied in once, on the first start that has them.
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
       - SLACK_APP_TOKEN=${SLACK_APP_TOKEN:-}
       - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET:-}
