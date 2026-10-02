@@ -125,6 +125,10 @@ docker compose up -d
 `docker-compose.yml` already maps `/dev/gpiomem` and `/dev/gpiochip0` into the
 container, so GPIO works without any host-side agent.
 
+The compose file publishes port 3000 on the Pi's loopback only, so the
+dashboard is reached through `tailscale serve` (below). To publish plain HTTP on
+the LAN instead, set `SODATRACKER_BIND=0.0.0.0` in `.env`; the app is then at:
+
 Dashboard: `http://<pi-ip>:3000/`
 Admin login: `http://<pi-ip>:3000/admin/login` (user: `admin`, pass: value of `ADMIN_PASSWORD`)
 API docs: `http://<pi-ip>:3000/swagger/index.html`

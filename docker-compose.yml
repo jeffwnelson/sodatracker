@@ -8,7 +8,11 @@ services:
     # Use "server" on hardware without GPIO.
     command: ["${SODATRACKER_MODE:-all}"]
     ports:
-      - "3000:3000"
+      # Loopback only: the Pi serves the dashboard over HTTPS with
+      # `tailscale serve`, which proxies to 127.0.0.1:3000, so plain HTTP
+      # isn't reachable from any network. Set SODATRACKER_BIND=0.0.0.0 to
+      # publish it on the LAN instead (e.g. on a host without Tailscale).
+      - "${SODATRACKER_BIND:-127.0.0.1}:3000:3000"
     environment:
       - PORT=3000
       - DB_PATH=/data/sodatracker.db

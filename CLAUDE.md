@@ -156,7 +156,7 @@ container running both the API server and the GPIO pi agent**.
 - **Container name:** `sodatracker`
 - **Compose dir on Pi:** `/home/pi/sodatracker` (git clone of this repo)
 - **Data volume:** `sodatracker-data` at `/data` (SQLite DB + piagent cache)
-- **Dashboard URL:** `https://sodatracker.<tailnet>.ts.net` (HTTPS, Tailscale; use this one), or plain HTTP at `http://sodatracker:3000` (Tailscale IP) or `http://<office-ip>:3000` (office ethernet)
+- **Dashboard URL:** `https://sodatracker.<tailnet>.ts.net`, the only way in. Since 2026-10-02 compose publishes port 3000 on `127.0.0.1` only (`SODATRACKER_BIND`, default loopback), so plain HTTP on the Tailscale IP or office ethernet is closed and only tailnet devices can reach the dashboard. On the Pi itself, `curl localhost:3000` still works.
 
 **Networking.** The Pi joined the owner's tailnet as `sodatracker`
 (`sodatracker`) on 2026-09-24, and `tailscaled` is enabled at boot. Prefer the
