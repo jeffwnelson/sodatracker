@@ -136,19 +136,26 @@ export function ChartCard({
   subtitle,
   legend,
   table,
+  compact = false,
   children,
 }: {
   title: string;
   subtitle?: string;
   legend?: ReactNode;
   table?: ReactNode;
+  /** Tighter padding, for cards laid out several to a row. */
+  compact?: boolean;
   children: ReactNode;
 }) {
   const [view, setView] = useState<"chart" | "table">("chart");
   return (
-    <Card>
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-        <div>
+    <Card padding={compact ? "sm" : "md"}>
+      {/* Compact cards keep the view toggle beside the title, wrapping the
+          subtitle instead, so cards side by side line up. */}
+      <div
+        className={`flex items-start justify-between gap-3 ${compact ? "mb-3" : "flex-wrap mb-4"}`}
+      >
+        <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
             {title}
           </p>
@@ -158,7 +165,7 @@ export function ChartCard({
         </div>
         {table && (
           <div
-            className="inline-flex rounded-lg border border-border-primary p-0.5 text-xs"
+            className="inline-flex shrink-0 rounded-lg border border-border-primary p-0.5 text-xs"
             role="group"
             aria-label={`${title} view`}
           >
@@ -281,20 +288,25 @@ export type Slice = { key: string; label: string; value: number; color: string }
 
 /**
  * A donut beside a legend that lists each slice's value and share, so the
- * numbers are readable without hovering. Zero slices are left out.
+ * numbers are readable without hovering. Zero slices are left out. compact
+ * stacks a smaller donut above the legend, for cards a third of the width.
  */
 export function BreakdownPie({
   slices,
   format = (n) => String(n),
+  compact = false,
 }: {
   slices: Slice[];
   format?: (n: number) => string;
+  compact?: boolean;
 }) {
   const shown = slices.filter((s) => s.value > 0);
   const total = shown.reduce((sum, s) => sum + s.value, 0);
   return (
-    <div className="flex flex-col sm:flex-row items-center gap-6">
-      <div className="w-56 h-56 shrink-0">
+    <div
+      className={`flex flex-col items-center ${compact ? "gap-4" : "sm:flex-row gap-6"}`}
+    >
+      <div className={`${compact ? "w-40 h-40" : "w-56 h-56"} shrink-0`}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -324,7 +336,7 @@ export function BreakdownPie({
           </PieChart>
         </ResponsiveContainer>
       </div>
-      <ul className="w-full max-w-sm space-y-2 text-sm">
+      <ul className={`w-full max-w-sm text-sm ${compact ? "space-y-1.5" : "space-y-2"}`}>
         {shown.map((s) => (
           <li key={s.key} className="flex items-center gap-2">
             <Swatch color={s.color} />

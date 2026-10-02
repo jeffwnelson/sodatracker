@@ -130,27 +130,29 @@ function Highlights({
         />
       </StatGrid>
 
-      <ProductPieCard
-        title="Who opens the day"
-        subtitle="Product of each day's first can"
-        products={data.firstCanProducts}
-        colors={colors}
-        unit="day"
-      />
-      <ProductPieCard
-        title="Who closes the day"
-        subtitle="Product of each day's last can"
-        products={data.lastCanProducts}
-        colors={colors}
-        unit="day"
-      />
-      <ProductPieCard
-        title="Lunch favorite"
-        subtitle="Cans taken from 11 AM to 2 PM"
-        products={data.lunchProducts}
-        colors={colors}
-        unit="can"
-      />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <ProductPieCard
+          title="Who opens the day"
+          subtitle="Each day's first can"
+          products={data.firstCanProducts}
+          colors={colors}
+          unit="day"
+        />
+        <ProductPieCard
+          title="Who closes the day"
+          subtitle="Each day's last can"
+          products={data.lastCanProducts}
+          colors={colors}
+          unit="day"
+        />
+        <ProductPieCard
+          title="Lunch favorite"
+          subtitle="Cans from 11 AM to 2 PM"
+          products={data.lunchProducts}
+          colors={colors}
+          unit="can"
+        />
+      </div>
     </>
   );
 }
@@ -173,6 +175,7 @@ function ProductPieCard({
     <ChartCard
       title={title}
       subtitle={subtitle}
+      compact
       table={
         <DataTable
           columns={[
@@ -200,6 +203,7 @@ function ProductPieCard({
             color: colors[p.productId],
           }))}
           format={(n) => `${n} ${n === 1 ? unit : `${unit}s`}`}
+          compact
         />
       )}
     </ChartCard>
