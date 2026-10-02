@@ -54,6 +54,48 @@ func RegisterSlack(bus events.EventBus, st store.Store, c *SlackClient) {
 		})
 	})
 
+	bus.Subscribe(events.EventQuietSlot, func(ctx context.Context, evt events.Event) error {
+		d := describe(ctx, st, evt)
+		others := intField(evt, "otherDispenses")
+		return post(ctx, Message{
+			Text: fmt.Sprintf("%s (slot %d) isn't registering: %d cans from other slots since its last dispense or restock", d.product, d.slot, others),
+			Blocks: []Block{
+				{Type: "section", Text: mrkdwn(":mag: *%s isn't registering* — the other slots dispensed %d cans since slot %d last did", d.product, others, d.slot)},
+				{Type: "context", Elements: []TextObject{
+					{Type: "mrkdwn", Text: "If it is being taken, check that slot's contact: the arm may not be closing it, or it is dirty."},
+				}},
+			},
+		})
+	})
+	bus.Subscribe(events.EventQuietMachine, func(ctx context.Context, evt events.Event) error {
+		d := describe(ctx, st, evt)
+		hours := intField(evt, "quietHours")
+		unit := "hours"
+		if weekdays, _ := evt.Data["weekdaysOnly"].(bool); weekdays {
+			unit = "weekday hours"
+		}
+		return post(ctx, Message{
+			Text: fmt.Sprintf("No dispenses registered in %s for %d %s", d.machine, hours, unit),
+			Blocks: []Block{
+				{Type: "section", Text: mrkdwn(":mag: *No dispenses registered for %d %s* — %s", hours, unit, d.machine)},
+				{Type: "context", Elements: []TextObject{
+					{Type: "mrkdwn", Text: "The Pi agent is online, so if cans are being taken, check the shared ground and the cable to the Pi."},
+				}},
+			},
+		})
+	})
+	bus.Subscribe(events.EventQuietCleared, func(ctx context.Context, evt events.Event) error {
+		d := describe(ctx, st, evt)
+		text := fmt.Sprintf("%s is registering again", d.product)
+		if d.slot == 0 {
+			text = fmt.Sprintf("%s is registering dispenses again", d.machine)
+		}
+		return post(ctx, Message{
+			Text:   text,
+			Blocks: []Block{{Type: "section", Text: mrkdwn(":white_check_mark: *%s*", text)}},
+		})
+	})
+
 	// Backup events arrive only on a change of health, not per failed retry.
 	bus.Subscribe(events.EventBackupFailed, func(ctx context.Context, evt events.Event) error {
 		reason, _ := evt.Data["error"].(string)

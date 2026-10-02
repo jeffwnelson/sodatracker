@@ -18,6 +18,14 @@ const (
 	// a machineId.
 	EventBackupFailed    EventType = "backup_failed"
 	EventBackupRecovered EventType = "backup_recovered"
+	// EventQuietSlot fires when a stocked slot registers nothing while the
+	// other slots dispense alertQuietSlotCans cans: likely a sensor fault.
+	// EventQuietMachine fires when no slot registers anything for the
+	// configured hours while the Pi agent is online. EventQuietCleared fires
+	// when the slot (slotPosition 0: the machine) registers again.
+	EventQuietSlot    EventType = "quiet_slot"
+	EventQuietMachine EventType = "quiet_machine"
+	EventQuietCleared EventType = "quiet_cleared"
 )
 
 type Event struct {

@@ -92,7 +92,8 @@ definitions:
   github_com_jeffwnelson_sodatracker_internal_domain.AlertEvent:
     properties:
       alertType:
-        description: '"low_stock" or "out_of_stock"'
+        description: '"low_stock", "out_of_stock", "quiet_slot" or "quiet_machine"
+          (slotPosition 0)'
         example: low_stock
         type: string
       cleared:
@@ -634,6 +635,31 @@ definitions:
           type: integer
         type: array
     type: object
+  github_com_jeffwnelson_sodatracker_internal_service.QuietSettings:
+    properties:
+      quietMachineHours:
+        description: |-
+          MachineHours: alert when no slot registers anything for this many
+          hours while the Pi agent is online.
+        example: 24
+        type: integer
+      quietMachineWeekdaysOnly:
+        description: |-
+          WeekdaysOnly counts only Monday–Friday hours toward MachineHours, so
+          a quiet weekend doesn't alert.
+        example: true
+        type: boolean
+      quietSlotCans:
+        description: |-
+          SlotCans: alert when a stocked slot registers nothing while the other
+          slots dispense this many cans.
+        example: 15
+        type: integer
+      timezone:
+        description: Timezone (IANA) decides where weekends start and end.
+        example: America/Chicago
+        type: string
+    type: object
   github_com_jeffwnelson_sodatracker_internal_service.RestockSummary:
     properties:
       cans:
@@ -904,6 +930,63 @@ info:
   title: SodaTracker API
   version: "1.0"
 paths:
+  /admin/alert-settings:
+    get:
+      description: When a slot, or the whole machine, registering nothing raises an
+        alert
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.QuietSettings'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Quiet alert settings
+      tags:
+      - Alerts
+    put:
+      consumes:
+      - application/json
+      description: 'quietSlotCans: alert when a stocked slot registers nothing while
+        the other slots dispense this many cans (0 = off). quietMachineHours: alert
+        when no slot registers anything for this many hours while the Pi agent is
+        online (0 = off). quietMachineWeekdaysOnly counts only Monday–Friday hours
+        in timezone.'
+      parameters:
+      - description: Settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.QuietSettings'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.QuietSettings'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Update quiet alert settings
+      tags:
+      - Alerts
   /admin/backup:
     get:
       description: Local snapshots, the last push to the backup repo, and whether

@@ -107,7 +107,7 @@ type AlertEvent struct {
 	MachineID    string     `json:"machineId" example:"550e8400-e29b-41d4-a716-446655440001"`
 	SlotPosition int        `json:"slotPosition" example:"1"`
 	ProductID    string     `json:"productId" example:"550e8400-e29b-41d4-a716-446655440000"`
-	AlertType    string     `json:"alertType" example:"low_stock"` // "low_stock" or "out_of_stock"
+	AlertType    string     `json:"alertType" example:"low_stock"` // "low_stock", "out_of_stock", "quiet_slot" or "quiet_machine" (slotPosition 0)
 	CurrentStock int        `json:"currentStock" example:"2"`
 	Threshold    int        `json:"threshold" example:"3"`
 	Cleared      bool       `json:"cleared" example:"false"`

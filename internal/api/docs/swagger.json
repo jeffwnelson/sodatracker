@@ -9,6 +9,88 @@
     "host": "localhost:3000",
     "basePath": "/api/v1",
     "paths": {
+        "/admin/alert-settings": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "When a slot, or the whole machine, registering nothing raises an alert",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Alerts"
+                ],
+                "summary": "Quiet alert settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.QuietSettings"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "quietSlotCans: alert when a stocked slot registers nothing while the other slots dispense this many cans (0 = off). quietMachineHours: alert when no slot registers anything for this many hours while the Pi agent is online (0 = off). quietMachineWeekdaysOnly counts only Monday–Friday hours in timezone.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Alerts"
+                ],
+                "summary": "Update quiet alert settings",
+                "parameters": [
+                    {
+                        "description": "Settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.QuietSettings"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.QuietSettings"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/backup": {
             "get": {
                 "security": [
@@ -2020,7 +2102,7 @@
             "type": "object",
             "properties": {
                 "alertType": {
-                    "description": "\"low_stock\" or \"out_of_stock\"",
+                    "description": "\"low_stock\", \"out_of_stock\", \"quiet_slot\" or \"quiet_machine\" (slotPosition 0)",
                     "type": "string",
                     "example": "low_stock"
                 },
@@ -2754,6 +2836,31 @@
                     "items": {
                         "type": "integer"
                     }
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.QuietSettings": {
+            "type": "object",
+            "properties": {
+                "quietMachineHours": {
+                    "description": "MachineHours: alert when no slot registers anything for this many\nhours while the Pi agent is online.",
+                    "type": "integer",
+                    "example": 24
+                },
+                "quietMachineWeekdaysOnly": {
+                    "description": "WeekdaysOnly counts only Monday–Friday hours toward MachineHours, so\na quiet weekend doesn't alert.",
+                    "type": "boolean",
+                    "example": true
+                },
+                "quietSlotCans": {
+                    "description": "SlotCans: alert when a stocked slot registers nothing while the other\nslots dispense this many cans.",
+                    "type": "integer",
+                    "example": 15
+                },
+                "timezone": {
+                    "description": "Timezone (IANA) decides where weekends start and end.",
+                    "type": "string",
+                    "example": "America/Chicago"
                 }
             }
         },

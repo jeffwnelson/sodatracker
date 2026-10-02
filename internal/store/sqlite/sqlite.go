@@ -551,10 +551,21 @@ func (s *SQLiteStore) ListAlertEvents(ctx context.Context, machineID string, act
 	return events, rows.Err()
 }
 
+// ClearAlertEvents clears a slot's stock alerts (low_stock, out_of_stock).
+// A restock fixes those, but not a quiet_slot alert: that one waits for the
+// slot to register a dispense.
 func (s *SQLiteStore) ClearAlertEvents(ctx context.Context, machineID string, slotPosition int) error {
 	_, err := s.db.ExecContext(ctx,
-		`UPDATE alert_events SET cleared = 1, cleared_at = datetime('now') WHERE machine_id = ? AND slot_position = ? AND cleared = 0`,
+		`UPDATE alert_events SET cleared = 1, cleared_at = datetime('now')
+		 WHERE machine_id = ? AND slot_position = ? AND cleared = 0 AND alert_type IN ('low_stock', 'out_of_stock')`,
 		machineID, slotPosition)
+	return err
+}
+
+// ClearAlert clears one active alert by ID.
+func (s *SQLiteStore) ClearAlert(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE alert_events SET cleared = 1, cleared_at = datetime('now') WHERE id = ? AND cleared = 0`, id)
 	return err
 }
 

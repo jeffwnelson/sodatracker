@@ -16,6 +16,7 @@ import type {
   AnalyticsByKind,
   BackupStatus,
   BackupUpdate,
+  QuietSettings,
 } from "./types";
 
 const BASE = "/api/v1";
@@ -328,6 +329,15 @@ export function listAlertEvents(
 // Admin
 export function resetAllData(): Promise<{ status: string }> {
   return deleteJSONAuth("/admin/reset");
+}
+
+// Quiet alert settings
+export function getAlertSettings(): Promise<QuietSettings> {
+  return fetchJSONAuth("/admin/alert-settings");
+}
+
+export function updateAlertSettings(q: QuietSettings): Promise<QuietSettings> {
+  return putJSONAuth("/admin/alert-settings", q);
 }
 
 // Backups
