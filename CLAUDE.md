@@ -423,7 +423,7 @@ section — do not reintroduce this.
 - [x] CSV/PDF export for dispense reports (`GET /api/v1/reports/dispenses?format=csv|pdf`)
 - [x] Swagger/OpenAPI docs via `swaggo/swag` — interactive UI at `/swagger/index.html`, all endpoints annotated
 - [x] Analytics dashboards: consumption, products, inventory, spend (`/admin/analytics`)
-- [ ] Mobile responsive polish
+- [x] Mobile/iPhone: phone tab bar (`AppShell tabBar`, below `sm`), safe-area insets, 16px inputs on phones (index.css, stops iOS focus zoom), larger tap targets, one-month bottom-sheet date picker, stacked Settings tables, and Add to Home Screen (`manifest.webmanifest`, `icon-*.png` from `public/app-icon.svg`, `apple-mobile-web-app-*` meta; the server registers the manifest's MIME type)
 - [x] Pi agent runs in-container (no systemd unit needed; Docker restart policy is the watchdog)
 - [ ] CloudWatch custom metrics
 - [ ] E2E tests (Playwright)

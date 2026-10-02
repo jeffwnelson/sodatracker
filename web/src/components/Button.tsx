@@ -21,9 +21,17 @@ const isLink = (v: Variant) => v === "link" || v === "link-danger";
 
 // sm is for actions in a card's header row; md is everything else. Link
 // variants take only the text size, so they sit inline with other text.
+// Phones get taller boxes, and links a padded hit area that the negative
+// margin keeps out of the layout, so every button is comfortable to tap.
 const sizes = {
-  sm: { box: "rounded-xl px-3 py-1.5 text-xs", link: "rounded text-xs" },
-  md: { box: "rounded-xl px-4 py-2 text-sm", link: "rounded text-sm" },
+  sm: {
+    box: "rounded-xl px-3 py-2 sm:py-1.5 text-xs",
+    link: "rounded text-xs py-2 -my-2 sm:py-0 sm:my-0",
+  },
+  md: {
+    box: "rounded-xl px-4 py-2.5 sm:py-2 text-sm",
+    link: "rounded text-sm py-2 -my-2 sm:py-0 sm:my-0",
+  },
 };
 
 export function Button({

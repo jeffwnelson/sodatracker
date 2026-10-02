@@ -82,19 +82,19 @@ export function AdminDashboard() {
       />
 
       {statsLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <SkeletonCard />
           <SkeletonCard />
         </div>
       ) : stats ? (
         <>
           {/* Summary cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <Card>
               <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-2">
                 Total Dispenses (30d)
               </p>
-              <p className="text-3xl font-semibold tracking-tight text-text-primary">
+              <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-text-primary">
                 {stats.totalCount}
               </p>
             </Card>
@@ -102,7 +102,7 @@ export function AdminDashboard() {
               <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-2">
                 Total Cost (30d)
               </p>
-              <p className="text-3xl font-semibold tracking-tight text-text-primary">
+              <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-text-primary">
                 ${stats.totalCost.toFixed(2)}
               </p>
             </Card>

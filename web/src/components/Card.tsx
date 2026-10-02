@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 const paddingVariants = {
   none: "",
   sm: "p-4",
-  md: "p-6",
-  lg: "p-8",
+  md: "p-4 sm:p-6",
+  lg: "p-6 sm:p-8",
 };
 
 export function Card({

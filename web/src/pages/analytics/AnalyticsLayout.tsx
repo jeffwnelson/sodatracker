@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { PageHeader } from "../../components/PageHeader";
 import { SkeletonCard } from "../../components/Skeleton";
@@ -29,7 +30,14 @@ export function AnalyticsLayout() {
     setRange,
     apply,
   } = useAnalyticsFilters();
-  const { search } = useLocation();
+  const { search, pathname } = useLocation();
+  // On phones the tab row scrolls; keep the open tab in view, e.g. Uptime.
+  const tabsRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    tabsRef.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [pathname, machines.isLoading]);
 
   if (machines.isLoading) {
     return (
@@ -50,8 +58,9 @@ export function AnalyticsLayout() {
       {/* One filter row scopes every chart on every tab. It anchors the date
           picker's popover, which is wider than the space right of its button. */}
       <div className="relative flex flex-wrap items-center gap-3">
+        {/* One row that swipes on phones rather than wrapping. */}
         <div
-          className="inline-flex flex-wrap rounded-xl border border-border-primary bg-surface-primary p-1"
+          className="flex max-w-full overflow-x-auto scrollbar-none rounded-xl border border-border-primary bg-surface-primary p-0.5 sm:p-1"
           role="group"
           aria-label="Date range"
         >
@@ -61,7 +70,7 @@ export function AnalyticsLayout() {
               type="button"
               onClick={() => setRange(r.id)}
               aria-pressed={range === r.id}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
+              className={`shrink-0 whitespace-nowrap px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
                 range === r.id
                   ? "bg-accent-soft text-accent"
                   : "text-text-tertiary hover:text-text-primary"
@@ -85,7 +94,8 @@ export function AnalyticsLayout() {
           margin overflowed the nav, and overflow-x-auto then showed a
           vertical scrollbar. */}
       <nav
-        className="flex gap-1 overflow-x-auto shadow-[inset_0_-1px_0_var(--color-border-primary)]"
+        ref={tabsRef}
+        className="-mx-4 px-4 sm:mx-0 sm:px-0 flex gap-1 overflow-x-auto scrollbar-none shadow-[inset_0_-1px_0_var(--color-border-primary)]"
         aria-label="Analytics dashboards"
       >
         {tabs.map((t) => (

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Full-bleed for home screens: iOS and Android round the corners. -->
+  <rect width="32" height="32" fill="#4f46e5"/>
+  <rect x="11" y="6.5" width="10" height="19" rx="2.8" fill="#ffffff"/>
+  <rect x="11" y="13.2" width="10" height="4.3" fill="#4f46e5"/>
+  <circle cx="16" cy="9.6" r="1.2" fill="#4f46e5" opacity="0.4"/>
+</svg>

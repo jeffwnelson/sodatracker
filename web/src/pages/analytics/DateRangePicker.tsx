@@ -112,6 +112,20 @@ export function DateRangePicker({
   );
 }
 
+const PHONE = "(max-width: 639px)";
+
+/** Whether the screen is phone-width, tracking rotation and resizes. */
+function usePhone(): boolean {
+  const [phone, setPhone] = useState(() => window.matchMedia(PHONE).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(PHONE);
+    const on = () => setPhone(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return phone;
+}
+
 function Popover({
   initial,
   onCancel,
@@ -174,19 +188,32 @@ function Popover({
   const canApply =
     draft.compare !== "custom" || (!!draft.compareRange && !!draft.days);
 
+  // Phones get a bottom sheet with one month: presets in a swipeable row,
+  // then the calendar, then the range and comparison options.
+  const phone = usePhone();
+  const months = phone ? [addMonths(view, 1)] : [view, addMonths(view, 1)];
+
   return (
+    <>
+    {phone && (
+      <div className="fixed inset-0 z-40 bg-black/30 animate-fade-in" onClick={onCancel} aria-hidden />
+    )}
     <div
       role="dialog"
       aria-label="Choose date range"
-      className="absolute left-0 top-full mt-2 z-30 w-max max-w-[calc(100vw-2rem)] overflow-x-auto rounded-2xl border border-border-primary bg-surface-primary shadow-lg animate-scale-in"
+      className={
+        phone
+          ? "fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-border-primary bg-surface-primary shadow-lg pb-[env(safe-area-inset-bottom)] animate-fade-up"
+          : "absolute left-0 top-full mt-2 z-30 w-max max-w-[calc(100vw-2rem)] overflow-x-auto rounded-2xl border border-border-primary bg-surface-primary shadow-lg animate-scale-in"
+      }
     >
-      <div className="flex">
+      <div className="flex flex-col sm:flex-row">
         {/* Presets */}
-        <ul className="w-36 shrink-0 border-r border-border-primary p-2 text-sm">
+        <ul className="flex sm:block gap-1 overflow-x-auto scrollbar-none sm:w-36 shrink-0 border-b sm:border-b-0 sm:border-r border-border-primary p-2 text-sm">
           {RANGES.map((r) => {
             const active = draft.preset === r.id;
             return (
-              <li key={r.id}>
+              <li key={r.id} className="shrink-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -200,7 +227,7 @@ function Popover({
                     }));
                     if (r.days) setView(addMonths(monthStart(today), -1));
                   }}
-                  className={`w-full text-left px-3 py-1.5 rounded-lg font-medium transition-colors duration-150 ${
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 sm:py-1.5 rounded-lg font-medium transition-colors duration-150 ${
                     active ? "bg-accent-soft text-accent" : "text-text-secondary hover:bg-surface-secondary"
                   }`}
                 >
@@ -214,7 +241,7 @@ function Popover({
         {/* Calendars */}
         <div className="p-4">
           <div className="flex gap-6">
-            {[view, addMonths(view, 1)].map((m, i) => (
+            {months.map((m, i) => (
               <Month
                 key={m}
                 month={m}
@@ -224,21 +251,21 @@ function Popover({
                 onPick={pick}
                 onHover={(k) => anchor && setHover(k)}
                 onPrev={i === 0 ? () => setView((v) => addMonths(v, -1)) : undefined}
-                onNext={i === 1 && addMonths(view, 1) < monthStart(today) ? () => setView((v) => addMonths(v, 1)) : undefined}
+                onNext={i === months.length - 1 && addMonths(view, 1) < monthStart(today) ? () => setView((v) => addMonths(v, 1)) : undefined}
               />
             ))}
           </div>
           <p className="mt-3 text-xs text-text-tertiary h-4">
             {anchor
-              ? "Click the last day"
+              ? `${phone ? "Tap" : "Click"} the last day`
               : target === "compare"
-                ? "Click two days to set the comparison"
-                : "Click two days to set the range"}
+                ? `${phone ? "Tap" : "Click"} two days to set the comparison`
+                : `${phone ? "Tap" : "Click"} two days to set the range`}
           </p>
         </div>
 
         {/* Range and comparison */}
-        <div className="w-72 shrink-0 border-l border-border-primary bg-surface-secondary p-4 flex flex-col gap-4 text-sm">
+        <div className="sm:w-72 shrink-0 border-t sm:border-t-0 sm:border-l border-border-primary bg-surface-secondary p-4 flex flex-col gap-4 text-sm">
           <fieldset className="space-y-1.5">
             <legend className="sr-only">Mode</legend>
             {(
@@ -330,6 +357,7 @@ function Popover({
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -413,7 +441,7 @@ function Month({
   const navBtn = "w-7 h-7 rounded-lg text-text-tertiary hover:bg-surface-secondary hover:text-text-primary";
 
   return (
-    <div className="w-[232px]">
+    <div className="w-full sm:w-[232px]">
       <div className="flex items-center justify-between mb-2">
         {onPrev ? (
           <button type="button" onClick={onPrev} className={navBtn} aria-label="Previous month">‹</button>

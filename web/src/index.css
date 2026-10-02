@@ -99,3 +99,23 @@ body {
   box-shadow: var(--shadow-subtle) !important;
   font-size: 0.8125rem !important; /* 13px */
 }
+
+/* iOS Safari zooms the page into any text field under 16px when it gets
+   focus, and doesn't zoom back out. Phones get 16px fields; wider screens
+   keep the design's 14px. */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* A horizontal scroller without a visible scrollbar, for tab and preset rows
+   that swipe on phones. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

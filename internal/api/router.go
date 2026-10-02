@@ -17,6 +17,7 @@ package api
 
 import (
 	"log/slog"
+	"mime"
 	"net/http"
 	"time"
 
@@ -51,6 +52,12 @@ type RouterConfig struct {
 	StreamsDone <-chan struct{}
 	// Backups serves /admin/backup. Without it those routes aren't registered.
 	Backups *backup.Manager
+}
+
+// Go's mime table lacks the web app manifest, which it would serve as
+// text/plain.
+func init() {
+	mime.AddExtensionType(".webmanifest", "application/manifest+json")
 }
 
 func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux {

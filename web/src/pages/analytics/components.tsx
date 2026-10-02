@@ -105,7 +105,7 @@ export function StatTile({
       <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary mb-2">
         {label}
       </p>
-      <p className="text-3xl font-semibold tracking-tight text-text-primary">
+      <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-text-primary">
         {value}
       </p>
       {sub && <p className="mt-2 text-xs text-text-secondary">{sub}</p>}
@@ -121,7 +121,7 @@ export function StatTile({
 
 export function StatGrid({ children, cols = 4 }: { children: ReactNode; cols?: 4 | 5 }) {
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${cols === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+    <div className={`grid grid-cols-2 gap-3 sm:gap-4 ${cols === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
       {children}
     </div>
   );
@@ -175,7 +175,7 @@ export function ChartCard({
                 type="button"
                 onClick={() => setView(v)}
                 aria-pressed={view === v}
-                className={`px-2.5 py-1 rounded-md font-medium capitalize transition-colors duration-150 ${
+                className={`px-3 py-2 sm:px-2.5 sm:py-1 rounded-md font-medium capitalize transition-colors duration-150 ${
                   view === v
                     ? "bg-accent-soft text-accent"
                     : "text-text-tertiary hover:text-text-primary"

@@ -338,6 +338,9 @@ function ProductsSection() {
       accessor: (row) => (
         <span className="text-xs">{row.description || "\u2014"}</span>
       ),
+      // Phones keep name, cost and Delete; the description is in the modal.
+      className: "hidden sm:table-cell",
+      headerClassName: "hidden sm:table-cell",
     },
     {
       header: "Cost/Can",
@@ -592,8 +595,8 @@ function SlotConfigSection() {
       {machineId && slotCount > 0 && (
         <>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
+            <table className="block sm:table w-full text-sm">
+              <thead className="hidden sm:table-header-group">
                 <tr className="border-b border-border-primary">
                   <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-text-tertiary w-16">
                     Slot
@@ -612,16 +615,18 @@ function SlotConfigSection() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border-primary">
+              <tbody className="block sm:table-row-group divide-y divide-border-primary">
                 {Array.from({ length: slotCount }, (_, i) => {
                   const pos = i + 1;
                   const cfg = getSlotConfig(pos);
                   return (
-                    <tr key={pos}>
-                      <td className="py-3 text-text-primary font-medium">
+                    // Phones stack each slot: number and product on top, the
+                    // three numbers in a row beneath with their own labels.
+                    <tr key={pos} className="grid grid-cols-3 gap-2 py-3 sm:table-row sm:py-0">
+                      <td className="col-span-3 sm:py-3 text-text-primary font-medium">
                         #{pos}
                       </td>
-                      <td className="py-3">
+                      <td className="col-span-3 sm:py-3">
                         <select
                           value={cfg.productId}
                           onChange={(e) =>
@@ -639,7 +644,10 @@ function SlotConfigSection() {
                           ))}
                         </select>
                       </td>
-                      <td className="py-3">
+                      <td className="sm:py-3">
+                        <span className="sm:hidden block mb-1 text-[11px] font-medium uppercase tracking-wider text-text-tertiary">
+                          Capacity
+                        </span>
                         <input
                           type="number"
                           min="1"
@@ -650,7 +658,10 @@ function SlotConfigSection() {
                           className="w-full rounded-xl border border-border-primary bg-surface-primary px-2 py-1.5 text-sm text-text-primary transition-all duration-150 ease-out-custom focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
                         />
                       </td>
-                      <td className="py-3">
+                      <td className="sm:py-3">
+                        <span className="sm:hidden block mb-1 text-[11px] font-medium uppercase tracking-wider text-text-tertiary">
+                          Low threshold
+                        </span>
                         <input
                           type="number"
                           min="0"
@@ -661,7 +672,10 @@ function SlotConfigSection() {
                           className="w-full rounded-xl border border-border-primary bg-surface-primary px-2 py-1.5 text-sm text-text-primary transition-all duration-150 ease-out-custom focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent"
                         />
                       </td>
-                      <td className="py-3">
+                      <td className="sm:py-3">
+                        <span className="sm:hidden block mb-1 text-[11px] font-medium uppercase tracking-wider text-text-tertiary">
+                          GPIO pin
+                        </span>
                         <input
                           type="number"
                           min="0"

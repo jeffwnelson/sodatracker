@@ -204,10 +204,12 @@ function Heatmap({ heatmap }: { heatmap: number[][] }) {
 
   return (
     <div>
+      {/* All 24 hours fit a phone's width (about 11px a cell), so the day
+          never scrolls out of view; wider screens get roomier cells. */}
       <div className="overflow-x-auto">
         <div
-          className="grid gap-0.5 min-w-[640px]"
-          style={{ gridTemplateColumns: "2.5rem repeat(24, minmax(0, 1fr))" }}
+          className="grid gap-px sm:gap-0.5 sm:min-w-[640px]"
+          style={{ gridTemplateColumns: "2rem repeat(24, minmax(0, 1fr))" }}
           role="img"
           aria-label="Heatmap of dispenses by weekday and hour; use the table view for values"
         >
@@ -222,7 +224,7 @@ function Heatmap({ heatmap }: { heatmap: number[][] }) {
                   <div
                     key={h}
                     title={`${WEEKDAYS_LONG[d]} ${formatHour(h)}: ${v} dispense${v === 1 ? "" : "s"}`}
-                    className={`h-6 rounded-[3px] ${color ? "" : "bg-surface-tertiary"}`}
+                    className={`h-5 sm:h-6 rounded-[2px] sm:rounded-[3px] ${color ? "" : "bg-surface-tertiary"}`}
                     style={color ? { background: color } : undefined}
                   />
                 );
@@ -231,7 +233,7 @@ function Heatmap({ heatmap }: { heatmap: number[][] }) {
           ))}
           <div />
           {Array.from({ length: 24 }, (_, h) => (
-            <div key={h} className="text-[11px] text-text-tertiary text-center pt-1">
+            <div key={h} className="text-[10px] sm:text-[11px] text-text-tertiary text-center pt-1 whitespace-nowrap">
               {h % 3 === 0 ? formatHour(h) : ""}
             </div>
           ))}
