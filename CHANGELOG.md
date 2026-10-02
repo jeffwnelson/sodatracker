@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.17.0](https://github.com/jeffwnelson/sodatracker/compare/94095c6790ddca3f94cd924a66640bbbfa48e4b0..v0.17.0) - 2026-10-02
+#### Features
+- (**web**) Status tab replaces Alerts; drop not-registering alerts - ([94095c6](https://github.com/jeffwnelson/sodatracker/commit/94095c6790ddca3f94cd924a66640bbbfa48e4b0)) - Jeff Nelson
+
+- - -
+
 ## [v0.16.0](https://github.com/jeffwnelson/sodatracker/compare/e048b0fce8af03991c91190c0b2d46e10dd8e914..v0.16.0) - 2026-10-02
 #### Features
 - (**analytics**) status page on the Uptime tab - ([e048b0f](https://github.com/jeffwnelson/sodatracker/commit/e048b0fce8af03991c91190c0b2d46e10dd8e914)) - Jeff Nelson
