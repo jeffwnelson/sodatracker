@@ -129,6 +129,17 @@ Dashboard: `http://<pi-ip>:3000/`
 Admin login: `http://<pi-ip>:3000/admin/login` (user: `admin`, pass: value of `ADMIN_PASSWORD`)
 API docs: `http://<pi-ip>:3000/swagger/index.html`
 
+**HTTPS over Tailscale.** With HTTPS certificates enabled in the tailnet's DNS
+settings, run this once on the Pi host:
+
+```bash
+sudo tailscale serve --bg 3000
+```
+
+The app is then at `https://<pi-name>.<tailnet>.ts.net/` with a Let's Encrypt
+certificate that Tailscale renews. It persists across reboots. On an iPhone,
+open that URL in Safari and use Share → Add to Home Screen.
+
 ### Plain `docker run` equivalent
 
 ```bash

@@ -156,7 +156,7 @@ container running both the API server and the GPIO pi agent**.
 - **Container name:** `sodatracker`
 - **Compose dir on Pi:** `/home/pi/sodatracker` (git clone of this repo)
 - **Data volume:** `sodatracker-data` at `/data` (SQLite DB + piagent cache)
-- **Dashboard URL:** `http://sodatracker:3000` (Tailscale) or `http://<office-ip>:3000` (office ethernet)
+- **Dashboard URL:** `https://sodatracker.<tailnet>.ts.net` (HTTPS, Tailscale; use this one), or plain HTTP at `http://sodatracker:3000` (Tailscale IP) or `http://<office-ip>:3000` (office ethernet)
 
 **Networking.** The Pi joined the owner's tailnet as `sodatracker`
 (`sodatracker`) on 2026-09-24, and `tailscaled` is enabled at boot. Prefer the
@@ -167,7 +167,17 @@ The office guest WiFi (`office-guest-wifi`, the Pi's fallback link) enforces cli
 isolation in both directions, so the Pi is unreachable over it by LAN address —
 Tailscale is what makes the Pi usable without the ethernet cable. Tailscale was
 brought up with `--accept-dns=false` to avoid resolver conflicts with the
-corporate network, so there is no MagicDNS name; use the IP.
+corporate network, so the Pi itself can't resolve MagicDNS names (other
+tailnet devices resolve the Pi's name fine).
+
+**HTTPS (since 2026-10-02).** `sudo tailscale serve --bg 3000` on the Pi host
+(not in the container) terminates TLS for `sodatracker.<tailnet>.ts.net` with a
+Let's Encrypt certificate that tailscaled fetches and renews itself, and proxies
+to the app on `127.0.0.1:3000`. HTTPS certificates are enabled in the tailnet's
+DNS settings. The config persists across reboots; check it with
+`tailscale serve status`, turn it off with `sudo tailscale serve --https=443 off`.
+It's reachable only from the tailnet. The SSE stream works through it (HTTP/2).
+Add the iPhone home-screen app from this URL.
 
 **Releases (cocogitto).** Commits on `main` must follow
 [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`,
