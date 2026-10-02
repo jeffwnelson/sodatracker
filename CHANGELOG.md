@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.12.0](https://github.com/jeffwnelson/sodatracker/compare/1b5ec6d37fe4441173c2cb61b1e0ed6200ed9205..v0.12.0) - 2026-10-02
+#### Features
+- (**analytics**) fit the three highlight pies on one row - ([1b5ec6d](https://github.com/jeffwnelson/sodatracker/commit/1b5ec6d37fe4441173c2cb61b1e0ed6200ed9205)) - Jeff Nelson
+#### Refactoring
+- (**web**) one Button for every action - ([5efa536](https://github.com/jeffwnelson/sodatracker/commit/5efa53679f482de30c68b37ee025832cf9401dc9)) - Jeff Nelson
+
+- - -
+
 ## [v0.11.0](https://github.com/jeffwnelson/sodatracker/compare/7a4aaf64ddbb2d7b5232ffc0c384407aeb3e7f78..v0.11.0) - 2026-10-02
 #### Features
 - (**alerts**) alert when a slot or the machine stops registering - ([71db6d4](https://github.com/jeffwnelson/sodatracker/commit/71db6d466f84df756d2505b363323a8f731f48bc)) - Jeff Nelson
