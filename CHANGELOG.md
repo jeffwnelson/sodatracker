@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.16.0](https://github.com/jeffwnelson/sodatracker/compare/e048b0fce8af03991c91190c0b2d46e10dd8e914..v0.16.0) - 2026-10-02
+#### Features
+- (**analytics**) status page on the Uptime tab - ([e048b0f](https://github.com/jeffwnelson/sodatracker/commit/e048b0fce8af03991c91190c0b2d46e10dd8e914)) - Jeff Nelson
+
+- - -
+
 ## [v0.15.0](https://github.com/jeffwnelson/sodatracker/compare/179266a051637869c4edc7d8f1db19acbbd70bc4..v0.15.0) - 2026-10-02
 #### Features
 - (**settings**) configure Slack from the Settings page - ([179266a](https://github.com/jeffwnelson/sodatracker/commit/179266a051637869c4edc7d8f1db19acbbd70bc4)) - Jeff Nelson
