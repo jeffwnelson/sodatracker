@@ -82,7 +82,7 @@ export function RestockSection() {
               }
               setQuantities(all);
             }}
-            className="!py-1 !px-3 !text-xs"
+            size="sm"
           >
             Max All
           </Button>
@@ -125,7 +125,7 @@ export function RestockSection() {
                     [ss.slot.position]: String(ss.slot.capacity),
                   }))
                 }
-                className="!py-1 !px-3 !text-xs"
+                size="sm"
               >
                 Max
               </Button>

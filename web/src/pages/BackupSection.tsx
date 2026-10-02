@@ -59,14 +59,14 @@ export function BackupSection() {
             variant="secondary"
             onClick={() => downloadMut.mutate()}
             loading={downloadMut.isPending}
-            className="text-xs px-3 py-1.5"
+            size="sm"
           >
             Download
           </Button>
           <Button
             onClick={() => backupMut.mutate()}
             loading={backupMut.isPending}
-            className="text-xs px-3 py-1.5"
+            size="sm"
           >
             Back up now
           </Button>
@@ -176,16 +176,17 @@ function BackupSettingsForm({
             autoComplete="new-password"
           />
           {status.tokenSet && (
-            <button
-              type="button"
-              className="mt-1 text-xs text-text-tertiary hover:text-status-empty"
+            <Button
+              variant="link-danger"
+              size="sm"
+              className="mt-1"
               onClick={() => {
                 setError("");
                 saveMut.mutate(true);
               }}
             >
               Remove token
-            </button>
+            </Button>
           )}
         </div>
         <Select

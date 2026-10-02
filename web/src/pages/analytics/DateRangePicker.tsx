@@ -74,12 +74,11 @@ export function DateRangePicker({
 
   return (
     <div ref={ref}>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="inline-flex items-center gap-2 rounded-xl border border-border-primary bg-surface-primary px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-secondary transition-colors duration-150"
       >
         <svg aria-hidden viewBox="0 0 20 20" className="w-4 h-4 text-text-tertiary" fill="none" stroke="currentColor" strokeWidth="1.6">
           <rect x="3" y="4.5" width="14" height="12" rx="2" />
@@ -98,7 +97,7 @@ export function DateRangePicker({
             {formatDayRange(compareRange)}
           </span>
         )}
-      </button>
+      </Button>
       {open && (
         <Popover
           initial={{ days, preset: range === "custom" ? null : (range as PresetId), compare, compareRange }}

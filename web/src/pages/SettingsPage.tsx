@@ -161,13 +161,9 @@ function ProductModal({
                 {color || "Default palette"}
               </span>
               {color && (
-                <button
-                  type="button"
-                  onClick={() => setColor("")}
-                  className="text-xs font-medium text-text-tertiary hover:text-text-primary transition-colors duration-150"
-                >
+                <Button variant="link" size="sm" onClick={() => setColor("")}>
                   Clear
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -175,13 +171,9 @@ function ProductModal({
           <div className="flex items-center justify-between pt-4 border-t border-border-primary">
             <div>
               {isEdit && onDeleteClick && (
-                <button
-                  type="button"
-                  onClick={onDeleteClick}
-                  className="text-sm font-medium text-status-empty hover:text-red-700 transition-colors duration-150"
-                >
+                <Button variant="link-danger" onClick={onDeleteClick}>
                   Delete Product
-                </button>
+                </Button>
               )}
             </div>
             <div className="flex gap-3">
@@ -280,13 +272,9 @@ function MachineModal({
           <div className="flex items-center justify-between pt-4 border-t border-border-primary">
             <div>
               {isEdit && onDeleteClick && (
-                <button
-                  type="button"
-                  onClick={onDeleteClick}
-                  className="text-sm font-medium text-status-empty hover:text-red-700 transition-colors duration-150"
-                >
+                <Button variant="link-danger" onClick={onDeleteClick}>
                   Delete Machine
-                </button>
+                </Button>
               )}
             </div>
             <div className="flex gap-3">
@@ -361,17 +349,16 @@ function ProductsSection() {
     {
       header: "",
       accessor: (row) => (
-        <button
-          type="button"
+        <Button
+          variant="link-danger"
           onClick={(e) => {
             e.stopPropagation(); // the row click opens the edit modal
             setError("");
             setDeleteTarget({ id: row.id, name: row.name });
           }}
-          className="text-xs font-medium text-status-empty hover:text-red-700 transition-colors duration-150"
         >
           Delete
-        </button>
+        </Button>
       ),
       headerClassName: "text-right",
       className: "text-right",
@@ -384,7 +371,7 @@ function ProductsSection() {
         <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
           Products
         </p>
-        <Button onClick={() => setShowModal(true)} className="text-xs px-3 py-1.5">
+        <Button onClick={() => setShowModal(true)} size="sm">
           Add Product
         </Button>
       </div>
@@ -471,7 +458,7 @@ function MachineSection() {
         <Button
           variant={machine ? "secondary" : "primary"}
           onClick={() => setModal(machine ? "edit" : "add")}
-          className="text-xs px-3 py-1.5"
+          size="sm"
         >
           {machine ? "Edit" : "Add Machine"}
         </Button>
