@@ -450,7 +450,7 @@ definitions:
         description: |-
           FirstCanProducts and LastCanProducts count days by the product of
           their first and last can. LunchProducts counts cans dispensed from
-          LunchStartHour to LunchEndHour, local time.
+          LunchStartMinute to LunchEndMinute, local time.
         items:
           $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.ProductCount'
         type: array

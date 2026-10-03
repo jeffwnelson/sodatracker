@@ -146,7 +146,7 @@ func TestHighlightsAnalytics(t *testing.T) {
 		h.LastCanProducts[1].Name != "Diet" || h.LastCanProducts[1].Count != 1 {
 		t.Errorf("last can products %+v", h.LastCanProducts)
 	}
-	// Nothing went between 11:00 and 14:00 (14:05 is after lunch).
+	// Nothing went between 11:30 and 13:00 (14:05 is after lunch).
 	if len(h.LunchProducts) != 0 {
 		t.Errorf("lunch products %+v", h.LunchProducts)
 	}
@@ -161,18 +161,18 @@ func TestHighlightsLunch(t *testing.T) {
 	st.CreateProduct(ctx, &domain.Product{ID: "p2", Name: "Diet"})
 	chicago, _ := time.LoadLocation("America/Chicago")
 	at := func(h, m int) time.Time { return time.Date(2026, 3, 5, h, m, 0, 0, chicago) }
-	addDispense(t, st, "p1", 1, at(10, 59)) // before lunch
-	addDispense(t, st, "p2", 2, at(11, 0))
-	addDispense(t, st, "p2", 2, at(12, 30))
-	addDispense(t, st, "p1", 1, at(13, 59))
-	addDispense(t, st, "p1", 1, at(14, 0)) // after lunch
+	addDispense(t, st, "p1", 1, at(11, 29)) // before lunch
+	addDispense(t, st, "p2", 2, at(11, 30))
+	addDispense(t, st, "p2", 2, at(12, 15))
+	addDispense(t, st, "p1", 1, at(12, 59))
+	addDispense(t, st, "p1", 1, at(13, 0)) // after lunch
 
 	h, err := svc.GetHighlightsAnalytics(ctx, AnalyticsQuery{MachineID: "m1",
 		From: at(0, 0), To: at(23, 0), Location: chicago})
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Lunch is local time: 11:00 to 13:59 in Chicago.
+	// Lunch is local time: 11:30 to 12:59 in Chicago.
 	if len(h.LunchProducts) != 2 || h.LunchProducts[0].Name != "Diet" || h.LunchProducts[0].Count != 2 ||
 		h.LunchProducts[1].Name != "Cola" || h.LunchProducts[1].Count != 1 {
 		t.Errorf("lunch products %+v", h.LunchProducts)

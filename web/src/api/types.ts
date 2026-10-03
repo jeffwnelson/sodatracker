@@ -297,7 +297,7 @@ export interface HighlightsAnalytics {
   firstCanProducts: ProductCount[];
   /** Days by the product of their last can. */
   lastCanProducts: ProductCount[];
-  /** Cans dispensed 11:00–14:00 local time, by product. */
+  /** Cans dispensed 11:30–13:00 local time, by product. */
   lunchProducts: ProductCount[];
   ounces: number;
   caffeineMg: number;

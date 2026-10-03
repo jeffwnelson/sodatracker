@@ -20,7 +20,7 @@ type HighlightsAnalytics struct {
 	BusiestHour *CountAt       `json:"busiestHour"`
 	// FirstCanProducts and LastCanProducts count days by the product of
 	// their first and last can. LunchProducts counts cans dispensed from
-	// LunchStartHour to LunchEndHour, local time.
+	// LunchStartMinute to LunchEndMinute, local time.
 	FirstCanProducts []ProductCount `json:"firstCanProducts"`
 	LastCanProducts  []ProductCount `json:"lastCanProducts"`
 	LunchProducts    []ProductCount `json:"lunchProducts"`
@@ -38,10 +38,10 @@ const aluminumGPer12oz = 14.2
 
 const gramsPerLb = 453.59237
 
-// Lunch is 11:00 to 14:00 local time.
+// Lunch is 11:30 to 13:00 local time, in minutes after midnight.
 const (
-	LunchStartHour = 11
-	LunchEndHour   = 14
+	LunchStartMinute = 11*60 + 30
+	LunchEndMinute   = 13 * 60
 )
 
 // TimeOfDay summarises one dispense per active day (the first or the last).
@@ -111,7 +111,8 @@ func (s *Service) GetHighlightsAnalytics(ctx context.Context, q AnalyticsQuery) 
 	lunch := productCounter{}
 	for _, i := range inWindow {
 		p := a.product(a.dispenses[i])
-		if h := a.dispenses[i].Timestamp.In(loc).Hour(); h >= LunchStartHour && h < LunchEndHour {
+		local := a.dispenses[i].Timestamp.In(loc)
+		if m := local.Hour()*60 + local.Minute(); m >= LunchStartMinute && m < LunchEndMinute {
 			lunch.add(p.ID, p.Name)
 		}
 		size := p.SizeOz

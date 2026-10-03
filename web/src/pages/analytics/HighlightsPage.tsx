@@ -147,7 +147,7 @@ function Highlights({
         />
         <ProductPieCard
           title="Lunch favorite"
-          subtitle="Cans from 11 AM to 2 PM"
+          subtitle="Cans from 11:30 AM to 1 PM"
           products={data.lunchProducts}
           colors={colors}
           unit="can"
