@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.17.2](https://github.com/jeffwnelson/sodatracker/compare/f2be53ab32031b08f1e67e0c7174280d3dee6982..v0.17.2) - 2026-10-03
+#### Bug Fixes
+- (**analytics**) lunch favorite counts 11:30 to 1 PM - ([f2be53a](https://github.com/jeffwnelson/sodatracker/commit/f2be53ab32031b08f1e67e0c7174280d3dee6982)) - Jeff Nelson
+
+- - -
+
 ## [v0.17.1](https://github.com/jeffwnelson/sodatracker/compare/8e8731cc8d0eb2181a207c05449eb6c5993cfb79..v0.17.1) - 2026-10-02
 #### Bug Fixes
 - (**web**) show active alerts right under the status banner - ([8e8731c](https://github.com/jeffwnelson/sodatracker/commit/8e8731cc8d0eb2181a207c05449eb6c5993cfb79)) - Jeff Nelson
