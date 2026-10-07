@@ -222,7 +222,7 @@ export function WiringSection() {
           <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">Wiring</p>
           <p className="mt-1 text-sm text-text-secondary">
             {layout === "current"
-              ? "Pi GPIO header to the RJ45 breakout to each column's cam contact, as wired now."
+              ? "Pi GPIO header to the RJ45 breakout to each slot's cam contact, as wired now."
               : "A planned rewire: every jumper on header pins 33–40, in the same T568B colors as the cable. Not wired yet."}{" "}
             Hover a wire to trace it. Every contact closes its signal pin to ground; the Pi's internal pull-ups hold
             the pins high.
@@ -270,7 +270,7 @@ export function WiringSection() {
             cable to the machine plugs in here
           </text>
           <text x={SW_X + 60} y={46} textAnchor="middle" fontSize={10} fill="#a8a29e">
-            one bare-wire contact per column
+            one bare-wire contact per slot
           </text>
 
           {/* Header body */}
@@ -286,7 +286,8 @@ export function WiringSection() {
           {/* Pi → breakout jumpers */}
           {wires.map((w) => {
             const exit = headerExit(w.physical);
-            const label = w.bcm == null ? `GND · pin ${w.physical}` : `GPIO${w.bcm} · pin ${w.physical}`;
+            // Pi pin first, then GPIO, the same order as the table.
+            const label = `Pin ${w.physical} · ${w.bcm == null ? "GND" : `GPIO${w.bcm}`}`;
             return (
               <g key={`pi-${w.position}`} {...hover(w.role === "common" ? "common" : w.position)} className="cursor-pointer">
                 <Conductor
@@ -421,15 +422,16 @@ export function WiringSection() {
                 <line x1={SW_X + SW_GAP} y1={y} x2={BUS_X} y2={y} stroke="#44403c" strokeWidth={3} />
                 <circle cx={BUS_X} cy={y} r={4} fill="#44403c" />
                 <text x={BUS_X + 14} y={y - 3} fontSize={13} fontWeight={600} fill="#1c1917">
-                  Column {c.slot}
+                  Slot {c.slot}
                   {UNCONFIRMED_SLOTS.has(c.slot) ? " *" : ""}
                 </text>
-                <text x={BUS_X + 14} y={y + 13} fontSize={11} fill="#57534e">
+                {/* The product's dot sits before its name, as in the stock grid. */}
+                {c.product?.color && (
+                  <circle cx={BUS_X + 19} cy={y + 9} r={4.5} fill={c.product.color} stroke="rgba(0,0,0,0.1)" />
+                )}
+                <text x={BUS_X + (c.product?.color ? 29 : 14)} y={y + 13} fontSize={11} fill="#57534e">
                   {c.product?.name ?? "No product"}
                 </text>
-                {c.product?.color && (
-                  <circle cx={BUS_X + 14 + 4} cy={y + 26} r={4} fill={c.product.color} />
-                )}
               </g>
             );
           })}
@@ -440,13 +442,14 @@ export function WiringSection() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-text-tertiary">
-              <th className="py-2 pr-3 font-medium">Breakout</th>
-              <th className="py-2 pr-3 font-medium">Jumper (Pi to breakout)</th>
-              <th className="py-2 pr-3 font-medium">Cable wire</th>
+              {/* Left to right in the same order as the diagram: Pi to machine. */}
               <th className="py-2 pr-3 font-medium">Pi pin</th>
-              {layout === "proposed" && <th className="py-2 pr-3 font-medium">Pin now</th>}
               <th className="py-2 pr-3 font-medium">GPIO</th>
-              <th className="py-2 font-medium">Goes to</th>
+              {layout === "proposed" && <th className="py-2 pr-3 font-medium">Pin now</th>}
+              <th className="py-2 pr-3 font-medium">Jumper</th>
+              <th className="py-2 pr-3 font-medium">Breakout</th>
+              <th className="py-2 pr-3 font-medium">Cable wire</th>
+              <th className="py-2 font-medium">Machine</th>
             </tr>
           </thead>
           <tbody>
@@ -460,27 +463,28 @@ export function WiringSection() {
                   }`}
                   {...hover(w.role === "common" ? "common" : w.position)}
                 >
-                  <td className="py-2 pr-3 tabular-nums">{w.position}</td>
-                  <td className="py-2 pr-3">
-                    <WireColor look={jumperLook(w)} />
-                  </td>
-                  <td className="py-2 pr-3">
-                    <WireColor look={cableLook(w)} />
-                  </td>
                   <td className="py-2 pr-3 tabular-nums">{w.physical}</td>
+                  <td className="py-2 pr-3 tabular-nums">{w.bcm == null ? "GND" : w.bcm}</td>
                   {layout === "proposed" && (
                     <td className="py-2 pr-3 tabular-nums text-text-tertiary">
                       {CURRENT[w.position - 1].physical}
                       {CURRENT[w.position - 1].bcm != null ? ` (GPIO${CURRENT[w.position - 1].bcm})` : " (GND)"}
                     </td>
                   )}
-                  <td className="py-2 pr-3 tabular-nums">{w.bcm == null ? "GND" : w.bcm}</td>
+                  <td className="py-2 pr-3">
+                    <WireColor look={jumperLook(w)} />
+                  </td>
+                  <td className="py-2 pr-3 tabular-nums">{w.position}</td>
+                  <td className="py-2 pr-3">
+                    <WireColor look={cableLook(w)} />
+                  </td>
                   <td className="py-2">
                     {col ? (
                       <span className="inline-flex items-center gap-2">
+                        Slot {col.slot}
+                        {UNCONFIRMED_SLOTS.has(col.slot) ? " *" : ""} ·
                         <ProductDot color={col.product?.color} />
-                        Column {col.slot} · {col.product?.name ?? "no product"}
-                        {UNCONFIRMED_SLOTS.has(col.slot) ? " *" : ""}
+                        {col.product?.name ?? "no product"}
                       </span>
                     ) : w.role === "common" ? (
                       "Common side of every contact"
@@ -498,7 +502,7 @@ export function WiringSection() {
       </div>
 
       <ul className="mt-4 space-y-1 text-xs text-text-tertiary">
-        <li>* Columns 1 and 2 (both Diet Mountain Dew) may be the other way round; that hasn't been confirmed.</li>
+        <li>* Slots 1 and 2 (both Diet Mountain Dew) may be the other way round; that hasn't been confirmed.</li>
         <li>
           The breakout and the cable's plug are both wired T568B (standard Ethernet type B). Cable colors are
           the Pi-side ones; the cable's colors don't match end to end, so don't go by color at the machine.
@@ -508,7 +512,7 @@ export function WiringSection() {
         <li>Nothing connects to the 3.3V pins (1, 17) or the 5V pins (2, 4).</li>
         {layout === "proposed" && (
           <li>
-            To move to this layout: change each column's GPIO pin in Slot Configuration and in{" "}
+            To move to this layout: change each slot's GPIO pin in Slot Configuration and in{" "}
             <code>piagent.yaml</code> on the Pi to the GPIO numbers above, move the jumpers, then restart the
             container. Counting stops while the jumpers are off, so do it outside lunch hours. Each jumper is the same
             color as the cable conductor on its breakout position.
@@ -516,7 +520,7 @@ export function WiringSection() {
         )}
         {unmapped.map((c) => (
           <li key={c.slot} className="text-status-low">
-            Column {c.slot} is configured for {c.gpioPin != null ? `GPIO${c.gpioPin}` : "no GPIO pin"}, which isn't
+            Slot {c.slot} is configured for {c.gpioPin != null ? `GPIO${c.gpioPin}` : "no GPIO pin"}, which isn't
             on this harness.
           </li>
         ))}
