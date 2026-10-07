@@ -19,7 +19,7 @@ import { ProductDot } from "../components/ProductDot";
  * Dupont jumper from the header to the breakout is a different color.
  *
  * PROPOSED is a planned rewire: the same breakout positions on header pins
- * 33–40, with jumpers in resistor color-code order. Once it's done, it becomes
+ * 33–40, with jumpers in the cable's own T568B colors. Once it's done, it becomes
  * CURRENT (and the slots' GPIO pins and piagent.yaml change to match).
  */
 
@@ -55,8 +55,6 @@ const BLACK = "#1c1917";
 const WHITE = "#ffffff";
 const DARK_GREY = "#525a66";
 const YELLOW = "#facc15";
-const RED = "#dc2626";
-const GREY = "#6b7280";
 /** Fills light enough to need dark text and a dark outline on a header pin. */
 const LIGHT = new Set([WHITE, YELLOW]);
 
@@ -78,18 +76,19 @@ const CURRENT: Wire[] = [
 ];
 
 /** The rewire onto header pins 33–40, breakout position by position. */
-const REWIRE: Record<number, { physical: number; bcm: number | null; jumper: Look }> = {
-  1: { physical: 34, bcm: null, jumper: { color: BROWN, striped: false, name: "brown" } },
-  2: { physical: 33, bcm: 13, jumper: { color: RED, striped: false, name: "red" } },
-  3: { physical: 35, bcm: 19, jumper: { color: ORANGE, striped: false, name: "orange" } },
-  4: { physical: 36, bcm: 16, jumper: { color: YELLOW, striped: false, name: "yellow" } },
-  5: { physical: 37, bcm: 26, jumper: { color: GREEN, striped: false, name: "green" } },
-  6: { physical: 38, bcm: 20, jumper: { color: BLUE, striped: false, name: "blue" } },
-  7: { physical: 39, bcm: null, jumper: { color: PURPLE, striped: false, name: "purple" } },
-  8: { physical: 40, bcm: 21, jumper: { color: GREY, striped: false, name: "grey" } },
+const REWIRE: Record<number, { physical: number; bcm: number | null }> = {
+  1: { physical: 34, bcm: null },
+  2: { physical: 33, bcm: 13 },
+  3: { physical: 35, bcm: 19 },
+  4: { physical: 36, bcm: 16 },
+  5: { physical: 37, bcm: 26 },
+  6: { physical: 38, bcm: 20 },
+  7: { physical: 39, bcm: null },
+  8: { physical: 40, bcm: 21 },
 };
 
-const PROPOSED: Wire[] = CURRENT.map((w) => ({ ...w, ...REWIRE[w.position] }));
+// Jumpers match the cable conductors, so no `jumper` override.
+const PROPOSED: Wire[] = CURRENT.map((w) => ({ ...w, ...REWIRE[w.position], jumper: undefined }));
 
 type Layout = "current" | "proposed";
 
@@ -224,7 +223,7 @@ export function WiringSection() {
           <p className="mt-1 text-sm text-text-secondary">
             {layout === "current"
               ? "Pi GPIO header to the RJ45 breakout to each column's cam contact, as wired now."
-              : "A planned rewire: every jumper on header pins 33–40, colored in order by breakout position. Not wired yet."}{" "}
+              : "A planned rewire: every jumper on header pins 33–40, in the same T568B colors as the cable. Not wired yet."}{" "}
             Hover a wire to trace it. Every contact closes its signal pin to ground; the Pi's internal pull-ups hold
             the pins high.
           </p>
@@ -511,9 +510,8 @@ export function WiringSection() {
           <li>
             To move to this layout: change each column's GPIO pin in Slot Configuration and in{" "}
             <code>piagent.yaml</code> on the Pi to the GPIO numbers above, move the jumpers, then restart the
-            container. Counting stops while the jumpers are off, so do it outside lunch hours. Jumpers follow the
-            resistor color code (brown, red, orange, yellow, green, blue, purple, grey), the order of a rainbow
-            Dupont ribbon.
+            container. Counting stops while the jumpers are off, so do it outside lunch hours. Each jumper is the same
+            color as the cable conductor on its breakout position.
           </li>
         )}
         {unmapped.map((c) => (
