@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.19.1](https://github.com/jeffwnelson/sodatracker/compare/c4b7c91febd2d004e005b55f706a4bc0a3947656..v0.19.1) - 2026-10-07
+#### Bug Fixes
+- (**web**) proposed wiring uses T568B jumper colors - ([c4b7c91](https://github.com/jeffwnelson/sodatracker/commit/c4b7c91febd2d004e005b55f706a4bc0a3947656)) - Jeff Nelson
+
+- - -
+
 ## [v0.19.0](https://github.com/jeffwnelson/sodatracker/compare/0966d670b67b7a6bbaafee6a7d7811ef40de806f..v0.19.0) - 2026-10-07
 #### Features
 - (**web**) wiring diagram on Settings, with a proposed rewire - ([0966d67](https://github.com/jeffwnelson/sodatracker/commit/0966d670b67b7a6bbaafee6a7d7811ef40de806f)) - Jeff Nelson
