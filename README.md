@@ -94,16 +94,20 @@ timestamped at the start of the closure, once the pin has read HIGH again for
 
 Slots use the machine's own column numbers.
 
-| Slot | Product           | Pi-side wire | Physical | BCM |
-|------|-------------------|--------------|----------|-----|
-| 1    | Diet Mountain Dew | brown        | 22       | 25  |
-| 2    | Diet Mountain Dew | blue         | 11       | 17  |
-| 3    | Coke Zero         | white/green  | 35       | 19  |
-| 4    | Mountain Dew      | green        | 33       | 13  |
-| 5    | Diet Coke         | white/blue   | 15       | 22  |
-| —    | common            | white/brown  | 14 (GND) | —   |
-| —    | common            | white/orange | 20 (GND) | —   |
-| —    | spare             | orange       | 16       | 23  |
+The Pi's header connects to the RJ45 breakout with Dupont jumpers, and the
+breakout and the cable's plug are both wired T568B, so breakout position n is
+the cable conductor on plug pin n. Settings → Wiring draws the same map.
+
+| Slot | Product           | Pi-side wire | Breakout | Jumper    | Physical | BCM |
+|------|-------------------|--------------|----------|-----------|----------|-----|
+| 1    | Diet Mountain Dew | brown        | 8        | orange    | 22       | 25  |
+| 2    | Diet Mountain Dew | blue         | 4        | blue      | 11       | 17  |
+| 3    | Coke Zero         | white/green  | 3        | white     | 35       | 19  |
+| 4    | Mountain Dew      | green        | 6        | green     | 33       | 13  |
+| 5    | Diet Coke         | white/blue   | 5        | dark grey | 15       | 22  |
+| —    | common            | white/brown  | 7        | yellow    | 14 (GND) | —   |
+| —    | common            | white/orange | 1        | purple    | 20 (GND) | —   |
+| —    | spare             | orange       | 2        | black     | 16       | 23  |
 
 No external resistors are needed: the piagent enables the internal pull-ups
 through periph.io. Nothing should connect to the 3.3V pins (1, 17) or the 5V
