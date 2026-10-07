@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.19.2](https://github.com/jeffwnelson/sodatracker/compare/4c7be5fb20821e8910ecb25458dbf0380cf3520d..v0.19.2) - 2026-10-07
+#### Bug Fixes
+- (**web**) wiring table and labels follow the diagram, say Slot, dots before product names - ([4c7be5f](https://github.com/jeffwnelson/sodatracker/commit/4c7be5fb20821e8910ecb25458dbf0380cf3520d)) - Jeff Nelson
+
+- - -
+
 ## [v0.19.1](https://github.com/jeffwnelson/sodatracker/compare/c4b7c91febd2d004e005b55f706a4bc0a3947656..v0.19.1) - 2026-10-07
 #### Bug Fixes
 - (**web**) proposed wiring uses T568B jumper colors - ([c4b7c91](https://github.com/jeffwnelson/sodatracker/commit/c4b7c91febd2d004e005b55f706a4bc0a3947656)) - Jeff Nelson
