@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.19.0](https://github.com/jeffwnelson/sodatracker/compare/0966d670b67b7a6bbaafee6a7d7811ef40de806f..v0.19.0) - 2026-10-07
+#### Features
+- (**web**) wiring diagram on Settings, with a proposed rewire - ([0966d67](https://github.com/jeffwnelson/sodatracker/commit/0966d670b67b7a6bbaafee6a7d7811ef40de806f)) - Jeff Nelson
+
+- - -
+
 ## [v0.18.0](https://github.com/jeffwnelson/sodatracker/compare/bc9f38e6c50989deaede905e78478018de91b531..v0.18.0) - 2026-10-07
 #### Features
 - (**analytics**) product heatmap with product filter on the Products tab - ([bc9f38e](https://github.com/jeffwnelson/sodatracker/commit/bc9f38e6c50989deaede905e78478018de91b531)) - Jeff Nelson
