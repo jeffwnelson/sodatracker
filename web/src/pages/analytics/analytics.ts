@@ -470,3 +470,10 @@ export const axisProps = {
   axisLine: false,
   tickLine: false,
 } as const;
+
+/** Sums [weekday][hour] grids, e.g. the heatmaps of several products. */
+export function sumHeatmaps(maps: number[][][]): number[][] {
+  const out = Array.from({ length: 7 }, () => Array<number>(24).fill(0));
+  for (const m of maps) m.forEach((row, d) => row.forEach((v, h) => (out[d][h] += v)));
+  return out;
+}

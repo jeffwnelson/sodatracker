@@ -205,6 +205,8 @@ export interface ProductAnalytics {
   products: ProductStat[];
   series: { bucket: string; counts: Record<string, number> }[];
   dayparts: DaypartStat[];
+  /** productId → [weekday Monday=0][local hour] */
+  heatmaps: Record<string, number[][]>;
 }
 
 export interface SlotInventory {

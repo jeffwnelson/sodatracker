@@ -2748,6 +2748,19 @@ const docTemplate = `{
                         "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.DaypartStat"
                     }
                 },
+                "heatmaps": {
+                    "description": "Heatmaps maps productId to its dispenses, indexed [weekday Monday=0][local\nhour] like ConsumptionAnalytics.Heatmap, so the UI can sum any selection.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                },
                 "products": {
                     "type": "array",
                     "items": {

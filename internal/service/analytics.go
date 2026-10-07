@@ -368,6 +368,9 @@ type ProductAnalytics struct {
 	Products []ProductStat        `json:"products"`
 	Series   []ProductSeriesPoint `json:"series"`
 	Dayparts []DaypartStat        `json:"dayparts"`
+	// Heatmaps maps productId to its dispenses, indexed [weekday Monday=0][local
+	// hour] like ConsumptionAnalytics.Heatmap, so the UI can sum any selection.
+	Heatmaps map[string][7][24]int `json:"heatmaps"`
 }
 
 type ProductStat struct {
@@ -432,7 +435,7 @@ func (s *Service) GetProductAnalytics(ctx context.Context, q AnalyticsQuery) (*P
 	if err != nil || a == nil {
 		return nil, err
 	}
-	out := &ProductAnalytics{Range: a.rangeInfo()}
+	out := &ProductAnalytics{Range: a.rangeInfo(), Heatmaps: map[string][7][24]int{}}
 
 	stats := map[string]*ProductStat{}
 	get := func(p domain.Product) *ProductStat {
@@ -477,9 +480,13 @@ func (s *Service) GetProductAnalytics(ctx context.Context, q AnalyticsQuery) (*P
 		ts := d.Timestamp.In(a.q.Location).Format(time.RFC3339)
 		st.LastDispensed = &ts
 		out.Series[i].Counts[p.ID]++
-		dp := &out.Dayparts[daypartIndex(d.Timestamp.In(a.q.Location).Hour())]
+		local := d.Timestamp.In(a.q.Location)
+		dp := &out.Dayparts[daypartIndex(local.Hour())]
 		dp.Total++
 		dp.Counts[p.ID]++
+		hm := out.Heatmaps[p.ID]
+		hm[mondayIndex(local.Weekday())][local.Hour()]++
+		out.Heatmaps[p.ID] = hm
 	}
 
 	for _, st := range stats {

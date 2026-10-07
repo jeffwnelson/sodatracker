@@ -177,6 +177,10 @@ func TestProductAnalytics(t *testing.T) {
 	if got := p.Dayparts[1].Counts["b"]; got != 1 {
 		t.Errorf("lunch b = %d, want 1", got)
 	}
+	// 2026-03-10 is a Tuesday (index 1).
+	if ha, hb := p.Heatmaps["a"], p.Heatmaps["b"]; ha[1][8] != 1 || ha[1][15] != 1 || hb[1][12] != 1 || len(p.Heatmaps) != 2 {
+		t.Errorf("heatmaps = %v", p.Heatmaps)
+	}
 }
 
 func TestInventoryAnalytics(t *testing.T) {

@@ -135,6 +135,7 @@ export function ChartCard({
   title,
   subtitle,
   legend,
+  controls,
   table,
   compact = false,
   children,
@@ -142,6 +143,8 @@ export function ChartCard({
   title: string;
   subtitle?: string;
   legend?: ReactNode;
+  /** Shown above both the chart and the table, e.g. filters. */
+  controls?: ReactNode;
   table?: ReactNode;
   /** Tighter padding, for cards laid out several to a row. */
   compact?: boolean;
@@ -187,6 +190,7 @@ export function ChartCard({
           </div>
         )}
       </div>
+      {controls && <div className="mb-4">{controls}</div>}
       {view === "chart" || !table ? (
         <>
           {legend && <div className="mb-4">{legend}</div>}

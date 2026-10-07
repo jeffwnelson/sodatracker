@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Bar,
@@ -24,6 +25,7 @@ import {
   formatHour,
   money,
   percent,
+  sumHeatmaps,
   useAnalytics,
   useComparison,
 } from "./analytics";
@@ -37,6 +39,7 @@ import {
   NoData,
   Swatch,
 } from "./components";
+import { Heatmap, HeatmapTable } from "./Heatmap";
 
 export function ProductsPage() {
   const query = useAnalytics("products");
@@ -99,6 +102,34 @@ function Products({
     <Legend
       items={stackIds.map((id) => ({ key: id, label: names[id], color: colors[id] }))}
     />
+  );
+
+  // An empty selection means every product.
+  const [picked, setPicked] = useState<string[]>([]);
+  const shown = picked.filter((id) => data.heatmaps[id]);
+  const heatmap = sumHeatmaps(
+    (shown.length ? shown : stackIds).map((id) => data.heatmaps[id]).filter(Boolean),
+  );
+  const toggle = (id: string) =>
+    setPicked((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  const chip = (on: boolean) =>
+    `inline-flex items-center rounded-full border px-3 py-1.5 sm:py-1 text-xs font-medium transition-colors duration-150 ${
+      on
+        ? "border-accent bg-accent-soft text-text-primary"
+        : "border-border-primary text-text-tertiary hover:text-text-primary"
+    }`;
+  const productFilter = (
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter heatmap by product">
+      <button type="button" onClick={() => setPicked([])} aria-pressed={shown.length === 0} className={chip(shown.length === 0)}>
+        All products
+      </button>
+      {stackIds.map((id) => (
+        <button key={id} type="button" onClick={() => toggle(id)} aria-pressed={shown.includes(id)} className={chip(shown.includes(id))}>
+          <Swatch color={colors[id]} />
+          {names[id]}
+        </button>
+      ))}
+    </div>
   );
 
   const series = data.series.map((pt) => ({ bucket: pt.bucket, ...pt.counts }));
@@ -299,6 +330,19 @@ function Products({
             </BarChart>
           </ResponsiveContainer>
         )}
+      </ChartCard>
+
+      <ChartCard
+        title="When people grab each product"
+        subtitle={
+          shown.length
+            ? `Dispenses of ${shown.map((id) => names[id]).join(", ")} by day of week and hour`
+            : "Dispenses of every product by day of week and hour; pick products to narrow it"
+        }
+        controls={total > 0 && productFilter}
+        table={<HeatmapTable heatmap={heatmap} />}
+      >
+        {total === 0 ? <NoData message="No dispenses in this range." /> : <Heatmap heatmap={heatmap} />}
       </ChartCard>
     </>
   );
