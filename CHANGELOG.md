@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.18.0](https://github.com/jeffwnelson/sodatracker/compare/bc9f38e6c50989deaede905e78478018de91b531..v0.18.0) - 2026-10-07
+#### Features
+- (**analytics**) product heatmap with product filter on the Products tab - ([bc9f38e](https://github.com/jeffwnelson/sodatracker/commit/bc9f38e6c50989deaede905e78478018de91b531)) - Jeff Nelson
+
+- - -
+
 ## [v0.17.2](https://github.com/jeffwnelson/sodatracker/compare/f2be53ab32031b08f1e67e0c7174280d3dee6982..v0.17.2) - 2026-10-03
 #### Bug Fixes
 - (**analytics**) lunch favorite counts 11:30 to 1 PM - ([f2be53a](https://github.com/jeffwnelson/sodatracker/commit/f2be53ab32031b08f1e67e0c7174280d3dee6982)) - Jeff Nelson
