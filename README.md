@@ -66,8 +66,8 @@ stack. They run to the Pi over an 8-conductor Ethernet cable, with the
 contact commons on two conductors and one conductor spare. The cable's colors
 don't match end to end, so the pin table below goes by the Pi-side color.
 
-Every column was verified by closing its contact and by real vends. The two
-Diet Mountain Dew columns are still unconfirmed as machine #1 vs #2.
+Every column was verified by closing its contact and by real vends, including
+which Diet Mountain Dew column is #1 and which is #2.
 
 **Mains voltage:** the machine's entire vend control circuit runs at 115V AC.
 The service manual draws it "across the line" between L1 and L2, so every

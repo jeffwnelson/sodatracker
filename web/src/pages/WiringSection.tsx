@@ -92,9 +92,6 @@ const PROPOSED: Wire[] = CURRENT.map((w) => ({ ...w, ...REWIRE[w.position], jump
 
 type Layout = "current" | "proposed";
 
-/** Slots whose two Diet Mountain Dew columns may be the other way round. */
-const UNCONFIRMED_SLOTS = new Set([1, 2]);
-
 // --- Geometry (SVG user units) ---------------------------------------------
 
 const W = 1000;
@@ -423,7 +420,6 @@ export function WiringSection() {
                 <circle cx={BUS_X} cy={y} r={4} fill="#44403c" />
                 <text x={BUS_X + 14} y={y - 3} fontSize={13} fontWeight={600} fill="#1c1917">
                   Slot {c.slot}
-                  {UNCONFIRMED_SLOTS.has(c.slot) ? " *" : ""}
                 </text>
                 {/* The product's dot sits before its name, as in the stock grid. */}
                 {c.product?.color && (
@@ -481,8 +477,7 @@ export function WiringSection() {
                   <td className="py-2">
                     {col ? (
                       <span className="inline-flex items-center gap-2">
-                        Slot {col.slot}
-                        {UNCONFIRMED_SLOTS.has(col.slot) ? " *" : ""} ·
+                        Slot {col.slot} ·
                         <ProductDot color={col.product?.color} />
                         {col.product?.name ?? "no product"}
                       </span>
@@ -502,7 +497,6 @@ export function WiringSection() {
       </div>
 
       <ul className="mt-4 space-y-1 text-xs text-text-tertiary">
-        <li>* Slots 1 and 2 (both Diet Mountain Dew) may be the other way round; that hasn't been confirmed.</li>
         <li>
           The breakout and the cable's plug are both wired T568B (standard Ethernet type B). Cable colors are
           the Pi-side ones; the cable's colors don't match end to end, so don't go by color at the machine.
