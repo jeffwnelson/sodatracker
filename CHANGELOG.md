@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.20.0](https://github.com/jeffwnelson/sodatracker/compare/03e16d659a6b3d4d9ef947c29d7f8672c626898b..v0.20.0) - 2026-10-08
+#### Features
+- (**web**) recent dispenses show the event ID and expand to raw JSON - ([bca5055](https://github.com/jeffwnelson/sodatracker/commit/bca5055a5f7d338df8099a5a4524289289738292)) - Jeff Nelson
+#### Documentation
+- Diet Mountain Dew columns confirmed, drop unconfirmed marks from wiring - ([03e16d6](https://github.com/jeffwnelson/sodatracker/commit/03e16d659a6b3d4d9ef947c29d7f8672c626898b)) - Jeff Nelson
+
+- - -
+
 ## [v0.19.2](https://github.com/jeffwnelson/sodatracker/compare/4c7be5fb20821e8910ecb25458dbf0380cf3520d..v0.19.2) - 2026-10-07
 #### Bug Fixes
 - (**web**) wiring table and labels follow the diagram, say Slot, dots before product names - ([4c7be5f](https://github.com/jeffwnelson/sodatracker/commit/4c7be5fb20821e8910ecb25458dbf0380cf3520d)) - Jeff Nelson
