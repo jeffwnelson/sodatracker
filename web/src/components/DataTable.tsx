@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { ReactNode } from "react";
 
 interface Column<T> {
@@ -15,12 +16,15 @@ export function DataTable<T>({
   keyFn,
   emptyMessage = "No data",
   onRowClick,
+  renderExpanded,
 }: {
   columns: Column<T>[];
   data: T[];
   keyFn: (row: T) => string;
   emptyMessage?: string;
   onRowClick?: (row: T) => void;
+  /** Content for a full-width row under `row`, or null to show none. */
+  renderExpanded?: (row: T) => ReactNode;
 }) {
   if (data.length === 0) {
     return (
@@ -46,22 +50,33 @@ export function DataTable<T>({
           </tr>
         </thead>
         <tbody className="divide-y divide-border-primary">
-          {data.map((row, rowIndex) => (
-            <tr
-              key={keyFn(row)}
-              className={`transition-colors duration-150 hover:bg-surface-secondary ${onRowClick ? "cursor-pointer" : ""}`}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-            >
-              {columns.map((col, colIndex) => (
-                <td
-                  key={colIndex}
-                  className={`py-3 text-text-secondary ${col.className ?? ""}`}
+          {data.map((row, rowIndex) => {
+            const expanded = renderExpanded?.(row);
+            return (
+              <Fragment key={keyFn(row)}>
+                <tr
+                  className={`transition-colors duration-150 hover:bg-surface-secondary ${onRowClick ? "cursor-pointer" : ""}`}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
                 >
-                  {col.accessor(row, rowIndex)}
-                </td>
-              ))}
-            </tr>
-          ))}
+                  {columns.map((col, colIndex) => (
+                    <td
+                      key={colIndex}
+                      className={`py-3 text-text-secondary ${col.className ?? ""}`}
+                    >
+                      {col.accessor(row, rowIndex)}
+                    </td>
+                  ))}
+                </tr>
+                {expanded != null && (
+                  <tr>
+                    <td colSpan={columns.length} className="pb-3">
+                      {expanded}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>

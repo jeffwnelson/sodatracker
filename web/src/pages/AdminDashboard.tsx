@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   LineChart,
@@ -184,8 +185,55 @@ function RecentDispenses({ machineId }: { machineId: string }) {
   });
   const { data: products } = useQuery({ queryKey: ["products"], queryFn: listProducts });
   const byId = new Map((products ?? []).map((p) => [p.id, p]));
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const toggle = (id: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const columns: Column<Dispense>[] = [
+    {
+      header: "",
+      headerClassName: "w-8",
+      className: "w-8",
+      accessor: (d) => (
+        <button
+          type="button"
+          onClick={() => toggle(d.id)}
+          aria-expanded={open.has(d.id)}
+          aria-label={open.has(d.id) ? "Hide raw JSON" : "Show raw JSON"}
+          title={open.has(d.id) ? "Hide raw JSON" : "Show raw JSON"}
+          className="-m-2 inline-flex rounded p-2 align-middle text-text-tertiary hover:text-text-primary focus-visible:outline-2 focus-visible:outline-accent"
+        >
+          <svg
+            viewBox="0 0 16 16"
+            className={`h-4 w-4 transition-transform duration-150 ${open.has(d.id) ? "rotate-90" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 4l4 4-4 4" />
+          </svg>
+        </button>
+      ),
+    },
+    {
+      header: "ID",
+      accessor: (d) => (
+        <code
+          title={d.id}
+          className="rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs text-text-secondary"
+        >
+          {d.id.slice(0, 8)}
+        </code>
+      ),
+    },
     {
       header: "When",
       accessor: (d) => (
@@ -226,7 +274,18 @@ function RecentDispenses({ machineId }: { machineId: string }) {
         Recent Dispenses
       </p>
       {dispenses && dispenses.length > 0 ? (
-        <DataTable columns={columns} data={dispenses} keyFn={(d) => d.id} />
+        <DataTable
+          columns={columns}
+          data={dispenses}
+          keyFn={(d) => d.id}
+          renderExpanded={(d) =>
+            open.has(d.id) ? (
+              <pre className="overflow-x-auto rounded-lg bg-surface-tertiary p-3 font-mono text-xs leading-relaxed text-text-primary">
+                {JSON.stringify(d, null, 2)}
+              </pre>
+            ) : null
+          }
+        />
       ) : (
         <p className="text-sm text-text-tertiary">
           {dispenses ? "No dispenses yet." : "Loading…"}
