@@ -351,11 +351,13 @@ func (s *SQLiteStore) GetSlots(ctx context.Context, machineID string) ([]domain.
 
 // --- Dispenses ---
 
+// Times are stored as text and compared as text, so they are always written
+// in UTC; a mix of offsets would sort and filter wrongly.
 func (s *SQLiteStore) CreateDispense(ctx context.Context, d *domain.Dispense) error {
 	res, err := s.db.ExecContext(ctx,
 		`INSERT INTO dispenses (id, machine_id, product_id, slot_position, source_type, timestamp) VALUES (?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(id) DO NOTHING`,
-		d.ID, d.MachineID, d.ProductID, d.SlotPosition, d.SourceType, d.Timestamp)
+		d.ID, d.MachineID, d.ProductID, d.SlotPosition, d.SourceType, d.Timestamp.UTC())
 	if err != nil {
 		return err
 	}
@@ -385,6 +387,51 @@ func (s *SQLiteStore) ListDispenses(ctx context.Context, machineID string, since
 	return dispenses, rows.Err()
 }
 
+func (s *SQLiteStore) ListDispensesBetween(ctx context.Context, machineID string, from, to time.Time) ([]domain.Dispense, error) {
+	query := `SELECT id, machine_id, product_id, slot_position, source_type, timestamp
+		 FROM dispenses WHERE machine_id = ? AND timestamp >= ?`
+	args := []any{machineID, from.UTC()}
+	if !to.IsZero() {
+		query += ` AND timestamp < ?`
+		args = append(args, to.UTC())
+	}
+	rows, err := s.db.QueryContext(ctx, query+` ORDER BY timestamp`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var dispenses []domain.Dispense
+	for rows.Next() {
+		var d domain.Dispense
+		if err := rows.Scan(&d.ID, &d.MachineID, &d.ProductID, &d.SlotPosition, &d.SourceType, &d.Timestamp); err != nil {
+			return nil, err
+		}
+		dispenses = append(dispenses, d)
+	}
+	return dispenses, rows.Err()
+}
+
+func (s *SQLiteStore) FirstActivity(ctx context.Context, machineID string) (time.Time, error) {
+	// One indexed lookup per table; MIN() would return untyped text.
+	var first time.Time
+	for _, table := range []string{"dispenses", "restocks"} {
+		var t time.Time
+		err := s.db.QueryRowContext(ctx,
+			`SELECT timestamp FROM `+table+` WHERE machine_id = ? ORDER BY timestamp LIMIT 1`,
+			machineID).Scan(&t)
+		if err == sql.ErrNoRows {
+			continue
+		}
+		if err != nil {
+			return time.Time{}, err
+		}
+		if first.IsZero() || t.Before(first) {
+			first = t
+		}
+	}
+	return first, nil
+}
+
 func (s *SQLiteStore) CountDispensesSince(ctx context.Context, machineID string, slotPosition int, since time.Time) (int, error) {
 	var count int
 	err := s.db.QueryRowContext(ctx,
@@ -402,7 +449,7 @@ func (s *SQLiteStore) CreateRestock(ctx context.Context, r *domain.Restock) erro
 	}
 	_, err = s.db.ExecContext(ctx,
 		`INSERT INTO restocks (id, machine_id, user_id, slots_json, timestamp) VALUES (?, ?, ?, ?, ?)`,
-		r.ID, r.MachineID, r.UserID, string(slotsJSON), r.Timestamp)
+		r.ID, r.MachineID, r.UserID, string(slotsJSON), r.Timestamp.UTC())
 	return err
 }
 

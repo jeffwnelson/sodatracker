@@ -284,3 +284,20 @@ func TestSpendAnalytics(t *testing.T) {
 		t.Errorf("byProduct = %+v", sp.ByProduct)
 	}
 }
+
+func TestInventoryReplayStart(t *testing.T) {
+	day := func(d int) time.Time { return time.Date(2026, 9, d, 12, 0, 0, 0, time.UTC) }
+	restocks := []domain.Restock{
+		{Timestamp: day(1), Slots: []domain.RestockSlot{{Position: 1}, {Position: 2}}},
+		{Timestamp: day(5), Slots: []domain.RestockSlot{{Position: 1}}},
+		{Timestamp: day(20), Slots: []domain.RestockSlot{{Position: 2}}},
+	}
+	// Slot 2's last restock by day 10 is day 1, slot 1's is day 5.
+	if got := inventoryReplayStart(restocks, day(10)); !got.Equal(day(1)) {
+		t.Errorf("from day 10: got %v, want day 1", got)
+	}
+	// Nothing restocked yet: replay starts at the window.
+	if got := inventoryReplayStart(restocks, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)); !got.Equal(time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("before any restock: got %v", got)
+	}
+}

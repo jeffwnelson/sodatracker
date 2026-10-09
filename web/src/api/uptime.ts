@@ -17,6 +17,8 @@ export function useUptime(machineId: string, start: string, end: string) {
       }),
     enabled: !!machineId,
     staleTime: 60_000,
+    // Only a range reaching today can change; LiveUpdates refreshes it.
+    meta: { live: end >= dayKey(new Date()) },
   });
 }
 

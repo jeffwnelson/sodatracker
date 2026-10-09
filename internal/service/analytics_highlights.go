@@ -64,7 +64,7 @@ type ProductCount struct {
 }
 
 func (s *Service) GetHighlightsAnalytics(ctx context.Context, q AnalyticsQuery) (*HighlightsAnalytics, error) {
-	a, err := s.loadAnalytics(ctx, q)
+	a, err := s.loadAnalytics(ctx, q, needWindow)
 	if err != nil || a == nil {
 		return nil, err
 	}

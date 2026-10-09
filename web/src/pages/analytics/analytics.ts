@@ -234,6 +234,8 @@ export function useAnalytics<K extends AnalyticsKind>(kind: K) {
       getAnalytics(kind, { machineId, from: period.from, to: period.to, tz: timezone }),
     enabled: !!machineId,
     staleTime: 30_000,
+    // A window ending now changes with each vend; LiveUpdates refreshes it.
+    meta: { live: period.to === undefined },
     // Hold the previous render while a new range loads instead of flashing
     // skeletons.
     placeholderData: keepPreviousData,
@@ -292,6 +294,7 @@ export function useComparison<K extends AnalyticsKind>(
       }),
     enabled: !!machineId && !!comparePeriod && !!bucket,
     staleTime: 30_000,
+    meta: { live: !!comparePeriod && comparePeriod.to === undefined },
   });
   if (!comparePeriod || !compareRange || !query.data || !bucket || !period.days || !primary) return null;
   const { missing, total } = comparisonCoverage(compareRange, primary.range.trackingSince);

@@ -252,7 +252,11 @@ function UptimeCalendar({ machineId, today }: { machineId: string; today: string
   const last = addMonths(monthStart(today), -3 * offset);
   const months = [addMonths(last, -2), addMonths(last, -1), last];
   const end = addDays(addMonths(last, 1), -1);
-  const days = useUptime(machineId, months[0], end < today ? end : today);
+  // The current three months usually fit in the last 90 days the bars
+  // above fetch; asking for exactly that range shares their query.
+  const last90 = addDays(today, -89);
+  const shared = offset === 0 && months[0] >= last90;
+  const days = useUptime(machineId, shared ? last90 : months[0], shared ? today : end < today ? end : today);
   const map = byDay(days.data);
   const [active, setActive] = useState<string | null>(null);
 

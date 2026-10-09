@@ -36,6 +36,12 @@ type Store interface {
 	CreateDispense(ctx context.Context, d *domain.Dispense) error
 	ListDispenses(ctx context.Context, machineID string, since time.Time, limit int) ([]domain.Dispense, error)
 	CountDispensesSince(ctx context.Context, machineID string, slotPosition int, since time.Time) (int, error)
+	// ListDispensesBetween returns dispenses in [from, to), oldest first. A
+	// zero to means no upper bound.
+	ListDispensesBetween(ctx context.Context, machineID string, from, to time.Time) ([]domain.Dispense, error)
+	// FirstActivity is the machine's earliest dispense or restock, or the
+	// zero time if it has neither.
+	FirstActivity(ctx context.Context, machineID string) (time.Time, error)
 
 	// Restocks
 	CreateRestock(ctx context.Context, r *domain.Restock) error

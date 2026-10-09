@@ -10,9 +10,7 @@ import (
 	"github.com/jeffwnelson/sodatracker/internal/domain"
 )
 
-// analyticsRowLimit caps how many dispenses one analytics request loads. The
-// analytics replay full history in memory (stock levels need every dispense
-// since the relevant restock), which is fine at one office machine's volume.
+// analyticsRowLimit caps how many restocks one analytics request loads.
 const analyticsRowLimit = 1_000_000
 
 // Bucket sizes for time series.
@@ -50,8 +48,9 @@ type AnalyticsRange struct {
 	TrackingSince *string `json:"trackingSince" example:"2026-09-10T07:12:00-05:00"`
 }
 
-// analyticsData is everything the analytics loaded once per request: all-time
-// dispenses and restocks in ascending order, plus product resolution tables.
+// analyticsData is what one analytics request loaded: the effective window
+// and buckets, product resolution tables, and (depending on analyticsNeed)
+// dispenses and restocks in ascending order.
 type analyticsData struct {
 	q            AnalyticsQuery
 	slots        []domain.Slot
@@ -67,7 +66,24 @@ type analyticsData struct {
 	hasPrevious bool
 }
 
-func (s *Service) loadAnalytics(ctx context.Context, q AnalyticsQuery) (*analyticsData, error) {
+// analyticsNeed says how much history an analytics view reads, so a request
+// loads only that rather than the machine's whole history.
+type analyticsNeed int
+
+const (
+	// needNothing loads no dispenses or restocks (uptime).
+	needNothing analyticsNeed = iota
+	// needWindow loads the window's dispenses.
+	needWindow
+	// needPrevious loads dispenses from the start of the preceding window of
+	// equal length, for previous-period totals, and all restocks.
+	needPrevious
+	// needInventory loads all restocks and the dispenses since each slot's
+	// last restock before the window, which is where its stock replay starts.
+	needInventory
+)
+
+func (s *Service) loadAnalytics(ctx context.Context, q AnalyticsQuery, need analyticsNeed) (*analyticsData, error) {
 	machine, err := s.store.GetMachine(ctx, q.MachineID)
 	if err != nil {
 		return nil, err
@@ -85,6 +101,15 @@ func (s *Service) loadAnalytics(ctx context.Context, q AnalyticsQuery) (*analyti
 		q.From = q.To.AddDate(0, 0, -30)
 	}
 
+	earliest, err := s.store.FirstActivity(ctx, q.MachineID)
+	if err != nil {
+		return nil, err
+	}
+	if !earliest.IsZero() && earliest.After(q.From) && earliest.Before(q.To) {
+		q.From = maxTime(q.From, bucketStart(earliest, q.Location, BucketDay))
+	}
+	prevFrom := q.From.Add(-q.To.Sub(q.From))
+
 	slots, err := s.store.GetSlots(ctx, q.MachineID)
 	if err != nil {
 		return nil, err
@@ -93,16 +118,28 @@ func (s *Service) loadAnalytics(ctx context.Context, q AnalyticsQuery) (*analyti
 	if err != nil {
 		return nil, err
 	}
-	dispenses, err := s.store.ListDispenses(ctx, q.MachineID, time.Time{}, analyticsRowLimit)
-	if err != nil {
-		return nil, err
+
+	var restocks []domain.Restock
+	if need == needPrevious || need == needInventory {
+		if restocks, err = s.store.ListRestocks(ctx, q.MachineID, analyticsRowLimit); err != nil {
+			return nil, err
+		}
+		sort.SliceStable(restocks, func(i, j int) bool { return restocks[i].Timestamp.Before(restocks[j].Timestamp) })
 	}
-	restocks, err := s.store.ListRestocks(ctx, q.MachineID, analyticsRowLimit)
-	if err != nil {
-		return nil, err
+
+	var dispenses []domain.Dispense
+	if need != needNothing {
+		from := q.From
+		switch need {
+		case needPrevious:
+			from = prevFrom
+		case needInventory:
+			from = inventoryReplayStart(restocks, q.From)
+		}
+		if dispenses, err = s.store.ListDispensesBetween(ctx, q.MachineID, from, q.To); err != nil {
+			return nil, err
+		}
 	}
-	sort.SliceStable(dispenses, func(i, j int) bool { return dispenses[i].Timestamp.Before(dispenses[j].Timestamp) })
-	sort.SliceStable(restocks, func(i, j int) bool { return restocks[i].Timestamp.Before(restocks[j].Timestamp) })
 
 	a := &analyticsData{
 		slots:        slots,
@@ -110,6 +147,8 @@ func (s *Service) loadAnalytics(ctx context.Context, q AnalyticsQuery) (*analyti
 		slotProducts: make(map[int]domain.Product),
 		dispenses:    dispenses,
 		restocks:     restocks,
+		earliest:     earliest,
+		hasPrevious:  !earliest.IsZero() && !earliest.After(prevFrom),
 	}
 	for _, p := range products {
 		a.products[p.ID] = p
@@ -120,18 +159,6 @@ func (s *Service) loadAnalytics(ctx context.Context, q AnalyticsQuery) (*analyti
 		}
 	}
 
-	var earliest time.Time
-	if len(dispenses) > 0 {
-		earliest = dispenses[0].Timestamp
-	}
-	if len(restocks) > 0 && (earliest.IsZero() || restocks[0].Timestamp.Before(earliest)) {
-		earliest = restocks[0].Timestamp
-	}
-	if !earliest.IsZero() && earliest.After(q.From) && earliest.Before(q.To) {
-		q.From = maxTime(q.From, bucketStart(earliest, q.Location, BucketDay))
-	}
-	a.hasPrevious = !earliest.IsZero() && !earliest.After(q.From.Add(-q.To.Sub(q.From)))
-
 	if q.Bucket == "" {
 		q.Bucket = autoBucket(q.To.Sub(q.From))
 	}
@@ -139,8 +166,31 @@ func (s *Service) loadAnalytics(ctx context.Context, q AnalyticsQuery) (*analyti
 		a.buckets = append(a.buckets, t)
 	}
 	a.q = q
-	a.earliest = earliest
 	return a, nil
+}
+
+// inventoryReplayStart is the earliest dispense the inventory replay needs:
+// each slot's stock is known from its last restock at or before from, and
+// dispenses before that change nothing in the window. A slot not restocked
+// by then has unknown stock until its first restock, so its earlier
+// dispenses don't matter either. restocks must be in ascending order.
+func inventoryReplayStart(restocks []domain.Restock, from time.Time) time.Time {
+	last := map[int]time.Time{}
+	for _, r := range restocks {
+		if r.Timestamp.After(from) {
+			break
+		}
+		for _, rs := range r.Slots {
+			last[rs.Position] = r.Timestamp
+		}
+	}
+	start := from
+	for _, t := range last {
+		if t.Before(start) {
+			start = t
+		}
+	}
+	return start
 }
 
 func autoBucket(span time.Duration) string {
@@ -292,7 +342,7 @@ type ConsumptionPoint struct {
 // GetConsumptionAnalytics reports dispense volume over time and when in the
 // week people use the machine.
 func (s *Service) GetConsumptionAnalytics(ctx context.Context, q AnalyticsQuery) (*ConsumptionAnalytics, error) {
-	a, err := s.loadAnalytics(ctx, q)
+	a, err := s.loadAnalytics(ctx, q, needPrevious)
 	if err != nil || a == nil {
 		return nil, err
 	}
@@ -431,7 +481,7 @@ func daypartIndex(hour int) int {
 // shows what people take at which time of day. Products stocked in a slot appear
 // even with zero dispenses so slow movers are visible.
 func (s *Service) GetProductAnalytics(ctx context.Context, q AnalyticsQuery) (*ProductAnalytics, error) {
-	a, err := s.loadAnalytics(ctx, q)
+	a, err := s.loadAnalytics(ctx, q, needPrevious)
 	if err != nil || a == nil {
 		return nil, err
 	}
@@ -615,7 +665,7 @@ type stockStep struct {
 // stock levels over time. It uses the same model as GetMachineStatus: a
 // restock sets the level, each later dispense takes one can, floored at zero.
 func (s *Service) GetInventoryAnalytics(ctx context.Context, q AnalyticsQuery) (*InventoryAnalytics, error) {
-	a, err := s.loadAnalytics(ctx, q)
+	a, err := s.loadAnalytics(ctx, q, needInventory)
 	if err != nil || a == nil {
 		return nil, err
 	}
@@ -841,7 +891,7 @@ type ProductSpend struct {
 // GetSpendAnalytics prices dispenses at each product's cost per can: what
 // the company paid for the cans people took. Nothing in the app is used.
 func (s *Service) GetSpendAnalytics(ctx context.Context, q AnalyticsQuery) (*SpendAnalytics, error) {
-	a, err := s.loadAnalytics(ctx, q)
+	a, err := s.loadAnalytics(ctx, q, needPrevious)
 	if err != nil || a == nil {
 		return nil, err
 	}

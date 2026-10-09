@@ -50,7 +50,7 @@ type interval struct{ from, to time.Time }
 // between sessions are outages. The current session runs to the end of the
 // window while its last beat is recent.
 func (s *Service) GetUptimeAnalytics(ctx context.Context, q AnalyticsQuery) (*UptimeAnalytics, error) {
-	a, err := s.loadAnalytics(ctx, q)
+	a, err := s.loadAnalytics(ctx, q, needNothing)
 	if err != nil || a == nil {
 		return nil, err
 	}

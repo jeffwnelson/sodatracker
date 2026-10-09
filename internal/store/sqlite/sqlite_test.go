@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -376,5 +377,52 @@ func TestDispenseAndRestock(t *testing.T) {
 	}
 	if rsl.Quantity != 10 {
 		t.Errorf("expected quantity 10, got %d", rsl.Quantity)
+	}
+}
+
+func TestListDispensesBetweenAndFirstActivity(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+
+	if first, err := s.FirstActivity(ctx, "m1"); err != nil || !first.IsZero() {
+		t.Fatalf("empty machine: first = %v, err = %v", first, err)
+	}
+
+	// Written with a non-UTC offset: stored as UTC so text comparison works.
+	chicago := time.FixedZone("CDT", -5*3600)
+	base := time.Date(2026, 10, 1, 7, 0, 0, 0, chicago) // 12:00 UTC
+	for i := 0; i < 4; i++ {
+		if err := s.CreateDispense(ctx, &domain.Dispense{
+			ID: fmt.Sprintf("d%d", i), MachineID: "m1", ProductID: "p1", SlotPosition: 1,
+			SourceType: "gpio", Timestamp: base.Add(time.Duration(i) * time.Hour),
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.CreateRestock(ctx, &domain.Restock{
+		ID: "r1", MachineID: "m1", Timestamp: base.Add(-time.Hour),
+		Slots: []domain.RestockSlot{{Position: 1, Quantity: 10}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// [13:00 UTC, 15:00 UTC) asked for in UTC holds d1 and d2, oldest first.
+	got, err := s.ListDispensesBetween(ctx, "m1", base.Add(time.Hour).UTC(), base.Add(3*time.Hour).UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].ID != "d1" || got[1].ID != "d2" {
+		t.Fatalf("got %+v, want d1, d2", got)
+	}
+	if all, _ := s.ListDispensesBetween(ctx, "m1", time.Time{}, time.Time{}); len(all) != 4 {
+		t.Fatalf("unbounded: got %d, want 4", len(all))
+	}
+
+	first, err := s.FirstActivity(ctx, "m1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !first.Equal(base.Add(-time.Hour)) {
+		t.Fatalf("first = %v, want the restock at %v", first, base.Add(-time.Hour))
 	}
 }
