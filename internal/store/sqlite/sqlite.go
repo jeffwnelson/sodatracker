@@ -678,16 +678,25 @@ func (s *SQLiteStore) SetSetting(ctx context.Context, key, value string, secret 
 	return err
 }
 
+// ResetAllData deletes the machine data in one transaction, so a failure
+// leaves everything as it was. Users and settings stay: the admin user is
+// only seeded at startup, so deleting it would lock everyone out until a
+// restart.
 func (s *SQLiteStore) ResetAllData(ctx context.Context) error {
 	tables := []string{
-		"alert_events", "alert_configs", "restocks", "dispenses", "slots", "machines", "products", "users",
+		"alert_events", "alert_configs", "agent_sessions", "restocks", "dispenses", "slots", "machines", "products",
 	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 	for _, table := range tables {
-		if _, err := s.db.ExecContext(ctx, "DELETE FROM "+table); err != nil {
+		if _, err := tx.ExecContext(ctx, "DELETE FROM "+table); err != nil {
 			return fmt.Errorf("clear %s: %w", table, err)
 		}
 	}
-	return nil
+	return tx.Commit()
 }
 
 type scanner interface {

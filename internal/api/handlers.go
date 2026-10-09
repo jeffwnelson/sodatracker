@@ -810,7 +810,7 @@ func (h *handlers) exportDispenses(w http.ResponseWriter, r *http.Request) {
 
 // resetAllData godoc
 // @Summary      Reset all data
-// @Description  Deletes all data from the database and re-seeds the admin user
+// @Description  Deletes the machine, products, dispenses, restocks, alerts and agent history. Users and settings are kept.
 // @Tags         Admin
 // @Produce      json
 // @Success      200  {object}  object{status=string}

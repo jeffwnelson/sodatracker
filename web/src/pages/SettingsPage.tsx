@@ -516,7 +516,11 @@ function SlotConfigSection() {
     queryFn: listProducts,
   });
 
-  const { data: status } = useQuery({
+  const {
+    data: status,
+    isError: statusFailed,
+    refetch: refetchStatus,
+  } = useQuery({
     queryKey: ["machineStatus", machineId],
     queryFn: () => getMachineStatus(machineId),
     enabled: !!machineId,
@@ -559,6 +563,9 @@ function SlotConfigSection() {
 
   const mutation = useMutation({
     mutationFn: () => {
+      // Saving replaces every slot. Without the current config the rows hold
+      // defaults, and saving them would wipe each slot's product and pin.
+      if (!status) throw new Error("The current slot settings haven't loaded yet.");
       const slots = Array.from({ length: slotCount }, (_, i) => {
         const pos = i + 1;
         const cfg = getSlotConfig(pos);
@@ -596,7 +603,26 @@ function SlotConfigSection() {
         </p>
       )}
 
-      {machineId && slotCount > 0 && (
+      {machineId && slotCount > 0 && !status && (
+        <p className="text-sm text-text-tertiary">
+          {statusFailed ? (
+            <>
+              Couldn&apos;t load the current slot settings.{" "}
+              <button
+                type="button"
+                onClick={() => void refetchStatus()}
+                className="text-accent hover:underline"
+              >
+                Try again
+              </button>
+            </>
+          ) : (
+            "Loading slot settings…"
+          )}
+        </p>
+      )}
+
+      {machineId && slotCount > 0 && status && (
         <>
           <div className="overflow-x-auto">
             <table className="block sm:table w-full text-sm">
@@ -743,8 +769,8 @@ function DangerZoneSection() {
             Reset All Data
           </p>
           <p className="text-xs text-text-tertiary mt-0.5">
-            Permanently delete the machine, products, dispenses, restocks, and
-            alerts. You will need to log in again.
+            Permanently delete the machine, products, dispenses, restocks,
+            alerts, and agent uptime history. Your login and settings are kept.
           </p>
         </div>
         <Button variant="danger" onClick={() => setShowConfirm(true)}>
@@ -754,7 +780,7 @@ function DangerZoneSection() {
       <ConfirmDialog
         open={showConfirm}
         title="Reset All Data"
-        message="This will permanently delete ALL data including the machine, products, dispenses, restocks, alerts, and user accounts. This action cannot be undone. Are you sure?"
+        message="This will permanently delete the machine, products, dispenses, restocks, alerts, and agent uptime history. Your login and settings (backups, Slack) are kept. This action cannot be undone. Are you sure?"
         onConfirm={() => resetMut.mutate()}
         onCancel={() => setShowConfirm(false)}
         isPending={resetMut.isPending}

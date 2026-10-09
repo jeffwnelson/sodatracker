@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -182,14 +183,22 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 
 	// Serve frontend static files if configured
 	if cfg.StaticDir != "" {
-		fileServer := http.FileServer(http.Dir(cfg.StaticDir))
+		root := http.Dir(cfg.StaticDir)
+		fileServer := http.FileServer(root)
+		index := filepath.Join(cfg.StaticDir, "index.html")
 		r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-			// Try the file first; fall back to index.html for SPA routing
-			if _, err := http.Dir(cfg.StaticDir).Open(r.URL.Path); err != nil {
-				http.ServeFile(w, r, cfg.StaticDir+"/index.html")
-				return
+			// Files are served as they are. Anything else, a client-side
+			// route or a directory (which FileServer would list), gets the
+			// SPA's index.html.
+			if f, err := root.Open(r.URL.Path); err == nil {
+				st, err := f.Stat()
+				f.Close()
+				if err == nil && !st.IsDir() {
+					fileServer.ServeHTTP(w, r)
+					return
+				}
 			}
-			fileServer.ServeHTTP(w, r)
+			http.ServeFile(w, r, index)
 		})
 	}
 

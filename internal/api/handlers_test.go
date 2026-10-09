@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -959,5 +961,63 @@ func TestExportRequiresAuth(t *testing.T) {
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("expected 401 without auth, got %d", w.Code)
+	}
+}
+
+// Reset clears the machine data but keeps users, so the admin can still log in.
+func TestResetKeepsUsers(t *testing.T) {
+	r, st := setupWithStore(t)
+	seedTestUser(t, st)
+	ctx := context.Background()
+	st.CreateMachine(ctx, &domain.Machine{ID: "m1", Name: "Break Room", SlotCount: 5})
+	st.CreateDispense(ctx, &domain.Dispense{ID: "d1", MachineID: "m1", ProductID: "p1", SlotPosition: 1, Timestamp: time.Now()})
+	st.StartAgentSession(ctx, "m1", time.Now())
+
+	req := httptest.NewRequest("DELETE", "/api/v1/admin/reset", nil)
+	req.Header.Set("Authorization", "Bearer "+loginAndGetToken(t, r))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("reset: %d %s", w.Code, w.Body.String())
+	}
+
+	if ms, _ := st.ListMachines(ctx); len(ms) != 0 {
+		t.Errorf("machines left after reset: %d", len(ms))
+	}
+	if ds, _ := st.ListDispenses(ctx, "m1", time.Time{}, 10); len(ds) != 0 {
+		t.Errorf("dispenses left after reset: %d", len(ds))
+	}
+	if s, _ := st.LatestAgentSession(ctx, "m1"); s != nil {
+		t.Errorf("agent session left after reset: %+v", s)
+	}
+	if tok := loginAndGetToken(t, r); tok == "" {
+		t.Error("admin can't log in after reset")
+	}
+}
+
+func TestStaticServing(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "index.html"), []byte("<html>app</html>"), 0o644)
+	os.MkdirAll(filepath.Join(dir, "assets"), 0o755)
+	os.WriteFile(filepath.Join(dir, "assets", "app.js"), []byte("console.log(1)"), 0o644)
+
+	st, err := sqlite.New(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { st.Close() })
+	r := NewRouter(st, service.New(st, testJWTSecret, nil), RouterConfig{APIKey: "k", JWTSecret: testJWTSecret, StaticDir: dir})
+
+	for path, want := range map[string]string{
+		"/":               "<html>app</html>",
+		"/admin/settings": "<html>app</html>", // client-side route
+		"/assets/":        "<html>app</html>", // a directory, not a listing
+		"/assets/app.js":  "console.log(1)",
+	} {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if w.Code != http.StatusOK || w.Body.String() != want {
+			t.Errorf("GET %s: %d %q, want 200 %q", path, w.Code, w.Body.String(), want)
+		}
 	}
 }
