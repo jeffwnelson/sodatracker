@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.20.3](https://github.com/jeffwnelson/sodatracker/compare/c3f82c1f6a6e184bb4b5acdcb91b22df45707d8f..v0.20.3) - 2026-10-09
+#### Bug Fixes
+- (**security**) refuse dev secrets, throttle login, tighten auth and backups - ([c3f82c1](https://github.com/jeffwnelson/sodatracker/commit/c3f82c1f6a6e184bb4b5acdcb91b22df45707d8f)) - Jeff Nelson
+
+- - -
+
 ## [v0.20.2](https://github.com/jeffwnelson/sodatracker/compare/0dddee081c52a98dbece48eef9cf306998fc159e..v0.20.2) - 2026-10-09
 #### Bug Fixes
 - keep login after Reset All Data, guard Save Slots, close static files - ([0dddee0](https://github.com/jeffwnelson/sodatracker/commit/0dddee081c52a98dbece48eef9cf306998fc159e)) - Jeff Nelson
