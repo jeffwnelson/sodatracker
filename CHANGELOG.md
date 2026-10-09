@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.20.1](https://github.com/jeffwnelson/sodatracker/compare/eec3a60b02d605b47bdd33d803cbf99b5d44739d..v0.20.1) - 2026-10-09
+#### Bug Fixes
+- (**piagent**) never count a dispense twice or miss one while sending - ([eec3a60](https://github.com/jeffwnelson/sodatracker/commit/eec3a60b02d605b47bdd33d803cbf99b5d44739d)) - Jeff Nelson
+#### Performance Improvements
+- load only the analytics history a view needs, refetch less on live events - ([1765fec](https://github.com/jeffwnelson/sodatracker/commit/1765fec5ec4c861337984439d5e4c7a94eeb913e)) - Jeff Nelson
+#### Documentation
+- describe the agent outbox, windowed analytics and targeted live refreshes - ([816e430](https://github.com/jeffwnelson/sodatracker/commit/816e430159edec1163f88104f3e135ecf4e0adbe)) - Jeff Nelson
+
+- - -
+
 ## [v0.20.0](https://github.com/jeffwnelson/sodatracker/compare/03e16d659a6b3d4d9ef947c29d7f8672c626898b..v0.20.0) - 2026-10-08
 #### Features
 - (**web**) recent dispenses show the event ID and expand to raw JSON - ([bca5055](https://github.com/jeffwnelson/sodatracker/commit/bca5055a5f7d338df8099a5a4524289289738292)) - Jeff Nelson
