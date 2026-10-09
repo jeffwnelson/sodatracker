@@ -31,6 +31,10 @@ import (
 func main() {
 	cfg := config.Load()
 	logging.Setup(cfg.LogFormat)
+	if err := cfg.Validate(); err != nil {
+		slog.Error("refusing to start", "error", err)
+		os.Exit(1)
+	}
 
 	st, err := sqlite.New(cfg.DBPath)
 	if err != nil {

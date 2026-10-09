@@ -32,6 +32,7 @@ type handlers struct {
 	streamsDone        <-chan struct{}
 	backups            *backup.Manager
 	slack              *slackconf.Manager
+	logins             *loginLimiter
 }
 
 // health godoc
@@ -441,6 +442,7 @@ func (h *handlers) deleteMachine(w http.ResponseWriter, r *http.Request) {
 // @Success      200          {object}  LoginResponse
 // @Failure      400          {object}  ErrorResponse
 // @Failure      401          {object}  ErrorResponse
+// @Failure      429          {object}  ErrorResponse
 // @Router       /auth/login [post]
 func (h *handlers) login(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -455,11 +457,16 @@ func (h *handlers) login(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "username and password are required")
 		return
 	}
+	if ok, wait := h.logins.take(); !ok {
+		writeTooMany(w, wait)
+		return
+	}
 	token, user, err := h.svc.Login(r.Context(), req.Username, req.Password)
 	if err != nil {
 		writeErr(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
+	h.logins.refund()
 	writeJSON(w, http.StatusOK, map[string]any{
 		"token": token,
 		"user":  user,

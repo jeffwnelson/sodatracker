@@ -24,7 +24,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"github.com/jeffwnelson/sodatracker/internal/auth"
@@ -69,14 +68,9 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 	r.Use(middleware.RequestID)
 	r.Use(structuredLogger)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.RealIP)
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-API-Key"},
-		AllowCredentials: false,
-		MaxAge:           300,
-	}))
+	// No CORS: the app is served from this origin and the Vite dev server
+	// proxies /api, so no other site's pages need to read the API.
+	r.Use(limitBody)
 
 	h := &handlers{
 		store:              st,
@@ -87,6 +81,7 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 		streamsDone:        cfg.StreamsDone,
 		backups:            cfg.Backups,
 		slack:              cfg.Slack,
+		logins:             newLoginLimiter(),
 	}
 	if cfg.Bus != nil {
 		h.broker = newBroker(cfg.Bus)

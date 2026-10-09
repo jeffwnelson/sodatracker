@@ -16,9 +16,13 @@ services:
     environment:
       - PORT=3000
       - DB_PATH=/data/sodatracker.db
+      # Set these in .env. The server refuses to start with the dev-*
+      # defaults (they're in this repo) unless ALLOW_DEV_SECRETS=true, which
+      # is only for trying the container locally.
       - API_KEY=${API_KEY:-dev-api-key}
       - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-dev-admin-password}
+      - ALLOW_DEV_SECRETS=${ALLOW_DEV_SECRETS:-false}
       - STATIC_DIR=/app/static
       - LOG_FORMAT=json
       # Slack's webhook and app token are set on the Settings page; these

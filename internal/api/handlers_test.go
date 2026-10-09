@@ -1021,3 +1021,61 @@ func TestStaticServing(t *testing.T) {
 		}
 	}
 }
+
+// Login attempts are rate limited; a successful login doesn't use one up.
+func TestLoginRateLimit(t *testing.T) {
+	// Freeze the clock: bcrypt is slow enough under -race for tokens to refill.
+	frozen := time.Now()
+	loginClock = func() time.Time { return frozen }
+	t.Cleanup(func() { loginClock = time.Now })
+	r, st := setupWithStore(t)
+	seedTestUser(t, st)
+	try := func(password string) int {
+		body, _ := json.Marshal(map[string]string{"username": "admin", "password": password})
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader(body)))
+		return w.Code
+	}
+	for i := 0; i < loginBurst-1; i++ {
+		if code := try("wrong"); code != http.StatusUnauthorized {
+			t.Fatalf("attempt %d: %d", i+1, code)
+		}
+	}
+	if code := try("test-password"); code != http.StatusOK {
+		t.Fatalf("good login within the burst: %d", code)
+	}
+	if code := try("wrong"); code != http.StatusUnauthorized {
+		t.Fatalf("last attempt in the burst: %d", code)
+	}
+	if code := try("test-password"); code != http.StatusTooManyRequests {
+		t.Fatalf("over the burst: got %d, want 429", code)
+	}
+}
+
+func TestRequestBodyLimit(t *testing.T) {
+	r := setup(t)
+	body := `{"username":"` + strings.Repeat("a", maxBodyBytes) + `","password":"x"}`
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest("POST", "/api/v1/auth/login", strings.NewReader(body)))
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("oversized body: got %d, want 400", w.Code)
+	}
+}
+
+func TestLoginLimiterRefills(t *testing.T) {
+	now := time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)
+	l := &loginLimiter{tokens: loginBurst, now: func() time.Time { return now }}
+	for i := 0; i < loginBurst; i++ {
+		if ok, _ := l.take(); !ok {
+			t.Fatalf("attempt %d refused within the burst", i+1)
+		}
+	}
+	ok, wait := l.take()
+	if ok || wait <= 0 || wait > loginRefill {
+		t.Fatalf("over the burst: ok=%v wait=%v", ok, wait)
+	}
+	now = now.Add(loginRefill)
+	if ok, _ := l.take(); !ok {
+		t.Fatal("no token after one refill interval")
+	}
+}

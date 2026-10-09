@@ -204,9 +204,10 @@ func New(ctx context.Context, cfg Config, st Store) (*Manager, error) {
 	if cfg.APIBase == "" {
 		cfg.APIBase = "https://api.github.com"
 	}
-	if err := os.MkdirAll(cfg.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(cfg.Dir, 0o700); err != nil {
 		return nil, fmt.Errorf("backup dir: %w", err)
 	}
+	tidyDir(cfg.Dir)
 	m := &Manager{
 		cfg:    cfg,
 		store:  st,
@@ -224,6 +225,31 @@ func New(ctx context.Context, cfg Config, st Store) (*Manager, error) {
 		return nil, fmt.Errorf("backup state: %w", err)
 	}
 	return m, nil
+}
+
+// tidyDir makes the backup directory and its snapshots private (they hold the
+// admin's password hash) and removes what an interrupted snapshot left: a
+// raw .snapshot-*.db still has the secret settings, scrubbed only after it
+// is written, and nothing else would ever delete it.
+func tidyDir(dir string) {
+	os.Chmod(dir, 0o700)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		name, path := e.Name(), filepath.Join(dir, e.Name())
+		switch {
+		case strings.HasPrefix(name, ".snapshot-") || strings.HasSuffix(name, ".part"):
+			if err := os.Remove(path); err != nil {
+				slog.Warn("remove leftover backup file", "file", name, "error", err)
+			} else {
+				slog.Info("removed leftover backup file", "file", name)
+			}
+		case !e.IsDir():
+			os.Chmod(path, 0o600)
+		}
+	}
 }
 
 func (m *Manager) loadSettings(ctx context.Context) {
@@ -394,10 +420,12 @@ func (m *Manager) backupLocked(ctx context.Context) error {
 }
 
 // WriteSnapshot writes a fresh gzipped snapshot to w without keeping it.
+// The lock covers only taking the snapshot, not streaming it to what may be
+// a slow browser, so status checks and the hourly tick aren't held up.
 func (m *Manager) WriteSnapshot(ctx context.Context, w io.Writer) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	raw, err := m.rawSnapshot(ctx)
+	m.mu.Unlock()
 	if err != nil {
 		return err
 	}
@@ -467,7 +495,7 @@ func (m *Manager) snapshotLocked(ctx context.Context) (File, error) {
 	name := FileName(at)
 	final := filepath.Join(m.cfg.Dir, name)
 	part := final + ".part"
-	out, err := os.Create(part)
+	out, err := os.OpenFile(part, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
 		return File{}, err
 	}
@@ -649,7 +677,7 @@ func (m *Manager) save() {
 		return
 	}
 	path := filepath.Join(m.cfg.Dir, stateFile)
-	if err := os.WriteFile(path+".tmp", b, 0o644); err == nil {
+	if err := os.WriteFile(path+".tmp", b, 0o600); err == nil {
 		err = os.Rename(path+".tmp", path)
 	}
 	if err != nil {

@@ -40,11 +40,8 @@ func JWTMiddleware(secret string) func(http.Handler) http.Handler {
 				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 				return
 			}
-			claims := &Claims{}
-			token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (any, error) {
-				return []byte(secret), nil
-			})
-			if err != nil || !token.Valid {
+			claims, ok := parseToken(tokenStr, secret)
+			if !ok {
 				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 				return
 			}
@@ -57,35 +54,40 @@ func JWTMiddleware(secret string) func(http.Handler) http.Handler {
 func APIKeyOrJWTMiddleware(apiKey, jwtSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Try API key first
-			key := r.Header.Get("X-API-Key")
-			if key == apiKey {
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			// Try JWT from Authorization header
+			// The API key, in X-API-Key or as a Bearer token.
 			tokenStr := extractToken(r)
-			if tokenStr == apiKey {
-				// Also accept API key via Bearer
+			if keyMatches(r.Header.Get("X-API-Key"), apiKey) || keyMatches(tokenStr, apiKey) {
 				next.ServeHTTP(w, r)
 				return
 			}
-			if tokenStr != "" {
-				claims := &Claims{}
-				token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (any, error) {
-					return []byte(jwtSecret), nil
-				})
-				if err == nil && token.Valid {
-					ctx := context.WithValue(r.Context(), ctxKey{}, claims)
-					next.ServeHTTP(w, r.WithContext(ctx))
-					return
-				}
+			// Otherwise a JWT.
+			if claims, ok := parseToken(tokenStr, jwtSecret); ok {
+				ctx := context.WithValue(r.Context(), ctxKey{}, claims)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
 			}
 
 			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		})
 	}
+}
+
+// parseToken validates a JWT. It accepts only HS256, so a token can't pick
+// its own algorithm, and only tokens that expire.
+func parseToken(tokenStr, secret string) (*Claims, bool) {
+	if tokenStr == "" {
+		return nil, false
+	}
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims,
+		func(*jwt.Token) (any, error) { return []byte(secret), nil },
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithExpirationRequired(),
+	)
+	if err != nil || !token.Valid {
+		return nil, false
+	}
+	return claims, true
 }
 
 func ClaimsFromContext(ctx context.Context) *Claims {

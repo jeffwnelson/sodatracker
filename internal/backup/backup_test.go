@@ -405,3 +405,44 @@ func TestBackupHealthEvents(t *testing.T) {
 		t.Fatalf("stale by age: %v %v", got, bus.evs[len(bus.evs)-1].Data)
 	}
 }
+
+// Snapshots are private, and a restart removes what an interrupted snapshot
+// left behind (a raw copy still holding the secret settings).
+func TestBackupFilesArePrivateAndLeftoversRemoved(t *testing.T) {
+	ctx := context.Background()
+	m, st, _, _, cfg := setup(t, 30)
+	if _, err := m.BackupNow(ctx); err != nil {
+		t.Fatal(err)
+	}
+	files, _ := m.list()
+	if len(files) != 1 {
+		t.Fatalf("got %d snapshots, want 1", len(files))
+	}
+	snap := filepath.Join(cfg.Dir, files[0].Name)
+	for _, p := range []string{cfg.Dir, snap, filepath.Join(cfg.Dir, stateFile)} {
+		info, err := os.Stat(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if perm := info.Mode().Perm(); perm&0o077 != 0 {
+			t.Errorf("%s has mode %v, want no group/other access", filepath.Base(p), perm)
+		}
+	}
+
+	leftovers := []string{".snapshot-123.db", files[0].Name + ".part"}
+	for _, name := range leftovers {
+		os.WriteFile(filepath.Join(cfg.Dir, name), []byte("x"), 0o644)
+	}
+	os.Chmod(snap, 0o644) // as written by an older version
+	if _, err := New(ctx, cfg, st); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range leftovers {
+		if _, err := os.Stat(filepath.Join(cfg.Dir, name)); !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("%s survived a restart", name)
+		}
+	}
+	if info, _ := os.Stat(snap); info.Mode().Perm() != 0o600 {
+		t.Errorf("old snapshot mode %v, want 0600", info.Mode().Perm())
+	}
+}
