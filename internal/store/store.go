@@ -2,10 +2,15 @@ package store
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jeffwnelson/sodatracker/internal/domain"
 )
+
+// ErrDuplicate is returned by CreateDispense when a dispense with the same ID
+// is already stored, which is how a retried request is recognized.
+var ErrDuplicate = errors.New("duplicate")
 
 // Store defines the persistence interface for SodaTracker.
 type Store interface {
@@ -27,6 +32,7 @@ type Store interface {
 	GetSlots(ctx context.Context, machineID string) ([]domain.Slot, error)
 
 	// Dispenses
+	// CreateDispense stores d, or returns ErrDuplicate if its ID exists.
 	CreateDispense(ctx context.Context, d *domain.Dispense) error
 	ListDispenses(ctx context.Context, machineID string, since time.Time, limit int) ([]domain.Dispense, error)
 	CountDispensesSince(ctx context.Context, machineID string, slotPosition int, since time.Time) (int, error)

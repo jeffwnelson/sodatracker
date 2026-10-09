@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jeffwnelson/sodatracker/internal/domain"
+	"github.com/jeffwnelson/sodatracker/internal/store"
 	_ "modernc.org/sqlite"
 )
 
@@ -351,10 +352,17 @@ func (s *SQLiteStore) GetSlots(ctx context.Context, machineID string) ([]domain.
 // --- Dispenses ---
 
 func (s *SQLiteStore) CreateDispense(ctx context.Context, d *domain.Dispense) error {
-	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO dispenses (id, machine_id, product_id, slot_position, source_type, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
+	res, err := s.db.ExecContext(ctx,
+		`INSERT INTO dispenses (id, machine_id, product_id, slot_position, source_type, timestamp) VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(id) DO NOTHING`,
 		d.ID, d.MachineID, d.ProductID, d.SlotPosition, d.SourceType, d.Timestamp)
-	return err
+	if err != nil {
+		return err
+	}
+	if n, err := res.RowsAffected(); err == nil && n == 0 {
+		return store.ErrDuplicate
+	}
+	return nil
 }
 
 func (s *SQLiteStore) ListDispenses(ctx context.Context, machineID string, since time.Time, limit int) ([]domain.Dispense, error) {

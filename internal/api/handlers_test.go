@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -156,6 +157,30 @@ func TestDispenseRequiresAPIKey(t *testing.T) {
 
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("expected 401 without API key, got %d", w.Code)
+	}
+}
+
+// A retried dispense (same id, after a lost response) is acknowledged without
+// being stored a second time.
+func TestDispenseRetryIsIdempotent(t *testing.T) {
+	r, st := setupWithStore(t)
+	body := []byte(`{"id":"evt-1","machineId":"m1","slotPosition":2,"timestamp":"2026-10-09T15:00:00Z"}`)
+	for i, want := range []int{http.StatusCreated, http.StatusOK} {
+		req := httptest.NewRequest("POST", "/api/v1/dispenses", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", "test-key")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code != want {
+			t.Fatalf("attempt %d: got %d, want %d: %s", i+1, w.Code, want, w.Body.String())
+		}
+	}
+	got, err := st.ListDispenses(context.Background(), "m1", time.Time{}, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("stored %d dispenses, want 1", len(got))
 	}
 }
 

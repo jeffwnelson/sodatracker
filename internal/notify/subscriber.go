@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jeffwnelson/sodatracker/internal/events"
 	"github.com/jeffwnelson/sodatracker/internal/store"
@@ -22,6 +23,11 @@ func RegisterSlack(bus events.EventBus, st store.Store, c *SlackClient) {
 	RegisterSlackSource(bus, st, func() *SlackClient { return c })
 }
 
+const (
+	slackQueueSize   = 32
+	slackPostTimeout = 15 * time.Second
+)
+
 // RegisterSlackSource is RegisterSlack for a webhook that can change while
 // the server runs: each message goes to whatever client source returns,
 // and a nil client (no webhook set) drops it.
@@ -30,10 +36,28 @@ func RegisterSlackSource(bus events.EventBus, st store.Store, source func() *Sla
 		return
 	}
 
-	post := func(ctx context.Context, m Message) error {
-		if err := source().Post(ctx, m); err != nil {
-			// A chat outage must never fail the dispense that triggered it.
-			slog.Error("slack notification failed", "error", err)
+	// The bus calls subscribers synchronously, so a stock alert runs inside
+	// the Pi agent's POST /dispenses. Posting there would let a slow Slack
+	// hold that request open past the agent's timeout, so messages go to a
+	// queue and one worker delivers them in order.
+	queue := make(chan Message, slackQueueSize)
+	go func() {
+		for m := range queue {
+			ctx, cancel := context.WithTimeout(context.Background(), slackPostTimeout)
+			if err := source().Post(ctx, m); err != nil {
+				slog.Error("slack notification failed", "error", err)
+			}
+			cancel()
+		}
+	}()
+
+	post := func(_ context.Context, m Message) error {
+		select {
+		case queue <- m:
+		default:
+			// A chat outage must never fail or stall the dispense that
+			// triggered it.
+			slog.Error("slack queue full, dropping notification", "text", m.Text)
 		}
 		return nil
 	}

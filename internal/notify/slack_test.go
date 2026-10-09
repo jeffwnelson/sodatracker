@@ -68,8 +68,31 @@ func TestLowStockEventPostsToSlack(t *testing.T) {
 		if len(m.Blocks) == 0 {
 			t.Error("expected rich blocks alongside the fallback text")
 		}
-	default:
+	case <-time.After(2 * time.Second):
 		t.Fatal("no message reached Slack")
+	}
+}
+
+// Delivery happens off the publishing goroutine, so a slow webhook can't hold
+// open the dispense request that raised the alert.
+func TestSlowSlackDoesNotBlockPublish(t *testing.T) {
+	release := make(chan struct{})
+	received := make(chan struct{}, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-release
+		received <- struct{}{}
+	}))
+	t.Cleanup(srv.Close)
+	t.Cleanup(func() { close(release) })
+
+	bus := local.New()
+	t.Cleanup(func() { bus.Close() })
+	RegisterSlack(bus, nil, NewSlack(srv.URL))
+
+	start := time.Now()
+	bus.Publish(context.Background(), events.Event{Type: events.EventBackupRecovered, Data: map[string]any{}})
+	if d := time.Since(start); d > 500*time.Millisecond {
+		t.Fatalf("publish waited %v on Slack", d)
 	}
 }
 

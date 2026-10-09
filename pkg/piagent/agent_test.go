@@ -60,10 +60,16 @@ func TestAgentReportsOneDispensePerBouncyVend(t *testing.T) {
 	step(1060, false) // closed again
 	step(1000, true)  // vend over
 
+	// Polling only caches; the sender delivers.
+	if len(got) != 0 {
+		t.Fatalf("poll sent %d dispenses itself", len(got))
+	}
+	a.drain(context.Background())
+
 	if len(got) != 1 {
 		t.Fatalf("got %d dispenses, want 1: %+v", len(got), got)
 	}
-	if got[0].SlotPosition != 5 || got[0].MachineID != "machine-1" {
+	if got[0].SlotPosition != 5 || got[0].MachineID != "machine-1" || got[0].ID == "" {
 		t.Errorf("unexpected payload %+v", got[0])
 	}
 	if want := base.Add(time.Second); !got[0].Timestamp.Equal(want) {
@@ -106,5 +112,115 @@ func TestAgentHeartbeats(t *testing.T) {
 		case <-time.After(time.Second):
 			t.Fatalf("got %d heartbeats, want 3", i)
 		}
+	}
+}
+
+// newTestAgent returns an agent that sends to handler, with no pins.
+func newTestAgent(t *testing.T, handler http.HandlerFunc) *Agent {
+	t.Helper()
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+	a, err := New(&Config{
+		APIURL: srv.URL, MachineID: "machine-1",
+		DBPath: filepath.Join(t.TempDir(), "cache.db"),
+	}, gpio.NewMockProvider())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { a.cache.Close() })
+	return a
+}
+
+func pendingCount(t *testing.T, a *Agent) int {
+	t.Helper()
+	evts, err := a.cache.Pending(sendBatch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return len(evts)
+}
+
+// A failed send keeps the dispense, and the resend carries the same ID so the
+// server can tell it from a new can.
+func TestAgentRetriesWithSameID(t *testing.T) {
+	var ids []string
+	fail := true
+	a := newTestAgent(t, func(w http.ResponseWriter, r *http.Request) {
+		var p dispensePayload
+		json.NewDecoder(r.Body).Decode(&p)
+		ids = append(ids, p.ID)
+		if fail {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	a.handleDispense(3, time.Now())
+	a.drain(context.Background())
+	if n := pendingCount(t, a); n != 1 {
+		t.Fatalf("pending after failure = %d, want 1", n)
+	}
+
+	fail = false
+	a.drain(context.Background())
+	if n := pendingCount(t, a); n != 0 {
+		t.Fatalf("pending after success = %d, want 0", n)
+	}
+	if len(ids) != 2 || ids[0] == "" || ids[0] != ids[1] {
+		t.Fatalf("sent ids %q, want the same non-empty id twice", ids)
+	}
+}
+
+// A dispense the API rejects is dropped instead of blocking the ones after it.
+func TestAgentDropsRejectedDispense(t *testing.T) {
+	var slots []int
+	a := newTestAgent(t, func(w http.ResponseWriter, r *http.Request) {
+		var p dispensePayload
+		json.NewDecoder(r.Body).Decode(&p)
+		slots = append(slots, p.SlotPosition)
+		if p.SlotPosition == 1 {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	a.handleDispense(1, time.Now())
+	a.handleDispense(2, time.Now())
+	a.drain(context.Background())
+
+	if n := pendingCount(t, a); n != 0 {
+		t.Fatalf("pending = %d, want 0", n)
+	}
+	if len(slots) != 2 || slots[0] != 1 || slots[1] != 2 {
+		t.Fatalf("sent slots %v, want [1 2] in order", slots)
+	}
+}
+
+// Events cached by an older agent have no ID; they get one that sticks.
+func TestCacheAssignsIDToLegacyEvents(t *testing.T) {
+	a := newTestAgent(t, func(w http.ResponseWriter, r *http.Request) {})
+	if _, err := a.cache.db.Exec(`INSERT INTO pending_events (payload, created_at) VALUES (?, ?)`,
+		`{"ID":0,"MachineID":"machine-1","Slot":4,"Timestamp":"2026-10-01T12:00:00Z"}`, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.cache.db.Exec(`INSERT INTO pending_events (payload, created_at) VALUES ('not json', ?)`, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+
+	first, err := a.cache.Pending(sendBatch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := a.cache.Pending(sendBatch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first) != 1 || len(second) != 1 {
+		t.Fatalf("got %d then %d events, want 1 and 1 (bad row dropped)", len(first), len(second))
+	}
+	if first[0].EventID == "" || first[0].EventID != second[0].EventID {
+		t.Fatalf("ids %q then %q, want one stable id", first[0].EventID, second[0].EventID)
 	}
 }

@@ -181,6 +181,7 @@ func (h *handlers) setSlots(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Param        dispense  body      domain.Dispense  true  "Dispense event"
 // @Success      201       {object}  domain.Dispense
+// @Success      200       {object}  domain.Dispense  "Already recorded (same id): a retry"
 // @Failure      400       {object}  ErrorResponse
 // @Failure      401       {object}  ErrorResponse
 // @Failure      500       {object}  ErrorResponse
@@ -226,6 +227,11 @@ func (h *handlers) createDispense(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.RegisterDispense(r.Context(), &d); err != nil {
+		if errors.Is(err, store.ErrDuplicate) {
+			// The agent retries when a response is lost; the first try counted.
+			writeJSON(w, http.StatusOK, d)
+			return
+		}
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}

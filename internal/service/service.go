@@ -97,7 +97,9 @@ func (s *Service) GetMachineStatus(ctx context.Context, machineID string) (*doma
 	}, nil
 }
 
-// RegisterDispense records a new dispense event and publishes it on the event bus.
+// RegisterDispense records a new dispense event and publishes it on the event
+// bus. A dispense whose ID is already stored returns store.ErrDuplicate and
+// publishes nothing, so a retried request neither counts nor alerts twice.
 func (s *Service) RegisterDispense(ctx context.Context, d *domain.Dispense) error {
 	if err := s.store.CreateDispense(ctx, d); err != nil {
 		return err
