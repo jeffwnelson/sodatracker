@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.20.2](https://github.com/jeffwnelson/sodatracker/compare/0dddee081c52a98dbece48eef9cf306998fc159e..v0.20.2) - 2026-10-09
+#### Bug Fixes
+- keep login after Reset All Data, guard Save Slots, close static files - ([0dddee0](https://github.com/jeffwnelson/sodatracker/commit/0dddee081c52a98dbece48eef9cf306998fc159e)) - Jeff Nelson
+
+- - -
+
 ## [v0.20.1](https://github.com/jeffwnelson/sodatracker/compare/eec3a60b02d605b47bdd33d803cbf99b5d44739d..v0.20.1) - 2026-10-09
 #### Bug Fixes
 - (**piagent**) never count a dispense twice or miss one while sending - ([eec3a60](https://github.com/jeffwnelson/sodatracker/commit/eec3a60b02d605b47bdd33d803cbf99b5d44739d)) - Jeff Nelson
