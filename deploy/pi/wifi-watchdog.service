@@ -1,0 +1,7 @@
+[Unit]
+Description=SodaTracker Wi-Fi watchdog (reload driver, then reboot, when offline)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/wifi-watchdog.sh

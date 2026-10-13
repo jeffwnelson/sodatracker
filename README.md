@@ -148,6 +148,34 @@ The app is then at `https://<pi-name>.<tailnet>.ts.net/` with a Let's Encrypt
 certificate that Tailscale renews. It persists across reboots. On an iPhone,
 open that URL in Safari and use Share → Add to Home Screen.
 
+**Host setup (logs and Wi-Fi watchdog).** The Pi is on Wi-Fi only. When the
+link drops or the `brcmfmac` driver wedges, nothing brings it back on its own.
+Run this once on the Pi:
+
+```bash
+cd ~/sodatracker && sudo deploy/pi/install.sh
+```
+
+It installs two things:
+
+- **A persistent journal.** Raspberry Pi OS keeps logs in memory, so a reboot
+  erases them. After this, `journalctl -b -1` shows the boot before the last
+  one, capped at 200 MB.
+- **`wifi-watchdog.timer`.** Every 2 minutes it fetches `https://api.github.com`
+  and `https://slack.com`, and any response counts as online. After 5 failed
+  checks (about 10 minutes) it reloads the Wi-Fi driver and reconnects
+  `office-guest-wifi`, then does that again every 30 minutes while the Pi is still
+  offline. After 15 failed checks (about 30 minutes) it reboots the Pi, at most
+  once every 6 hours.
+  - See what it did: `journalctl -u wifi-watchdog`.
+  - Try it without it acting:
+    `sudo DRY_RUN=1 WATCHDOG_URLS=https://example.invalid WATCHDOG_FAILS_FILE=/tmp/wd /usr/local/sbin/wifi-watchdog.sh`.
+  - Turn it off: `sudo systemctl disable --now wifi-watchdog.timer`.
+
+The app can't send Slack alerts while the Pi is offline, and it doesn't send
+them later. So a "Backups recovered" message with no "failed" message before
+it usually means the Pi was offline.
+
 ### Plain `docker run` equivalent
 
 ```bash

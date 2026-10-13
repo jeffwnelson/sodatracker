@@ -79,6 +79,7 @@ sodaTracker/
 │       ├── components/        # AppShell (the one page frame: header with version, main), AdminLayout, StockGrid, ProtectedRoute
 │       ├── context/           # AuthContext (JWT token + user state, localStorage persistence)
 │       └── api/               # API client + TypeScript types
+├── deploy/pi/                 # Pi host config: persistent journal, Wi-Fi watchdog (install.sh)
 ├── .github/workflows/         # CI: one arm64 build (tests inside), cocogitto release, push to GHCR
 ├── docker-compose.yml         # Self-hosted: single container, SQLite volume, GPIO devices
 ├── docker-entrypoint.sh       # Mode dispatch: all | server | piagent
@@ -150,26 +151,37 @@ Swagger UI is served at `/swagger/index.html` when the server is running. Docs a
 The self-hosted demo runs on a Raspberry Pi 3 Model B (arm64) as a **single Docker
 container running both the API server and the GPIO pi agent**.
 
-- **SSH:** `ssh pi@sodatracker` (Tailscale, works from any network) or
-  `ssh pi@<office-ip>` (office ethernet). Key-based: the owner's
+- **SSH:** `ssh pi@sodatracker` (Tailscale, the only way in, since the Pi is on
+  client-isolated guest WiFi). Key-based: the owner's
   `~/.ssh/id_ed25519` is authorized. The password is not kept in this repo.
 - **GHCR image:** `ghcr.io/jeffwnelson/sodatracker:latest` (linux/arm64 only)
 - **Container name:** `sodatracker`
 - **Compose dir on Pi:** `/home/pi/sodatracker` (git clone of this repo)
 - **Data volume:** `sodatracker-data` at `/data` (SQLite DB + piagent cache)
-- **Dashboard URL:** `https://sodatracker.<tailnet>.ts.net`, the only way in. Since 2026-10-02 compose publishes port 3000 on `127.0.0.1` only (`SODATRACKER_BIND`, default loopback), so plain HTTP on the Tailscale IP or office ethernet is closed and only tailnet devices can reach the dashboard. On the Pi itself, `curl localhost:3000` still works.
+- **Dashboard URL:** `https://sodatracker.<tailnet>.ts.net`, the only way in. Since 2026-10-02 compose publishes port 3000 on `127.0.0.1` only (`SODATRACKER_BIND`, default loopback), so plain HTTP on the Tailscale IP or the LAN is closed and only tailnet devices can reach the dashboard. On the Pi itself, `curl localhost:3000` still works.
 
 **Networking.** The Pi joined the owner's tailnet as `sodatracker`
-(`sodatracker`) on 2026-09-24, and `tailscaled` is enabled at boot. Prefer the
-Tailscale address: it works from any network, whereas `<office-ip>` only works
-from the office ethernet segment. `sodatracker.example.com` no longer resolves.
+(`sodatracker`) on 2026-09-24, and `tailscaled` is enabled at boot.
+`sodatracker.example.com` no longer resolves, and the old office ethernet address
+`<office-ip>` is gone: there is no ethernet where the machine sits.
 
-The office guest WiFi (`office-guest-wifi`, the Pi's fallback link) enforces client
-isolation in both directions, so the Pi is unreachable over it by LAN address —
-Tailscale is what makes the Pi usable without the ethernet cable. Tailscale was
+The Pi is on the office guest WiFi (`office-guest-wifi`) only. It enforces client
+isolation in both directions, so the Pi is unreachable by its LAN address and
+Tailscale is the only way to reach it. Tailscale was
 brought up with `--accept-dns=false` to avoid resolver conflicts with the
 corporate network, so the Pi itself can't resolve MagicDNS names (other
 tailnet devices resolve the Pi's name fine).
+
+**Host config (since 2026-10-13)**, installed by `sudo deploy/pi/install.sh` from
+the clone: a persistent journal (`/etc/systemd/journald.conf.d/50-persistent.conf`,
+overriding Raspberry Pi OS's `Storage=volatile`; read the previous boot with
+`journalctl -b -1`) and `wifi-watchdog.timer` (`deploy/pi/wifi-watchdog.sh`).
+Every 2 minutes the watchdog fetches api.github.com or slack.com. After 5
+failed checks it reloads `brcmfmac` and reconnects, and after 15 it reboots, at
+most once per 6 h (`journalctl -u wifi-watchdog`). It was added after the Pi
+was offline from 2026-10-11 to 10-13 until someone rebooted it. A Slack "Backups
+recovered" message with no "failed" one before it means the Pi was offline,
+because alerts are dropped while Slack is unreachable.
 
 **HTTPS (since 2026-10-02).** `sudo tailscale serve --bg 3000` on the Pi host
 (not in the container) terminates TLS for `sodatracker.<tailnet>.ts.net` with a
@@ -223,7 +235,7 @@ make docker-push    # manual arm64 build+push, bypassing CI
 
 GHCR auth on the Pi is already configured (`~pi/.docker/config.json`). If it expires:
 ```bash
-gh auth token | ssh pi@<office-ip> 'cat | docker login ghcr.io -u jeffwnelson --password-stdin'
+gh auth token | ssh pi@sodatracker 'cat | docker login ghcr.io -u jeffwnelson --password-stdin'
 ```
 
 ### Container Modes and GPIO
