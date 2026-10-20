@@ -15,12 +15,9 @@ import { ProductDot } from "../components/ProductDot";
  *
  * The breakout and the cable's plug are both wired T568B, so position n is the
  * same conductor color as the plug's pin n. Cable colors are the Pi-side ones:
- * the cable's colors don't match end to end. A wire's `jumper` is set where the
- * Dupont jumper from the header to the breakout is a different color.
- *
- * PROPOSED is a planned rewire: the same breakout positions on header pins
- * 33–40, with jumpers in the cable's own T568B colors. Once it's done, it becomes
- * CURRENT (and the slots' GPIO pins and piagent.yaml change to match).
+ * the cable's colors don't match end to end. Every jumper is on header pins
+ * 33–40 (rewired 2026-10-20) and is the same color as the cable conductor on
+ * its breakout position.
  */
 
 type Wire = {
@@ -35,62 +32,28 @@ type Wire = {
   striped: boolean;
   colorName: string;
   role: "signal" | "common" | "spare";
-  /** The Dupont jumper from the header to the breakout, when its color
-   * differs from the cable conductor's. */
-  jumper?: Look;
 };
 
 /** How a conductor is drawn and named. */
 type Look = { color: string; striped: boolean; name: string };
 
-const cableLook = (w: Wire): Look => ({ color: w.color, striped: w.striped, name: w.colorName });
-const jumperLook = (w: Wire): Look => w.jumper ?? cableLook(w);
+const look = (w: Wire): Look => ({ color: w.color, striped: w.striped, name: w.colorName });
 
 const ORANGE = "#ea580c";
 const GREEN = "#16a34a";
 const BLUE = "#2563eb";
 const BROWN = "#8b4513";
-const PURPLE = "#7e22ce";
-const BLACK = "#1c1917";
-const WHITE = "#ffffff";
-const DARK_GREY = "#525a66";
-const YELLOW = "#facc15";
-/** Fills light enough to need dark text and a dark outline on a header pin. */
-const LIGHT = new Set([WHITE, YELLOW]);
 
-const CURRENT: Wire[] = [
-  { position: 1, physical: 20, bcm: null, color: ORANGE, striped: true, colorName: "white/orange", role: "common",
-    jumper: { color: PURPLE, striped: false, name: "purple" } },
-  { position: 2, physical: 16, bcm: 23, color: ORANGE, striped: false, colorName: "orange", role: "spare",
-    jumper: { color: BLACK, striped: false, name: "black" } },
-  { position: 3, physical: 35, bcm: 19, color: GREEN, striped: true, colorName: "white/green", role: "signal",
-    jumper: { color: WHITE, striped: false, name: "white" } },
-  { position: 4, physical: 11, bcm: 17, color: BLUE, striped: false, colorName: "blue", role: "signal" },
-  { position: 5, physical: 15, bcm: 22, color: BLUE, striped: true, colorName: "white/blue", role: "signal",
-    jumper: { color: DARK_GREY, striped: false, name: "dark grey" } },
-  { position: 6, physical: 33, bcm: 13, color: GREEN, striped: false, colorName: "green", role: "signal" },
-  { position: 7, physical: 14, bcm: null, color: BROWN, striped: true, colorName: "white/brown", role: "common",
-    jumper: { color: YELLOW, striped: false, name: "yellow" } },
-  { position: 8, physical: 22, bcm: 25, color: BROWN, striped: false, colorName: "brown", role: "signal",
-    jumper: { color: ORANGE, striped: false, name: "orange" } },
+const WIRES: Wire[] = [
+  { position: 1, physical: 34, bcm: null, color: ORANGE, striped: true, colorName: "white/orange", role: "common" },
+  { position: 2, physical: 33, bcm: 13, color: ORANGE, striped: false, colorName: "orange", role: "spare" },
+  { position: 3, physical: 35, bcm: 19, color: GREEN, striped: true, colorName: "white/green", role: "signal" },
+  { position: 4, physical: 36, bcm: 16, color: BLUE, striped: false, colorName: "blue", role: "signal" },
+  { position: 5, physical: 37, bcm: 26, color: BLUE, striped: true, colorName: "white/blue", role: "signal" },
+  { position: 6, physical: 38, bcm: 20, color: GREEN, striped: false, colorName: "green", role: "signal" },
+  { position: 7, physical: 39, bcm: null, color: BROWN, striped: true, colorName: "white/brown", role: "common" },
+  { position: 8, physical: 40, bcm: 21, color: BROWN, striped: false, colorName: "brown", role: "signal" },
 ];
-
-/** The rewire onto header pins 33–40, breakout position by position. */
-const REWIRE: Record<number, { physical: number; bcm: number | null }> = {
-  1: { physical: 34, bcm: null },
-  2: { physical: 33, bcm: 13 },
-  3: { physical: 35, bcm: 19 },
-  4: { physical: 36, bcm: 16 },
-  5: { physical: 37, bcm: 26 },
-  6: { physical: 38, bcm: 20 },
-  7: { physical: 39, bcm: null },
-  8: { physical: 40, bcm: 21 },
-};
-
-// Jumpers match the cable conductors, so no `jumper` override.
-const PROPOSED: Wire[] = CURRENT.map((w) => ({ ...w, ...REWIRE[w.position], jumper: undefined }));
-
-type Layout = "current" | "proposed";
 
 // --- Geometry (SVG user units) ---------------------------------------------
 
@@ -174,8 +137,7 @@ function WireColor({ look }: { look: Look }) {
   );
 }
 
-/** A machine column. `wire` is its conductor in the current harness; the
- * breakout position, and so the cable conductor, is the same in both layouts. */
+/** A machine column and its conductor on the harness. */
 type Column = { slot: number; product?: Product; wire?: Wire; gpioPin?: number };
 
 export function WiringSection() {
@@ -187,15 +149,14 @@ export function WiringSection() {
   });
   // Highlighted breakout position, or "common" for both commons.
   const [active, setActive] = useState<number | "common" | null>(null);
-  const [layout, setLayout] = useState<Layout>("current");
-  const wires = layout === "current" ? CURRENT : PROPOSED;
+  const wires = WIRES;
 
   const columns: Column[] = (status?.slots ?? [])
     .map((s) => ({
       slot: s.slot.position,
       product: s.product,
       gpioPin: s.slot.gpioPin,
-      wire: CURRENT.find((w) => w.bcm != null && w.bcm === s.slot.gpioPin),
+      wire: WIRES.find((w) => w.bcm != null && w.bcm === s.slot.gpioPin),
     }))
     .sort((a, b) => a.slot - b.slot);
   const columnOf = (w: Wire) => columns.find((c) => c.wire?.position === w.position);
@@ -214,36 +175,12 @@ export function WiringSection() {
 
   return (
     <Card>
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">Wiring</p>
-          <p className="mt-1 text-sm text-text-secondary">
-            {layout === "current"
-              ? "Pi GPIO header to the RJ45 breakout to each slot's cam contact, as wired now."
-              : "A planned rewire: every jumper on header pins 33–40, in the same T568B colors as the cable. Not wired yet."}{" "}
-            Hover a wire to trace it. Every contact closes its signal pin to ground; the Pi's internal pull-ups hold
-            the pins high.
-          </p>
-        </div>
-        <div
-          className="inline-flex shrink-0 rounded-lg border border-border-primary p-0.5 text-xs"
-          role="group"
-          aria-label="Wiring layout"
-        >
-          {(["current", "proposed"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setLayout(v)}
-              aria-pressed={layout === v}
-              className={`px-3 py-2 sm:px-2.5 sm:py-1 rounded-md font-medium capitalize transition-colors duration-150 ${
-                layout === v ? "bg-accent-soft text-accent" : "text-text-tertiary hover:text-text-primary"
-              }`}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
+      <div className="mb-4">
+        <p className="text-xs font-medium uppercase tracking-wider text-text-tertiary">Wiring</p>
+        <p className="mt-1 text-sm text-text-secondary">
+          Pi GPIO header to the RJ45 breakout to each slot's cam contact. Hover a wire to trace it. Every contact
+          closes its signal pin to ground; the Pi's internal pull-ups hold the pins high.
+        </p>
       </div>
 
       <div className="overflow-x-auto">
@@ -289,7 +226,7 @@ export function WiringSection() {
               <g key={`pi-${w.position}`} {...hover(w.role === "common" ? "common" : w.position)} className="cursor-pointer">
                 <Conductor
                   d={`${exit.d} ${curveTo(EXIT_X, exit.y, LEAD_X, termY(w.position))} L ${BO_X + 14} ${termY(w.position)}`}
-                  look={jumperLook(w)}
+                  look={look(w)}
                   dim={isDim(w)}
                 />
                 <text
@@ -321,8 +258,8 @@ export function WiringSection() {
                   cx={cx}
                   cy={pinY(n)}
                   r={PIN_R}
-                  fill={w ? jumperLook(w).color : "#e7e5e4"}
-                  stroke={w ? (LIGHT.has(jumperLook(w).color) ? "#44403c" : "#ffffff") : "#a8a29e"}
+                  fill={w ? w.color : "#e7e5e4"}
+                  stroke={w ? "#ffffff" : "#a8a29e"}
                   strokeWidth={w ? 2 : 1}
                 />
                 <text
@@ -331,7 +268,7 @@ export function WiringSection() {
                   textAnchor="middle"
                   fontSize={9}
                   fontWeight={w ? 700 : 400}
-                  fill={w && !LIGHT.has(jumperLook(w).color) ? "#ffffff" : "#1c1917"}
+                  fill={w ? "#ffffff" : "#1c1917"}
                 >
                   {n}
                 </text>
@@ -371,7 +308,7 @@ export function WiringSection() {
             const w = c.wire;
             return (
               <g key={`col-${c.slot}`} {...hover(w.position)} className="cursor-pointer">
-                <Conductor d={curve(JACK_OUT, termY(w.position), SW_X, y)} look={cableLook(w)} dim={isDim(w)} />
+                <Conductor d={curve(JACK_OUT, termY(w.position), SW_X, y)} look={look(w)} dim={isDim(w)} />
               </g>
             );
           })}
@@ -381,7 +318,7 @@ export function WiringSection() {
             const end = i === 0 ? busTop : busBottom;
             return (
               <g key={`common-${w.position}`} {...hover("common")} className="cursor-pointer">
-                <Conductor d={curve(JACK_OUT, termY(w.position), BUS_X, end)} look={cableLook(w)} dim={isDim(w)} />
+                <Conductor d={curve(JACK_OUT, termY(w.position), BUS_X, end)} look={look(w)} dim={isDim(w)} />
               </g>
             );
           })}
@@ -397,7 +334,7 @@ export function WiringSection() {
             const y = termY(w.position);
             return (
               <g key="spare" {...hover(w.position)} className="cursor-pointer">
-                <Conductor d={`M ${JACK_OUT} ${y} L ${JACK_OUT + 60} ${y}`} look={cableLook(w)} dim={isDim(w)} />
+                <Conductor d={`M ${JACK_OUT} ${y} L ${JACK_OUT + 60} ${y}`} look={look(w)} dim={isDim(w)} />
                 <circle cx={JACK_OUT + 66} cy={y} r={5} fill="#ffffff" stroke="#57534e" strokeWidth={1.5} />
                 <text x={JACK_OUT + 76} y={y + 4} fontSize={10} fill="#78716c">
                   spare
@@ -441,10 +378,8 @@ export function WiringSection() {
               {/* Left to right in the same order as the diagram: Pi to machine. */}
               <th className="py-2 pr-3 font-medium">Pi pin</th>
               <th className="py-2 pr-3 font-medium">GPIO</th>
-              {layout === "proposed" && <th className="py-2 pr-3 font-medium">Pin now</th>}
-              <th className="py-2 pr-3 font-medium">Jumper</th>
               <th className="py-2 pr-3 font-medium">Breakout</th>
-              <th className="py-2 pr-3 font-medium">Cable wire</th>
+              <th className="py-2 pr-3 font-medium">Wire</th>
               <th className="py-2 font-medium">Machine</th>
             </tr>
           </thead>
@@ -461,18 +396,9 @@ export function WiringSection() {
                 >
                   <td className="py-2 pr-3 tabular-nums">{w.physical}</td>
                   <td className="py-2 pr-3 tabular-nums">{w.bcm == null ? "GND" : w.bcm}</td>
-                  {layout === "proposed" && (
-                    <td className="py-2 pr-3 tabular-nums text-text-tertiary">
-                      {CURRENT[w.position - 1].physical}
-                      {CURRENT[w.position - 1].bcm != null ? ` (GPIO${CURRENT[w.position - 1].bcm})` : " (GND)"}
-                    </td>
-                  )}
-                  <td className="py-2 pr-3">
-                    <WireColor look={jumperLook(w)} />
-                  </td>
                   <td className="py-2 pr-3 tabular-nums">{w.position}</td>
                   <td className="py-2 pr-3">
-                    <WireColor look={cableLook(w)} />
+                    <WireColor look={look(w)} />
                   </td>
                   <td className="py-2">
                     {col ? (
@@ -500,18 +426,10 @@ export function WiringSection() {
         <li>
           The breakout and the cable's plug are both wired T568B (standard Ethernet type B). Cable colors are
           the Pi-side ones; the cable's colors don't match end to end, so don't go by color at the machine.
-          {layout === "current" &&
-            " Jumpers between the header and the breakout match the cable's colors except where the table says otherwise."}
+          Each jumper between the header and the breakout is the same color as the cable conductor on its
+          breakout position.
         </li>
         <li>Nothing connects to the 3.3V pins (1, 17) or the 5V pins (2, 4).</li>
-        {layout === "proposed" && (
-          <li>
-            To move to this layout: change each slot's GPIO pin in Slot Configuration and in{" "}
-            <code>piagent.yaml</code> on the Pi to the GPIO numbers above, move the jumpers, then restart the
-            container. Counting stops while the jumpers are off, so do it outside lunch hours. Each jumper is the same
-            color as the cable conductor on its breakout position.
-          </li>
-        )}
         {unmapped.map((c) => (
           <li key={c.slot} className="text-status-low">
             Slot {c.slot} is configured for {c.gpioPin != null ? `GPIO${c.gpioPin}` : "no GPIO pin"}, which isn't

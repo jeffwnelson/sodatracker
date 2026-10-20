@@ -11,13 +11,13 @@ minOpenMs: 500
 dbPath: piagent-cache.db
 # Slots are the machine's own column numbers. See README "Pin Assignments".
 pins:
-  - pin: 25
-    slot: 1   # Physical 22, Pi-side brown: Diet Mountain Dew
-  - pin: 17
-    slot: 2   # Physical 11, Pi-side blue: Diet Mountain Dew
+  - pin: 21
+    slot: 1   # Physical 40, Pi-side brown: Diet Mountain Dew
+  - pin: 16
+    slot: 2   # Physical 36, Pi-side blue: Diet Mountain Dew
   - pin: 19
     slot: 3   # Physical 35, Pi-side white/green: Coke Zero
-  - pin: 13
-    slot: 4   # Physical 33, Pi-side green: Mountain Dew
-  - pin: 22
-    slot: 5   # Physical 15, Pi-side white/blue: Diet Coke
+  - pin: 20
+    slot: 4   # Physical 38, Pi-side green: Mountain Dew
+  - pin: 26
+    slot: 5   # Physical 37, Pi-side white/blue: Diet Coke
