@@ -33,8 +33,8 @@ COPY web/ .
 RUN npm run build
 
 # --- Fetch tini for the target arch without running target-arch code ---
-# The final stage has no RUN steps, so building arm64 needs no QEMU; the
-# self-hosted runners' Talos kernel has no binfmt_misc to emulate with.
+# The final stage has no RUN steps, so an amd64 host (`make docker-push` on
+# Intel) builds the arm64 image without QEMU.
 FROM --platform=$BUILDPLATFORM alpine:3.21 AS tini
 ARG TARGETARCH
 RUN case "$TARGETARCH" in \

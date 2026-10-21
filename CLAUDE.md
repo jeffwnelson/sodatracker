@@ -216,17 +216,17 @@ builds once: predict the version (`cog bump --auto --dry-run`), build and push t
 **arm64** image as `sha-<commit>` (the Dockerfile's `api-build` stage runs
 `go vet` and `go test`, so a failing test fails the build), then do the real bump,
 tag and GitHub release, and finally re-tag that same image as `latest` and `vX.Y.Z` with
-`docker buildx imagetools create` rather than rebuilding it. Go and npm caches are BuildKit
-cache mounts, which persist while the runner pod lives. A push of a `v*` tag builds and
+`docker buildx imagetools create` rather than rebuilding it. Layers are cached in the GitHub
+Actions cache (`type=gha`); BuildKit cache mounts don.t survive between hosted runs. A push of a `v*` tag builds and
 tags that version without moving `latest`. The image is arm64 only; on an Intel
 machine use `make run` or `docker compose up --build`.
 
-It runs on the owner's **self-hosted** `sodatracker-runner` (a Docker-in-Docker
-StatefulSet defined in the `gitops-deployments` repo, `apps/github-runners`), not on
-GitHub-hosted runners. Keep this repo **private** while it uses them. The runners'
-Talos kernel has no `binfmt_misc`, so QEMU is unavailable: every `RUN` in the
-Dockerfile must stay in a `--platform=$BUILDPLATFORM` stage, and the final stage
-only `COPY`s (tini comes from a build-platform stage via `apk --arch`).
+It runs on GitHub-hosted **`ubuntu-24.04-arm`** runners (free for public repos),
+so the image builds natively, and only on push or dispatch: no `pull_request`
+trigger, so forks never run it. The Dockerfile still keeps every `RUN` in a
+`--platform=$BUILDPLATFORM` stage and the final stage only `COPY`s (tini comes
+from a build-platform stage via `apk --arch`), so an Intel machine can build the
+arm64 image without QEMU.
 
 ```bash
 make pi-deploy      # ssh to Pi, docker compose pull && docker compose up -d
@@ -272,7 +272,7 @@ Pin mappings are YAML-only. Deployment-specific fields have env overrides
 
 - **API port:** 3000 (env `PORT`)
 - **SQLite DB path:** `sodatracker.db` (env `DB_PATH`) — opens with `?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)` (modernc's syntax; mattn-style `_journal_mode` params are silently ignored, which left the DB in rollback mode with no busy timeout before v0.11; `TestPragmasApplied` guards it)
-- **Secrets:** the values below are **local-dev defaults only**. The Pi sets real ones in `/home/pi/sodatracker/.env` (rotated 2026-09-30; never commit them, even though the repo is private). The server refuses to start when `STATIC_DIR` is set (the container) and `API_KEY`, `JWT_SECRET` or `ADMIN_PASSWORD` is its dev default, or `JWT_SECRET` is under 32 characters (`config.Validate`); `ALLOW_DEV_SECRETS=true` overrides that for trying the container locally.
+- **Secrets:** the values below are **local-dev defaults only**. The Pi sets real ones in `/home/pi/sodatracker/.env` (rotated 2026-09-30; never commit them). The server refuses to start when `STATIC_DIR` is set (the container) and `API_KEY`, `JWT_SECRET` or `ADMIN_PASSWORD` is its dev default, or `JWT_SECRET` is under 32 characters (`config.Validate`); `ALLOW_DEV_SECRETS=true` overrides that for trying the container locally.
 - **API key:** `dev-api-key` (env `API_KEY`) — used by Pi agent (compose passes it as `PIAGENT_API_KEY`); also accepted on admin CRUD routes via `APIKeyOrJWT` middleware
 - **JWT secret:** `dev-jwt-secret` (env `JWT_SECRET`) — signs HS256 tokens for admin dashboard auth
 - **Admin password:** `dev-admin-password` (env `ADMIN_PASSWORD`) — bcrypt-hashed only when the `admin` user is first seeded. Changing `ADMIN_PASSWORD` later has no effect until that user is deleted and re-seeded

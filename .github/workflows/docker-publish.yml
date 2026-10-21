@@ -9,9 +9,8 @@ on:
 env:
   IMAGE: ghcr.io/${{ github.repository }}
 
-# Runs on the owner's self-hosted runner (the sodatracker-runner StatefulSet in
-# gitops-deployments, which runs its own Docker daemon). Keep this repo private
-# while it uses it.
+# Runs on GitHub-hosted arm64 runners (free for public repos), so the arm64
+# image builds natively. Only push and dispatch trigger it, never pull requests.
 #
 # One job, one build:
 #   1. Work out the version cocogitto will release (bump --dry-run).
@@ -27,7 +26,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: write
       packages: write
