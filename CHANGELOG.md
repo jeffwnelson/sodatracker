@@ -2,6 +2,18 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.20.4](https://github.com/jeffwnelson/sodatracker/compare/6d4f84d6ae07b717ba04eb8961a84c58905f1597..v0.20.4) - 2026-10-21
+#### Bug Fixes
+- (**wiring**) adopt rewire onto header pins 33–40 - ([85c339e](https://github.com/jeffwnelson/sodatracker/commit/85c339e348cd441d5acd56f52022682be16290a6)) - Jeff Nelson
+#### Documentation
+- (**pi**) add Wi-Fi watchdog and persistent journal host config - ([6d4f84d](https://github.com/jeffwnelson/sodatracker/commit/6d4f84d6ae07b717ba04eb8961a84c58905f1597)) - Jeff Nelson
+#### Continuous Integration
+- build on GitHub-hosted arm64 runners - ([3e7aef6](https://github.com/jeffwnelson/sodatracker/commit/3e7aef6d561bb35814c272b615eb39730c578f09)) - Jeff Nelson
+#### Miscellaneous Chores
+- move private network details out of the repo - ([37ffe7d](https://github.com/jeffwnelson/sodatracker/commit/37ffe7dc6933fde47ca853445e6e7997a0ca519b)) - Jeff Nelson
+
+- - -
+
 ## [v0.20.3](https://github.com/jeffwnelson/sodatracker/compare/c3f82c1f6a6e184bb4b5acdcb91b22df45707d8f..v0.20.3) - 2026-10-09
 #### Bug Fixes
 - (**security**) refuse dev secrets, throttle login, tighten auth and backups - ([c3f82c1](https://github.com/jeffwnelson/sodatracker/commit/c3f82c1f6a6e184bb4b5acdcb91b22df45707d8f)) - Jeff Nelson
