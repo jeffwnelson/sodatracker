@@ -8,7 +8,8 @@
 # Test without acting: DRY_RUN=1 WATCHDOG_URLS=https://example.invalid wifi-watchdog.sh
 set -u
 
-CON="${WATCHDOG_CON:-office-guest-wifi}"
+CON="${WATCHDOG_CON:-}"           # NetworkManager connection; empty = whatever IFACE joins
+IFACE="${WATCHDOG_IFACE:-wlan0}"
 URLS="${WATCHDOG_URLS:-https://api.github.com https://slack.com}"
 FAILS_FILE="${WATCHDOG_FAILS_FILE:-/run/wifi-watchdog.fails}" # tmpfs: resets on boot
 LAST_REBOOT_FILE=/var/lib/wifi-watchdog/last-reboot
@@ -59,9 +60,13 @@ if [ "$fails" -ge "$REBOOT_AFTER" ]; then
 fi
 
 if [ "$fails" -ge "$RELOAD_AFTER" ] && [ $(( (fails - RELOAD_AFTER) % RELOAD_EVERY )) -eq 0 ]; then
-	echo "reloading brcmfmac and reconnecting \"$CON\""
+	echo "reloading brcmfmac and reconnecting ${CON:-$IFACE}"
 	run modprobe -r brcmfmac_cyw brcmfmac
 	run modprobe brcmfmac
 	[ "$DRY_RUN" = 1 ] || sleep 15
-	run nmcli connection up "$CON"
+	if [ -n "$CON" ]; then
+		run nmcli connection up "$CON"
+	else
+		run nmcli device connect "$IFACE"
+	fi
 fi

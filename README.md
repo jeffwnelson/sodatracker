@@ -167,7 +167,7 @@ It installs two things:
 - **`wifi-watchdog.timer`.** Every 2 minutes it fetches `https://api.github.com`
   and `https://slack.com`, and any response counts as online. After 5 failed
   checks (about 10 minutes) it reloads the Wi-Fi driver and reconnects
-  `office-guest-wifi`, then does that again every 30 minutes while the Pi is still
+  Wi-Fi (`WATCHDOG_CON`, or whatever network `wlan0` joins), then does that again every 30 minutes while the Pi is still
   offline. After 15 failed checks (about 30 minutes) it reboots the Pi, at most
   once every 6 hours.
   - See what it did: `journalctl -u wifi-watchdog`.

@@ -30,3 +30,6 @@ piagent-cache.db
 # Stray binaries from `go build` without -o
 /piagent
 /server
+
+# Private deployment notes for Claude Code (addresses, network names)
+CLAUDE.local.md

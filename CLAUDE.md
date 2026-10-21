@@ -161,11 +161,12 @@ container running both the API server and the GPIO pi agent**.
 - **Dashboard URL:** `https://sodatracker.<tailnet>.ts.net`, the only way in. Since 2026-10-02 compose publishes port 3000 on `127.0.0.1` only (`SODATRACKER_BIND`, default loopback), so plain HTTP on the Tailscale IP or the LAN is closed and only tailnet devices can reach the dashboard. On the Pi itself, `curl localhost:3000` still works.
 
 **Networking.** The Pi joined the owner's tailnet as `sodatracker`
-(`sodatracker`) on 2026-09-24, and `tailscaled` is enabled at boot.
-`sodatracker.example.com` no longer resolves, and the old office ethernet address
-`<office-ip>` is gone: there is no ethernet where the machine sits.
+on 2026-09-24, and `tailscaled` is enabled at boot.
+Exact addresses (Tailscale IP, tailnet name, Wi-Fi name) are in the gitignored
+`CLAUDE.local.md`, kept out of this public repo.
+There is no ethernet where the machine sits.
 
-The Pi is on the office guest WiFi (`office-guest-wifi`) only. It enforces client
+The Pi is on the office guest WiFi only. It enforces client
 isolation in both directions, so the Pi is unreachable by its LAN address and
 Tailscale is the only way to reach it. Tailscale was
 brought up with `--accept-dns=false` to avoid resolver conflicts with the
