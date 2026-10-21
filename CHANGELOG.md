@@ -2,215 +2,215 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
-## [v0.20.4](https://github.com/jeffwnelson/sodatracker/compare/6d4f84d6ae07b717ba04eb8961a84c58905f1597..v0.20.4) - 2026-10-21
+## [v0.20.4](https://github.com/jeffwnelson/sodatracker/compare/500fecbf7cb4ccdf24daca16ba6233236ff1d52a..v0.20.4) - 2026-10-21
 #### Bug Fixes
-- (**wiring**) adopt rewire onto header pins 33–40 - ([85c339e](https://github.com/jeffwnelson/sodatracker/commit/85c339e348cd441d5acd56f52022682be16290a6)) - Jeff Nelson
+- (**wiring**) adopt rewire onto header pins 33–40 - ([8f41dd1](https://github.com/jeffwnelson/sodatracker/commit/8f41dd1c8c8db5317d93dac8c9a0956ca411e0bc)) - Jeff Nelson
 #### Documentation
-- (**pi**) add Wi-Fi watchdog and persistent journal host config - ([6d4f84d](https://github.com/jeffwnelson/sodatracker/commit/6d4f84d6ae07b717ba04eb8961a84c58905f1597)) - Jeff Nelson
+- (**pi**) add Wi-Fi watchdog and persistent journal host config - ([500fecb](https://github.com/jeffwnelson/sodatracker/commit/500fecbf7cb4ccdf24daca16ba6233236ff1d52a)) - Jeff Nelson
 #### Continuous Integration
-- build on GitHub-hosted arm64 runners - ([3e7aef6](https://github.com/jeffwnelson/sodatracker/commit/3e7aef6d561bb35814c272b615eb39730c578f09)) - Jeff Nelson
+- build on GitHub-hosted arm64 runners - ([7bb7cfc](https://github.com/jeffwnelson/sodatracker/commit/7bb7cfc1bffe7b26c38211e5ac8a236e841b87ae)) - Jeff Nelson
 #### Miscellaneous Chores
-- move private network details out of the repo - ([37ffe7d](https://github.com/jeffwnelson/sodatracker/commit/37ffe7dc6933fde47ca853445e6e7997a0ca519b)) - Jeff Nelson
+- move private network details out of the repo - ([ae53c54](https://github.com/jeffwnelson/sodatracker/commit/ae53c54a97b72a58de4bced5b2d3f0c66fbcfbc9)) - Jeff Nelson
 
 - - -
 
-## [v0.20.3](https://github.com/jeffwnelson/sodatracker/compare/c3f82c1f6a6e184bb4b5acdcb91b22df45707d8f..v0.20.3) - 2026-10-09
+## [v0.20.3](https://github.com/jeffwnelson/sodatracker/compare/19ff9996c14274d519b91dc2e03d8ff102e0a918..v0.20.3) - 2026-10-09
 #### Bug Fixes
-- (**security**) refuse dev secrets, throttle login, tighten auth and backups - ([c3f82c1](https://github.com/jeffwnelson/sodatracker/commit/c3f82c1f6a6e184bb4b5acdcb91b22df45707d8f)) - Jeff Nelson
+- (**security**) refuse dev secrets, throttle login, tighten auth and backups - ([19ff999](https://github.com/jeffwnelson/sodatracker/commit/19ff9996c14274d519b91dc2e03d8ff102e0a918)) - Jeff Nelson
 
 - - -
 
-## [v0.20.2](https://github.com/jeffwnelson/sodatracker/compare/0dddee081c52a98dbece48eef9cf306998fc159e..v0.20.2) - 2026-10-09
+## [v0.20.2](https://github.com/jeffwnelson/sodatracker/compare/3746c8970e62e2e4b969da27ef17b9083aa90cb3..v0.20.2) - 2026-10-09
 #### Bug Fixes
-- keep login after Reset All Data, guard Save Slots, close static files - ([0dddee0](https://github.com/jeffwnelson/sodatracker/commit/0dddee081c52a98dbece48eef9cf306998fc159e)) - Jeff Nelson
+- keep login after Reset All Data, guard Save Slots, close static files - ([3746c89](https://github.com/jeffwnelson/sodatracker/commit/3746c8970e62e2e4b969da27ef17b9083aa90cb3)) - Jeff Nelson
 
 - - -
 
-## [v0.20.1](https://github.com/jeffwnelson/sodatracker/compare/eec3a60b02d605b47bdd33d803cbf99b5d44739d..v0.20.1) - 2026-10-09
+## [v0.20.1](https://github.com/jeffwnelson/sodatracker/compare/b454dc9d8678aad0e0ea7d12132bde163b753ba7..v0.20.1) - 2026-10-09
 #### Bug Fixes
-- (**piagent**) never count a dispense twice or miss one while sending - ([eec3a60](https://github.com/jeffwnelson/sodatracker/commit/eec3a60b02d605b47bdd33d803cbf99b5d44739d)) - Jeff Nelson
+- (**piagent**) never count a dispense twice or miss one while sending - ([b454dc9](https://github.com/jeffwnelson/sodatracker/commit/b454dc9d8678aad0e0ea7d12132bde163b753ba7)) - Jeff Nelson
 #### Performance Improvements
-- load only the analytics history a view needs, refetch less on live events - ([1765fec](https://github.com/jeffwnelson/sodatracker/commit/1765fec5ec4c861337984439d5e4c7a94eeb913e)) - Jeff Nelson
+- load only the analytics history a view needs, refetch less on live events - ([4473acc](https://github.com/jeffwnelson/sodatracker/commit/4473acc668d6c9621caacd15dd6e357ad4363eba)) - Jeff Nelson
 #### Documentation
-- describe the agent outbox, windowed analytics and targeted live refreshes - ([816e430](https://github.com/jeffwnelson/sodatracker/commit/816e430159edec1163f88104f3e135ecf4e0adbe)) - Jeff Nelson
+- describe the agent outbox, windowed analytics and targeted live refreshes - ([7b513c4](https://github.com/jeffwnelson/sodatracker/commit/7b513c4de198148d104b4a4b0e0f17af1463d26c)) - Jeff Nelson
 
 - - -
 
-## [v0.20.0](https://github.com/jeffwnelson/sodatracker/compare/03e16d659a6b3d4d9ef947c29d7f8672c626898b..v0.20.0) - 2026-10-08
+## [v0.20.0](https://github.com/jeffwnelson/sodatracker/compare/f22368981a8b940fa40e2062e5ff72e3cabe74a9..v0.20.0) - 2026-10-08
 #### Features
-- (**web**) recent dispenses show the event ID and expand to raw JSON - ([bca5055](https://github.com/jeffwnelson/sodatracker/commit/bca5055a5f7d338df8099a5a4524289289738292)) - Jeff Nelson
+- (**web**) recent dispenses show the event ID and expand to raw JSON - ([475181f](https://github.com/jeffwnelson/sodatracker/commit/475181f8d0df39c18b46b524451114a27c031cfc)) - Jeff Nelson
 #### Documentation
-- Diet Mountain Dew columns confirmed, drop unconfirmed marks from wiring - ([03e16d6](https://github.com/jeffwnelson/sodatracker/commit/03e16d659a6b3d4d9ef947c29d7f8672c626898b)) - Jeff Nelson
+- Diet Mountain Dew columns confirmed, drop unconfirmed marks from wiring - ([f223689](https://github.com/jeffwnelson/sodatracker/commit/f22368981a8b940fa40e2062e5ff72e3cabe74a9)) - Jeff Nelson
 
 - - -
 
-## [v0.19.2](https://github.com/jeffwnelson/sodatracker/compare/4c7be5fb20821e8910ecb25458dbf0380cf3520d..v0.19.2) - 2026-10-07
+## [v0.19.2](https://github.com/jeffwnelson/sodatracker/compare/0057249c07f2f29a95bf0e794ef162bbd3cff315..v0.19.2) - 2026-10-07
 #### Bug Fixes
-- (**web**) wiring table and labels follow the diagram, say Slot, dots before product names - ([4c7be5f](https://github.com/jeffwnelson/sodatracker/commit/4c7be5fb20821e8910ecb25458dbf0380cf3520d)) - Jeff Nelson
+- (**web**) wiring table and labels follow the diagram, say Slot, dots before product names - ([0057249](https://github.com/jeffwnelson/sodatracker/commit/0057249c07f2f29a95bf0e794ef162bbd3cff315)) - Jeff Nelson
 
 - - -
 
-## [v0.19.1](https://github.com/jeffwnelson/sodatracker/compare/c4b7c91febd2d004e005b55f706a4bc0a3947656..v0.19.1) - 2026-10-07
+## [v0.19.1](https://github.com/jeffwnelson/sodatracker/compare/2a5a28aac005f5852773e246594cea3a518ff2bb..v0.19.1) - 2026-10-07
 #### Bug Fixes
-- (**web**) proposed wiring uses T568B jumper colors - ([c4b7c91](https://github.com/jeffwnelson/sodatracker/commit/c4b7c91febd2d004e005b55f706a4bc0a3947656)) - Jeff Nelson
+- (**web**) proposed wiring uses T568B jumper colors - ([2a5a28a](https://github.com/jeffwnelson/sodatracker/commit/2a5a28aac005f5852773e246594cea3a518ff2bb)) - Jeff Nelson
 
 - - -
 
-## [v0.19.0](https://github.com/jeffwnelson/sodatracker/compare/0966d670b67b7a6bbaafee6a7d7811ef40de806f..v0.19.0) - 2026-10-07
+## [v0.19.0](https://github.com/jeffwnelson/sodatracker/compare/aa164ffbecfe2195ff29c75ef67381397eef6e0f..v0.19.0) - 2026-10-07
 #### Features
-- (**web**) wiring diagram on Settings, with a proposed rewire - ([0966d67](https://github.com/jeffwnelson/sodatracker/commit/0966d670b67b7a6bbaafee6a7d7811ef40de806f)) - Jeff Nelson
+- (**web**) wiring diagram on Settings, with a proposed rewire - ([aa164ff](https://github.com/jeffwnelson/sodatracker/commit/aa164ffbecfe2195ff29c75ef67381397eef6e0f)) - Jeff Nelson
 
 - - -
 
-## [v0.18.0](https://github.com/jeffwnelson/sodatracker/compare/bc9f38e6c50989deaede905e78478018de91b531..v0.18.0) - 2026-10-07
+## [v0.18.0](https://github.com/jeffwnelson/sodatracker/compare/d04f110dc967ad58be1fd6e24c1d4cff28b05640..v0.18.0) - 2026-10-07
 #### Features
-- (**analytics**) product heatmap with product filter on the Products tab - ([bc9f38e](https://github.com/jeffwnelson/sodatracker/commit/bc9f38e6c50989deaede905e78478018de91b531)) - Jeff Nelson
+- (**analytics**) product heatmap with product filter on the Products tab - ([d04f110](https://github.com/jeffwnelson/sodatracker/commit/d04f110dc967ad58be1fd6e24c1d4cff28b05640)) - Jeff Nelson
 
 - - -
 
-## [v0.17.2](https://github.com/jeffwnelson/sodatracker/compare/f2be53ab32031b08f1e67e0c7174280d3dee6982..v0.17.2) - 2026-10-03
+## [v0.17.2](https://github.com/jeffwnelson/sodatracker/compare/f4cd8934afc6f321b4874cc22f1c9c2394760668..v0.17.2) - 2026-10-03
 #### Bug Fixes
-- (**analytics**) lunch favorite counts 11:30 to 1 PM - ([f2be53a](https://github.com/jeffwnelson/sodatracker/commit/f2be53ab32031b08f1e67e0c7174280d3dee6982)) - Jeff Nelson
+- (**analytics**) lunch favorite counts 11:30 to 1 PM - ([f4cd893](https://github.com/jeffwnelson/sodatracker/commit/f4cd8934afc6f321b4874cc22f1c9c2394760668)) - Jeff Nelson
 
 - - -
 
-## [v0.17.1](https://github.com/jeffwnelson/sodatracker/compare/8e8731cc8d0eb2181a207c05449eb6c5993cfb79..v0.17.1) - 2026-10-02
+## [v0.17.1](https://github.com/jeffwnelson/sodatracker/compare/efffedd6cbb68a1c9a02ce3becb49c21d13271c7..v0.17.1) - 2026-10-02
 #### Bug Fixes
-- (**web**) show active alerts right under the status banner - ([8e8731c](https://github.com/jeffwnelson/sodatracker/commit/8e8731cc8d0eb2181a207c05449eb6c5993cfb79)) - Jeff Nelson
+- (**web**) show active alerts right under the status banner - ([efffedd](https://github.com/jeffwnelson/sodatracker/commit/efffedd6cbb68a1c9a02ce3becb49c21d13271c7)) - Jeff Nelson
 
 - - -
 
-## [v0.17.0](https://github.com/jeffwnelson/sodatracker/compare/94095c6790ddca3f94cd924a66640bbbfa48e4b0..v0.17.0) - 2026-10-02
+## [v0.17.0](https://github.com/jeffwnelson/sodatracker/compare/582e65e0d890f71fcaa3f4213d3faed18f593c36..v0.17.0) - 2026-10-02
 #### Features
-- (**web**) Status tab replaces Alerts; drop not-registering alerts - ([94095c6](https://github.com/jeffwnelson/sodatracker/commit/94095c6790ddca3f94cd924a66640bbbfa48e4b0)) - Jeff Nelson
+- (**web**) Status tab replaces Alerts; drop not-registering alerts - ([582e65e](https://github.com/jeffwnelson/sodatracker/commit/582e65e0d890f71fcaa3f4213d3faed18f593c36)) - Jeff Nelson
 
 - - -
 
-## [v0.16.0](https://github.com/jeffwnelson/sodatracker/compare/e048b0fce8af03991c91190c0b2d46e10dd8e914..v0.16.0) - 2026-10-02
+## [v0.16.0](https://github.com/jeffwnelson/sodatracker/compare/88e0d66b33635a12c292dffb0aad6da6b6283af2..v0.16.0) - 2026-10-02
 #### Features
-- (**analytics**) status page on the Uptime tab - ([e048b0f](https://github.com/jeffwnelson/sodatracker/commit/e048b0fce8af03991c91190c0b2d46e10dd8e914)) - Jeff Nelson
+- (**analytics**) status page on the Uptime tab - ([88e0d66](https://github.com/jeffwnelson/sodatracker/commit/88e0d66b33635a12c292dffb0aad6da6b6283af2)) - Jeff Nelson
 
 - - -
 
-## [v0.15.0](https://github.com/jeffwnelson/sodatracker/compare/179266a051637869c4edc7d8f1db19acbbd70bc4..v0.15.0) - 2026-10-02
+## [v0.15.0](https://github.com/jeffwnelson/sodatracker/compare/02bb150bff780be1cda7893f31b042e14781ed2c..v0.15.0) - 2026-10-02
 #### Features
-- (**settings**) configure Slack from the Settings page - ([179266a](https://github.com/jeffwnelson/sodatracker/commit/179266a051637869c4edc7d8f1db19acbbd70bc4)) - Jeff Nelson
+- (**settings**) configure Slack from the Settings page - ([02bb150](https://github.com/jeffwnelson/sodatracker/commit/02bb150bff780be1cda7893f31b042e14781ed2c)) - Jeff Nelson
 
 - - -
 
-## [v0.14.0](https://github.com/jeffwnelson/sodatracker/compare/0fc8910a599e8c91b343f142f057635ad80b9fd7..v0.14.0) - 2026-10-02
+## [v0.14.0](https://github.com/jeffwnelson/sodatracker/compare/25597c6fdafba28c521caf4ebd96860096d5ee74..v0.14.0) - 2026-10-02
 #### Features
-- (**deploy**) serve the dashboard only over HTTPS - ([3b15a90](https://github.com/jeffwnelson/sodatracker/commit/3b15a90c39bacfa7b1f7f6844f4f282b6c01ec07)) - Jeff Nelson
+- (**deploy**) serve the dashboard only over HTTPS - ([1949370](https://github.com/jeffwnelson/sodatracker/commit/194937019c1c05ef24dc72ffbef04f44ac4ffdb1)) - Jeff Nelson
 #### Documentation
-- HTTPS for the dashboard through Tailscale serve - ([0fc8910](https://github.com/jeffwnelson/sodatracker/commit/0fc8910a599e8c91b343f142f057635ad80b9fd7)) - Jeff Nelson
+- HTTPS for the dashboard through Tailscale serve - ([25597c6](https://github.com/jeffwnelson/sodatracker/commit/25597c6fdafba28c521caf4ebd96860096d5ee74)) - Jeff Nelson
 
 - - -
 
-## [v0.13.0](https://github.com/jeffwnelson/sodatracker/compare/f2a6aff11ea2e4e699c815b9c40eafa24ffb2c1f..v0.13.0) - 2026-10-02
+## [v0.13.0](https://github.com/jeffwnelson/sodatracker/compare/8d722852ff5cc127fc8b1eb44a645cf4a0ecfe48..v0.13.0) - 2026-10-02
 #### Features
-- (**web**) iPhone-ready layout and Add to Home Screen - ([f2a6aff](https://github.com/jeffwnelson/sodatracker/commit/f2a6aff11ea2e4e699c815b9c40eafa24ffb2c1f)) - Jeff Nelson
+- (**web**) iPhone-ready layout and Add to Home Screen - ([8d72285](https://github.com/jeffwnelson/sodatracker/commit/8d722852ff5cc127fc8b1eb44a645cf4a0ecfe48)) - Jeff Nelson
 
 - - -
 
-## [v0.12.0](https://github.com/jeffwnelson/sodatracker/compare/1b5ec6d37fe4441173c2cb61b1e0ed6200ed9205..v0.12.0) - 2026-10-02
+## [v0.12.0](https://github.com/jeffwnelson/sodatracker/compare/5e2e91e46d0f22fbd5a0846a1b0efb0742538771..v0.12.0) - 2026-10-02
 #### Features
-- (**analytics**) fit the three highlight pies on one row - ([1b5ec6d](https://github.com/jeffwnelson/sodatracker/commit/1b5ec6d37fe4441173c2cb61b1e0ed6200ed9205)) - Jeff Nelson
+- (**analytics**) fit the three highlight pies on one row - ([5e2e91e](https://github.com/jeffwnelson/sodatracker/commit/5e2e91e46d0f22fbd5a0846a1b0efb0742538771)) - Jeff Nelson
 #### Refactoring
-- (**web**) one Button for every action - ([5efa536](https://github.com/jeffwnelson/sodatracker/commit/5efa53679f482de30c68b37ee025832cf9401dc9)) - Jeff Nelson
+- (**web**) one Button for every action - ([6ad8d90](https://github.com/jeffwnelson/sodatracker/commit/6ad8d90af05b11e62864f9c3d808851f4f73b677)) - Jeff Nelson
 
 - - -
 
-## [v0.11.0](https://github.com/jeffwnelson/sodatracker/compare/7a4aaf64ddbb2d7b5232ffc0c384407aeb3e7f78..v0.11.0) - 2026-10-02
+## [v0.11.0](https://github.com/jeffwnelson/sodatracker/compare/22a63e2b098c2f3270913459377d632cd1489242..v0.11.0) - 2026-10-02
 #### Features
-- (**alerts**) alert when a slot or the machine stops registering - ([71db6d4](https://github.com/jeffwnelson/sodatracker/commit/71db6d466f84df756d2505b363323a8f731f48bc)) - Jeff Nelson
-- (**analytics**) who closes the day and lunch favorite highlights - ([a04fe24](https://github.com/jeffwnelson/sodatracker/commit/a04fe24250aff7293e9240982f3b9496ef95eb03)) - Jeff Nelson
-- (**web**) recent dispenses log on the dashboard - ([b5cf5fe](https://github.com/jeffwnelson/sodatracker/commit/b5cf5fe8fe6207a717bcaf51bb8cf918e1e2d5f2)) - Jeff Nelson
+- (**alerts**) alert when a slot or the machine stops registering - ([8f9e1d3](https://github.com/jeffwnelson/sodatracker/commit/8f9e1d3da98443c7b0ca74ad77b01e04defacc05)) - Jeff Nelson
+- (**analytics**) who closes the day and lunch favorite highlights - ([6240c63](https://github.com/jeffwnelson/sodatracker/commit/6240c63e91f517cd464c6c04daf6341498233255)) - Jeff Nelson
+- (**web**) recent dispenses log on the dashboard - ([a087af4](https://github.com/jeffwnelson/sodatracker/commit/a087af45b0aa73a5a48ee0b50e90099e0b9e837f)) - Jeff Nelson
 #### Bug Fixes
-- (**store**) actually enable WAL and the busy timeout - ([7a4aaf6](https://github.com/jeffwnelson/sodatracker/commit/7a4aaf64ddbb2d7b5232ffc0c384407aeb3e7f78)) - Jeff Nelson
+- (**store**) actually enable WAL and the busy timeout - ([22a63e2](https://github.com/jeffwnelson/sodatracker/commit/22a63e2b098c2f3270913459377d632cd1489242)) - Jeff Nelson
 
 - - -
 
-## [v0.10.0](https://github.com/jeffwnelson/sodatracker/compare/e2a10b89e65f259523500d86b4d87e0c306cfc4b..v0.10.0) - 2026-10-02
+## [v0.10.0](https://github.com/jeffwnelson/sodatracker/compare/6201bd25baa223a0dadeaafdb40e22c767a95754..v0.10.0) - 2026-10-02
 #### Features
-- alert on backup failures over Slack and the live stream - ([e2a10b8](https://github.com/jeffwnelson/sodatracker/commit/e2a10b89e65f259523500d86b4d87e0c306cfc4b)) - Jeff Nelson
+- alert on backup failures over Slack and the live stream - ([6201bd2](https://github.com/jeffwnelson/sodatracker/commit/6201bd25baa223a0dadeaafdb40e22c767a95754)) - Jeff Nelson
 
 - - -
 
-## [v0.9.0](https://github.com/jeffwnelson/sodatracker/compare/a0fc5cb601b72ba8370ea0338b7a5e3f5d493780..v0.9.0) - 2026-10-02
+## [v0.9.0](https://github.com/jeffwnelson/sodatracker/compare/30ec45d92962724bb7b038440d80e95e1f4cd029..v0.9.0) - 2026-10-02
 #### Features
-- database backups to a GitHub repo - ([4bd5efa](https://github.com/jeffwnelson/sodatracker/commit/4bd5efac51d7a903de959227e2c0c152ee5b551a)) - Jeff Nelson
+- database backups to a GitHub repo - ([f6107f6](https://github.com/jeffwnelson/sodatracker/commit/f6107f62e08e57cfe25b052c1ddbec276c0ddfce)) - Jeff Nelson
 #### Refactoring
-- (**web**) drop the machine detail page; restock moves to Settings - ([6ee3a96](https://github.com/jeffwnelson/sodatracker/commit/6ee3a96217c31218d67989e07cafab23eb4d2386)) - Jeff Nelson
-- (**web**) drop the machine name and location from the landing page - ([a0fc5cb](https://github.com/jeffwnelson/sodatracker/commit/a0fc5cb601b72ba8370ea0338b7a5e3f5d493780)) - Jeff Nelson
+- (**web**) drop the machine detail page; restock moves to Settings - ([3e94f4b](https://github.com/jeffwnelson/sodatracker/commit/3e94f4b06667fee4429844de95104ef81b952f23)) - Jeff Nelson
+- (**web**) drop the machine name and location from the landing page - ([30ec45d](https://github.com/jeffwnelson/sodatracker/commit/30ec45d92962724bb7b038440d80e95e1f4cd029)) - Jeff Nelson
 
 - - -
 
-## [v0.8.0](https://github.com/jeffwnelson/sodatracker/compare/69dcf85628310cab32ac4f17ab4fa02b684ecb52..v0.8.0) - 2026-10-01
+## [v0.8.0](https://github.com/jeffwnelson/sodatracker/compare/93948f71dac5923e0a31ce6323ec67a45e1d745f..v0.8.0) - 2026-10-01
 #### Features
-- (**web**) one machine, no selectors; alert count on the Alerts tab - ([f46c431](https://github.com/jeffwnelson/sodatracker/commit/f46c4317dd79790254892e67a90fc0ae33b2e87b)) - Jeff Nelson
+- (**web**) one machine, no selectors; alert count on the Alerts tab - ([70be452](https://github.com/jeffwnelson/sodatracker/commit/70be45226c2d17f12455b063d2cd2f6e706f9245)) - Jeff Nelson
 #### Refactoring
-- (**analytics**) trim Highlights to averages, range records and totals - ([69dcf85](https://github.com/jeffwnelson/sodatracker/commit/69dcf85628310cab32ac4f17ab4fa02b684ecb52)) - Jeff Nelson
+- (**analytics**) trim Highlights to averages, range records and totals - ([93948f7](https://github.com/jeffwnelson/sodatracker/commit/93948f71dac5923e0a31ce6323ec67a45e1d745f)) - Jeff Nelson
 
 - - -
 
-## [v0.7.0](https://github.com/jeffwnelson/sodatracker/compare/7755336eb64bcc905f0fef13aa662b20091e9003..v0.7.0) - 2026-10-01
+## [v0.7.0](https://github.com/jeffwnelson/sodatracker/compare/6f409a9b20acf69d413bda07994b227168efd1cf..v0.7.0) - 2026-10-01
 #### Features
-- (**analytics**) soda, caffeine and aluminum totals and all-time can records - ([528405a](https://github.com/jeffwnelson/sodatracker/commit/528405a61d02b73c9b31a91851a1b4588dedf231)) - Jeff Nelson
+- (**analytics**) soda, caffeine and aluminum totals and all-time can records - ([b32562a](https://github.com/jeffwnelson/sodatracker/commit/b32562a57ddeaf74ce2161d28916cffb5f92bc2e)) - Jeff Nelson
 #### Refactoring
-- (**web**) rename Setup to Settings; /admin/setup redirects - ([7755336](https://github.com/jeffwnelson/sodatracker/commit/7755336eb64bcc905f0fef13aa662b20091e9003)) - Jeff Nelson
+- (**web**) rename Setup to Settings; /admin/setup redirects - ([6f409a9](https://github.com/jeffwnelson/sodatracker/commit/6f409a9b20acf69d413bda07994b227168efd1cf)) - Jeff Nelson
 
 - - -
 
-## [v0.6.0](https://github.com/jeffwnelson/sodatracker/compare/0e348a6d13b3c161b3dc8783ae12f4c99a33ee7a..v0.6.0) - 2026-10-01
+## [v0.6.0](https://github.com/jeffwnelson/sodatracker/compare/6ae919467f549722fa0411d02c306ce95116c504..v0.6.0) - 2026-10-01
 #### Features
-- (**analytics**) date range picker with comparison - ([d7b10b6](https://github.com/jeffwnelson/sodatracker/commit/d7b10b62192b18fbb7206adfe50bdc01b6f791cc)) - Jeff Nelson
+- (**analytics**) date range picker with comparison - ([eb5f28e](https://github.com/jeffwnelson/sodatracker/commit/eb5f28ea76dbadf247c11d11fa89057bbbc95dc4)) - Jeff Nelson
 #### Refactoring
-- drop sales wording; nothing in the office machine is sold - ([0e348a6](https://github.com/jeffwnelson/sodatracker/commit/0e348a6d13b3c161b3dc8783ae12f4c99a33ee7a)) - Jeff Nelson
+- drop sales wording; nothing in the office machine is sold - ([6ae9194](https://github.com/jeffwnelson/sodatracker/commit/6ae919467f549722fa0411d02c306ce95116c504)) - Jeff Nelson
 
 - - -
 
-## [v0.5.1](https://github.com/jeffwnelson/sodatracker/compare/8e59d37562d5c15bc2f8c0d72378fd9f54722463..v0.5.1) - 2026-10-01
+## [v0.5.1](https://github.com/jeffwnelson/sodatracker/compare/b7778f03bb72eb152f6e9de4d9aa8635e0c61bc0..v0.5.1) - 2026-10-01
 #### Bug Fixes
-- (**analytics**) report uptime from unrounded hours so a short tracked span isn't null - ([8e59d37](https://github.com/jeffwnelson/sodatracker/commit/8e59d37562d5c15bc2f8c0d72378fd9f54722463)) - Jeff Nelson
+- (**analytics**) report uptime from unrounded hours so a short tracked span isn't null - ([b7778f0](https://github.com/jeffwnelson/sodatracker/commit/b7778f03bb72eb152f6e9de4d9aa8635e0c61bc0)) - Jeff Nelson
 
 - - -
 
-## [v0.5.0](https://github.com/jeffwnelson/sodatracker/compare/cab0e11bbd01373db269786d9da872dd528b10a5..v0.5.0) - 2026-10-01
+## [v0.5.0](https://github.com/jeffwnelson/sodatracker/compare/1b1e344bc6056deecb9bfa6cc45c1866f2aef9dc..v0.5.0) - 2026-10-01
 #### Features
-- (**analytics**) highlights and Pi agent uptime tabs - ([e161181](https://github.com/jeffwnelson/sodatracker/commit/e161181892dec257ab07b650c42f8ff77945167a)) - Jeff Nelson
+- (**analytics**) highlights and Pi agent uptime tabs - ([53efcb1](https://github.com/jeffwnelson/sodatracker/commit/53efcb14899f88ce4bf953b61c12b3e59dea5b41)) - Jeff Nelson
 #### Tests
-- (**slacksocket**) don't fail on writes to a connection the client already dropped - ([583d2ab](https://github.com/jeffwnelson/sodatracker/commit/583d2ab8863e088e3e2ddc0b0a43859475404bb1)) - Jeff Nelson
+- (**slacksocket**) don't fail on writes to a connection the client already dropped - ([7637ff2](https://github.com/jeffwnelson/sodatracker/commit/7637ff28dd72074e2938fa13b836614915352703)) - Jeff Nelson
 #### Refactoring
-- (**web**) drop the footer and show the version next to the brand - ([cab0e11](https://github.com/jeffwnelson/sodatracker/commit/cab0e11bbd01373db269786d9da872dd528b10a5)) - Jeff Nelson
+- (**web**) drop the footer and show the version next to the brand - ([1b1e344](https://github.com/jeffwnelson/sodatracker/commit/1b1e344bc6056deecb9bfa6cc45c1866f2aef9dc)) - Jeff Nelson
 
 - - -
 
-## [v0.4.0](https://github.com/jeffwnelson/sodatracker/compare/5e854ba18afd9f858fb0d60726907364d39da6b1..v0.4.0) - 2026-10-01
+## [v0.4.0](https://github.com/jeffwnelson/sodatracker/compare/e478c2da6914f60633ba6a113fdd7b4c0c85442e..v0.4.0) - 2026-10-01
 #### Features
-- real-time dashboards over SSE and a Pi agent heartbeat - ([5e854ba](https://github.com/jeffwnelson/sodatracker/commit/5e854ba18afd9f858fb0d60726907364d39da6b1)) - Jeff Nelson
+- real-time dashboards over SSE and a Pi agent heartbeat - ([e478c2d](https://github.com/jeffwnelson/sodatracker/commit/e478c2da6914f60633ba6a113fdd7b4c0c85442e)) - Jeff Nelson
 
 - - -
 
-## [v0.3.1](https://github.com/jeffwnelson/sodatracker/compare/4c8e583c04ac27fc5443ca16abf981d8e62e1632..v0.3.1) - 2026-09-30
+## [v0.3.1](https://github.com/jeffwnelson/sodatracker/compare/7abb58363e72e696ad2dc46fd788936cfeb879d2..v0.3.1) - 2026-09-30
 #### Bug Fixes
-- (**web**) use one page frame so the header stays the same everywhere - ([d34168e](https://github.com/jeffwnelson/sodatracker/commit/d34168ebff9c0b2441f8b1efd4f44da65855b1e3)) - Jeff Nelson
+- (**web**) use one page frame so the header stays the same everywhere - ([f6c2234](https://github.com/jeffwnelson/sodatracker/commit/f6c2234a678162d7ffa04a4883b303d9b661ce38)) - Jeff Nelson
 #### Refactoring
-- (**web**) label the predicted stock-out date "Estimated restock" - ([86b168d](https://github.com/jeffwnelson/sodatracker/commit/86b168d6257ec13bd7993a1ca800da1844c1b3c0)) - Jeff Nelson
-- (**web**) drop the Customer View link from the admin header - ([4c8e583](https://github.com/jeffwnelson/sodatracker/commit/4c8e583c04ac27fc5443ca16abf981d8e62e1632)) - Jeff Nelson
+- (**web**) label the predicted stock-out date "Estimated restock" - ([5323199](https://github.com/jeffwnelson/sodatracker/commit/5323199b45dfd106cbf04f80b13526aff8393f49)) - Jeff Nelson
+- (**web**) drop the Customer View link from the admin header - ([7abb583](https://github.com/jeffwnelson/sodatracker/commit/7abb58363e72e696ad2dc46fd788936cfeb879d2)) - Jeff Nelson
 
 - - -
 
-## [v0.3.0](https://github.com/jeffwnelson/sodatracker/compare/ac99172a6416baf3172b4deae4e4d8efd624d334..v0.3.0) - 2026-09-30
+## [v0.3.0](https://github.com/jeffwnelson/sodatracker/compare/f1d844728df646f4f9361bf065ad1137d2e99409..v0.3.0) - 2026-09-30
 #### Features
-- per-product colors, set on the Setup page - ([6eac56e](https://github.com/jeffwnelson/sodatracker/commit/6eac56e6dc2e3311b6bc869428924dce629ceb7a)) - Jeff Nelson
+- per-product colors, set on the Setup page - ([eaf27df](https://github.com/jeffwnelson/sodatracker/commit/eaf27df6411d3ec95cec6624d24b3f520d8960f5)) - Jeff Nelson
 #### Continuous Integration
-- build the image once, with tests inside, for arm64 only - ([ac99172](https://github.com/jeffwnelson/sodatracker/commit/ac99172a6416baf3172b4deae4e4d8efd624d334)) - Jeff Nelson
+- build the image once, with tests inside, for arm64 only - ([f1d8447](https://github.com/jeffwnelson/sodatracker/commit/f1d844728df646f4f9361bf065ad1137d2e99409)) - Jeff Nelson
 
 - - -
 
-## [v0.2.0](https://github.com/jeffwnelson/sodatracker/compare/02896fa6c895fb753120a713334d390dda4e9910..v0.2.0) - 2026-09-30
+## [v0.2.0](https://github.com/jeffwnelson/sodatracker/compare/af8486864b33c54d528cfede9740b060249e96ca..v0.2.0) - 2026-09-30
 #### Features
-- release with cocogitto and show the version in the page footer - ([02896fa](https://github.com/jeffwnelson/sodatracker/commit/02896fa6c895fb753120a713334d390dda4e9910)) - Jeff Nelson
+- release with cocogitto and show the version in the page footer - ([af84868](https://github.com/jeffwnelson/sodatracker/commit/af8486864b33c54d528cfede9740b060249e96ca)) - Jeff Nelson
 
 - - -
 
