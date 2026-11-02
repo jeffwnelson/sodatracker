@@ -877,7 +877,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "One calendar month's stats written up as a Slack message to copy and paste: totals against the month before, top products, habits, and fun equivalents (capybaras of soda, cups of coffee, Boeing 737s of aluminum). The month in progress runs to now and is compared with the same stretch of the month before.",
+                "description": "One calendar month's stats written up as a Slack message to copy and paste: totals against the month before, top products, habits (including the busiest hour, longest workday dry spell and weekend cans), and facts (gallons and pounds of soda, caffeine, aluminum, stack height). The month in progress runs to now and is compared with the same stretch of the month before.",
                 "produces": [
                     "application/json"
                 ],

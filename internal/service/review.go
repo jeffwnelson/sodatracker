@@ -8,11 +8,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jeffwnelson/sodatracker/internal/domain"
 )
 
 // MonthlyReview is one calendar month's stats written up as a Slack message
-// to copy and paste: totals, the top products, habits, and the month's soda
-// in capybaras, coffee, giraffes and Boeing 737s.
+// to copy and paste: totals, the top products, habits, and the month's soda,
+// caffeine and aluminum.
 type MonthlyReview struct {
 	Month string `json:"month" example:"2026-10"`
 	// Partial is true for the month in progress; its stats run to now and it
@@ -22,30 +24,11 @@ type MonthlyReview struct {
 	Text    string `json:"text"`
 }
 
-// Rough reference figures for the review's comparisons. They are for fun, so
-// round numbers are fine.
+// Rough figures for the review's facts.
 const (
-	sodaGramsPerOz      = 29.5735 * 1.03 // fl oz × density of soda (diet ~1.00, regular ~1.04)
-	capybaraLb          = 110            // an adult capybara, ~50 kg
-	coffeeCupMg         = 95             // caffeine in an 8 oz cup of brewed coffee
-	bathtubGallons      = 40             // a filled standard bathtub
-	canHeightIn12oz     = 4.83           // a 12 oz can's height; other sizes scale with volume
-	boeing737AluminumLb = 66_000         // ~30 t of aluminum in a 737's airframe
-	tvHoursPerCan       = 3              // energy saved recycling one can, as hours of TV
+	sodaGramsPerOz  = 29.5735 * 1.03 // fl oz × density of soda (diet ~1.00, regular ~1.04)
+	canHeightIn12oz = 4.83           // a 12 oz can's height; other sizes scale with volume
 )
-
-// stackRefs are things to compare a stack of cans with, shortest first.
-var stackRefs = []struct {
-	name   string
-	plural string
-	feet   float64
-}{
-	{"giraffe", "giraffes", 18},
-	{"telephone pole", "telephone poles", 40},
-	{"Statue of Liberty", "Statues of Liberty", 151},
-	{"football field (on end)", "football fields (on end)", 300},
-	{"Eiffel Tower", "Eiffel Towers", 1083},
-}
 
 // reviewStats is everything the review text reports, gathered from the
 // analytics views so the text can be rendered (and tested) on its own.
@@ -63,6 +46,9 @@ type reviewStats struct {
 	firstCan   *TimeOfDay
 	lastCan    *TimeOfDay
 	busiest    *CountAt
+	busiestHr  *CountAt // the window's busiest clock hour
+	weekend    int      // cans on Saturdays and Sundays
+	drought    *drySpell
 	opens      []ProductCount
 	closes     []ProductCount
 	lunch      []ProductCount
@@ -70,8 +56,6 @@ type reviewStats struct {
 	ounces     float64
 	caffeine   float64
 	aluminum   float64 // lb
-	cost       float64
-	costPer    float64
 	restocks   int
 	offlineH   float64
 }
@@ -121,10 +105,6 @@ func (s *Service) GetMonthlyReview(ctx context.Context, machineID string, year i
 	if err != nil {
 		return nil, err
 	}
-	spend, err := s.GetSpendAnalytics(ctx, q)
-	if err != nil {
-		return nil, err
-	}
 	hl, err := s.GetHighlightsAnalytics(ctx, q)
 	if err != nil {
 		return nil, err
@@ -135,25 +115,24 @@ func (s *Service) GetMonthlyReview(ctx context.Context, machineID string, year i
 	}
 
 	st := reviewStats{
-		month:    start,
-		partial:  partial,
-		days:     cons.Range.Days,
-		cans:     cons.Total,
-		perDay:   cons.PerDay,
-		weekday:  cons.WeekdayPerDay,
-		peakHour: cons.PeakHour,
-		firstCan: hl.FirstCan,
-		lastCan:  hl.LastCan,
-		busiest:  hl.BusiestDay,
-		opens:    hl.FirstCanProducts,
-		closes:   hl.LastCanProducts,
-		lunch:    hl.LunchProducts,
-		ounces:   hl.Ounces,
-		caffeine: hl.CaffeineMg,
-		aluminum: hl.AluminumLb,
-		cost:     spend.Total,
-		costPer:  spend.AvgCostPerCan,
-		offlineH: up.OfflineHours,
+		month:     start,
+		partial:   partial,
+		days:      cons.Range.Days,
+		cans:      cons.Total,
+		perDay:    cons.PerDay,
+		weekday:   cons.WeekdayPerDay,
+		peakHour:  cons.PeakHour,
+		firstCan:  hl.FirstCan,
+		lastCan:   hl.LastCan,
+		busiest:   hl.BusiestDay,
+		busiestHr: hl.BusiestHour,
+		opens:     hl.FirstCanProducts,
+		closes:    hl.LastCanProducts,
+		lunch:     hl.LunchProducts,
+		ounces:    hl.Ounces,
+		caffeine:  hl.CaffeineMg,
+		aluminum:  hl.AluminumLb,
+		offlineH:  up.OfflineHours,
 	}
 	for _, p := range hl.FirstCanProducts {
 		st.activeDays += p.Count
@@ -193,6 +172,17 @@ func (s *Service) GetMonthlyReview(ctx context.Context, machineID string, year i
 		}
 	}
 
+	dispenses, err := s.store.ListDispensesBetween(ctx, machineID, start, end)
+	if err != nil {
+		return nil, err
+	}
+	for _, d := range dispenses {
+		if wd := d.Timestamp.In(loc).Weekday(); wd == time.Saturday || wd == time.Sunday {
+			st.weekend++
+		}
+	}
+	st.drought = longestDrySpell(dispenses, loc, end)
+
 	restocks, err := s.store.ListRestocks(ctx, machineID, analyticsRowLimit)
 	if err != nil {
 		return nil, err
@@ -209,6 +199,86 @@ func (s *Service) GetMonthlyReview(ctx context.Context, machineID string, year i
 		Cans:    st.cans,
 		Text:    renderReview(st),
 	}, nil
+}
+
+// Work hours for dry spells, in minutes after local midnight, Monday to Friday.
+const (
+	WorkStartMinute = 8 * 60
+	WorkEndMinute   = 17 * 60
+)
+
+// drySpell is the longest stretch of work hours without a can.
+type drySpell struct{ start, end time.Time }
+
+// longestDrySpell finds the longest gap between cans within one weekday's
+// work hours, counting from the start of work to the first can and from the
+// last can to the end of work. Days with no cans in work hours are skipped
+// (holidays, or the tracker was down), as is work time after until. dispenses must be in
+// ascending order.
+func longestDrySpell(dispenses []domain.Dispense, loc *time.Location, until time.Time) *drySpell {
+	byDay := map[time.Time][]time.Time{}
+	var days []time.Time
+	for _, d := range dispenses {
+		t := d.Timestamp.In(loc)
+		if wd := t.Weekday(); wd == time.Saturday || wd == time.Sunday {
+			continue
+		}
+		day := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
+		if _, ok := byDay[day]; !ok {
+			days = append(days, day)
+		}
+		byDay[day] = append(byDay[day], t)
+	}
+	var best *drySpell
+	for _, day := range days {
+		open := day.Add(WorkStartMinute * time.Minute)
+		shut := day.Add(WorkEndMinute * time.Minute)
+		if until.Before(shut) {
+			shut = until
+		}
+		inHours := false
+		for _, t := range byDay[day] {
+			if !t.Before(open) && !t.After(shut) {
+				inHours = true
+			}
+		}
+		if !inHours {
+			continue
+		}
+		prev := open
+		consider := func(end time.Time) {
+			if end.After(shut) {
+				end = shut
+			}
+			if end.After(prev) && (best == nil || end.Sub(prev) > best.end.Sub(best.start)) {
+				best = &drySpell{prev, end}
+			}
+		}
+		for _, t := range byDay[day] {
+			if t.Before(open) {
+				continue
+			}
+			if t.After(shut) {
+				break
+			}
+			consider(t)
+			prev = t
+		}
+		consider(shut)
+	}
+	return best
+}
+
+// hoursMinutes writes a duration as "3 h 40 min", "45 min" or "2 h".
+func hoursMinutes(d time.Duration) string {
+	m := int(d.Round(time.Minute).Minutes())
+	switch {
+	case m < 60:
+		return fmt.Sprintf("%d min", m)
+	case m%60 == 0:
+		return fmt.Sprintf("%d h", m/60)
+	}
+	return fmt.Sprintf("%d h %d min", m/60, m%60)
 }
 
 // rankedProducts returns the products that were dispensed, most first, then
@@ -294,6 +364,14 @@ func renderReview(st reviewStats) string {
 			fmt.Fprintf(&b, "• Busiest day: %s, %s %s\n", t.Format("Mon Jan 2"), commas(st.busiest.Count), plural(st.busiest.Count, "can", "cans"))
 		}
 	}
+	if h := st.busiestHr; h != nil {
+		if t, err := time.Parse(time.RFC3339, h.At); err == nil {
+			fmt.Fprintf(&b, "• Most cans in one hour: %s, %s, %s to %s\n", commas(h.Count), t.Format("Mon Jan 2"), hourName(t.Hour()), hourName((t.Hour()+1)%24))
+		}
+	}
+	if st.drought != nil {
+		fmt.Fprintf(&b, "• Longest workday dry spell: %s, %s (%s to %s)\n", hoursMinutes(st.drought.end.Sub(st.drought.start)), st.drought.start.Format("Mon Jan 2"), st.drought.start.Format("3:04 PM"), st.drought.end.Format("3:04 PM"))
+	}
 	if st.peakHour >= 0 {
 		fmt.Fprintf(&b, "• Rush hour: %s to %s\n", hourName(st.peakHour), hourName((st.peakHour+1)%24))
 	}
@@ -306,31 +384,19 @@ func renderReview(st reviewStats) string {
 	if len(st.lunch) > 0 {
 		fmt.Fprintf(&b, "• Lunch favorite: %s\n", st.lunch[0].Name)
 	}
+	fmt.Fprintf(&b, "• Weekend cans: %s\n", commas(st.weekend))
 
 	// Fun equivalents.
 	b.WriteString("\n*🧮 By the numbers*\n")
-	gallons := st.ounces / 128
 	sodaLb := st.ounces * sodaGramsPerOz / gramsPerLb
-	fmt.Fprintf(&b, "• 🫗 %s gallons of soda, %s\n", oneDecimal(gallons), bathtubs(gallons/bathtubGallons))
-	fmt.Fprintf(&b, "• ⚖️ %s lb of it, about the weight of %s 🦫\n", commas(int(math.Round(sodaLb))), capybaras(sodaLb/capybaraLb))
-	if st.caffeine > 0 {
-		cups := st.caffeine / coffeeCupMg
-		fmt.Fprintf(&b, "• ☕ %s mg of caffeine, as much as %s %s of coffee\n", commas(int(st.caffeine)), commas(int(math.Round(cups))), plural(int(math.Round(cups)), "cup", "cups"))
-	}
 	stackFt := st.ounces / 12 * canHeightIn12oz / 12
-	fmt.Fprintf(&b, "• 🗼 Stacked up, the cans would stand %s ft tall: %s\n", commas(int(math.Round(stackFt))), stackCompare(stackFt))
-	if st.aluminum > 0 {
-		fmt.Fprintf(&b, "• ✈️ %s lb of aluminum, %s of a Boeing 737", oneDecimal(st.aluminum), fraction(st.aluminum/boeing737AluminumLb))
-		if st.days > 0 {
-			years := boeing737AluminumLb / (st.aluminum / st.days * 365)
-			fmt.Fprintf(&b, ". At this rate we'll have a whole plane in %s years", commas(int(roundSig(years))))
-		}
-		b.WriteString("\n")
-		fmt.Fprintf(&b, "• ♻️ Recycled, those cans save enough energy to run a TV for %s hours\n", commas(st.cans*tvHoursPerCan))
+	fmt.Fprintf(&b, "• 🫗 %s gallons of soda\n", oneDecimal(st.ounces/128))
+	fmt.Fprintf(&b, "• ⚖️ %s lb of soda\n", commas(int(math.Round(sodaLb))))
+	if st.caffeine > 0 {
+		fmt.Fprintf(&b, "• ⚡ %s mg of caffeine\n", commas(int(st.caffeine)))
 	}
-	if st.cost > 0 {
-		fmt.Fprintf(&b, "• 💸 The company spent $%.2f on cans ($%.2f a can)\n", st.cost, st.costPer)
-	}
+	fmt.Fprintf(&b, "• 🥫 %s lb of aluminum\n", oneDecimal(st.aluminum))
+	fmt.Fprintf(&b, "• 🗼 %s ft of cans, stacked end to end\n", commas(int(math.Round(stackFt))))
 
 	// Footnotes.
 	var notes []string
@@ -358,57 +424,6 @@ func rankChange(p reviewProduct, comparable bool) string {
 		return fmt.Sprintf(" ▼%d", p.rank-p.prevRank)
 	}
 	return ""
-}
-
-func capybaras(n float64) string {
-	if n < 0.95 {
-		return fmt.Sprintf("*%.0f%% of a capybara*", n*100)
-	}
-	return fmt.Sprintf("*%s %s*", oneDecimal(n), plural2(n, "capybara", "capybaras"))
-}
-
-func bathtubs(n float64) string {
-	if n < 1 {
-		return fmt.Sprintf("enough to fill %.0f%% of a bathtub 🛁", n*100)
-	}
-	return fmt.Sprintf("enough to fill %s %s 🛁", oneDecimal(n), plural2(n, "bathtub", "bathtubs"))
-}
-
-// stackCompare compares a stack's height with the tallest reference it
-// reaches, or the shortest one when it reaches none.
-func stackCompare(ft float64) string {
-	ref := stackRefs[0]
-	for _, r := range stackRefs {
-		if ft >= r.feet {
-			ref = r
-		}
-	}
-	n := ft / ref.feet
-	if n < 1 {
-		return fmt.Sprintf("%.0f%% of a %s", n*100, ref.name)
-	}
-	return fmt.Sprintf("%s %s", oneDecimal(n), plural2(n, ref.name, ref.plural))
-}
-
-// fraction writes a small share as "1/12,000th".
-func fraction(f float64) string {
-	if f <= 0 {
-		return "none"
-	}
-	if f >= 1 {
-		return fmt.Sprintf("%s×", oneDecimal(f))
-	}
-	return fmt.Sprintf("1/%sth", commas(int(roundSig(1/f))))
-}
-
-// roundSig rounds to two significant figures (12,345 → 12,000), leaving
-// numbers under 100 whole.
-func roundSig(n float64) float64 {
-	mag := math.Pow(10, math.Floor(math.Log10(n))-1)
-	if mag < 1 {
-		mag = 1
-	}
-	return math.Round(n/mag) * mag
 }
 
 func recordTime(rfc string) string {

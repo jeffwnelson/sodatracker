@@ -43,6 +43,9 @@ func TestMonthlyReview(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if strings.Contains(r.Text, "$") {
+		t.Errorf("review mentions cost:\n%s", r.Text)
+	}
 	if r.Month != "2026-09" || r.Partial || r.Cans != 5 {
 		t.Fatalf("review = %+v", r)
 	}
@@ -57,9 +60,12 @@ func TestMonthlyReview(t *testing.T) {
 		"Opens the day: Cola (2 of 3 days)",
 		"Lunch favorite: Cola",
 		"136 mg of caffeine",
-		"of a capybara*",
-		"Boeing 737",
-		"$2.25 on cans",
+		"• 🫗 0.5 gallons of soda\n",
+		"• 🥫 0.2 lb of aluminum\n",
+		"• 🗼 2 ft of cans, stacked end to end\n",
+		"Most cans in one hour: 1, Tue Sep 1, 7 AM to 8 AM",
+		"Longest workday dry spell: 8 h 45 min, Wed Sep 2 (8:00 AM to 4:45 PM)",
+		"Weekend cans: 0",
 		"Restocked once.",
 	} {
 		if !strings.Contains(r.Text, want) {
@@ -86,16 +92,39 @@ func TestMonthlyReview(t *testing.T) {
 	}
 }
 
+func TestLongestDrySpell(t *testing.T) {
+	loc := time.UTC
+	at := func(day, h, m int) domain.Dispense {
+		return domain.Dispense{Timestamp: time.Date(2026, 9, day, h, m, 0, 0, loc)}
+	}
+	ds := []domain.Dispense{
+		at(5, 9, 0),   // Saturday: ignored
+		at(7, 9, 0),   // Monday: 8:00–9:00, 9:00–16:30, 16:30–17:00
+		at(7, 16, 30), //
+		at(8, 6, 0),   // Tuesday, before and after work only: skipped
+		at(8, 20, 0),  //
+		at(9, 15, 0),  // Wednesday: 8:00–15:00 (7 h) and 15:00–17:00
+	}
+	got := longestDrySpell(ds, loc, time.Date(2026, 10, 1, 0, 0, 0, 0, loc))
+	if got == nil || !got.start.Equal(time.Date(2026, 9, 7, 9, 0, 0, 0, loc)) || got.end.Sub(got.start) != 7*time.Hour+30*time.Minute {
+		t.Errorf("dry spell = %+v", got)
+	}
+	// Work time after until doesn't count: Wednesday ends at 15:00.
+	got = longestDrySpell(ds[5:], loc, time.Date(2026, 9, 9, 15, 0, 0, 0, loc))
+	if got == nil || got.end.Sub(got.start) != 7*time.Hour {
+		t.Errorf("cut at until = %+v", got)
+	}
+	if longestDrySpell(nil, loc, time.Now()) != nil {
+		t.Error("no dispenses should mean no dry spell")
+	}
+}
+
 func TestReviewFormatting(t *testing.T) {
 	for _, c := range []struct{ got, want string }{
 		{oneDecimal(1234.56), "1,234.6"},
 		{oneDecimal(3.0), "3"},
 		{oneDecimal(0.04), "0"},
 		{commas(1234567), "1,234,567"},
-		{fraction(1.0 / 12345), "1/12,000th"},
-		{fraction(1.0 / 7), "1/7th"},
-		{stackCompare(9), "50% of a giraffe"},
-		{stackCompare(80), "2 telephone poles"},
 		{clock(0), "12:00 AM"},
 		{hourName(0), "midnight"},
 		{hourName(12), "noon"},
@@ -104,6 +133,9 @@ func TestReviewFormatting(t *testing.T) {
 		{duration(1.0 / 60), "1 minute"},
 		{duration(1), "1 hour"},
 		{duration(2.54), "2.5 hours"},
+		{hoursMinutes(45 * time.Minute), "45 min"},
+		{hoursMinutes(2 * time.Hour), "2 h"},
+		{hoursMinutes(220 * time.Minute), "3 h 40 min"},
 		{clock(13*60 + 5), "1:05 PM"},
 	} {
 		if c.got != c.want {
