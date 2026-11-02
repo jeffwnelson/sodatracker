@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.21.0](https://github.com/jeffwnelson/sodatracker/compare/2adf38830eb05811d5e77e2b5e0a4072efccfa19..v0.21.0) - 2026-11-02
+#### Features
+- (**analytics**) monthly review to copy into Slack - ([5bc1143](https://github.com/jeffwnelson/sodatracker/commit/5bc114307bd2222dce186b940635b8793e5a181a)) - Jeff Nelson
+#### Documentation
+- (**changelog**) point commit links at the rewritten history - ([b873db1](https://github.com/jeffwnelson/sodatracker/commit/b873db1490d78d319c9f67b8e1fafd2dbacb344c)) - Jeff Nelson
+#### Continuous Integration
+- sign release commits as github-actions[bot] - ([2adf388](https://github.com/jeffwnelson/sodatracker/commit/2adf38830eb05811d5e77e2b5e0a4072efccfa19)) - Jeff Nelson
+
+- - -
+
 ## [v0.20.4](https://github.com/jeffwnelson/sodatracker/compare/500fecbf7cb4ccdf24daca16ba6233236ff1d52a..v0.20.4) - 2026-10-21
 #### Bug Fixes
 - (**wiring**) adopt rewire onto header pins 33–40 - ([8f41dd1](https://github.com/jeffwnelson/sodatracker/commit/8f41dd1c8c8db5317d93dac8c9a0956ca411e0bc)) - Jeff Nelson
