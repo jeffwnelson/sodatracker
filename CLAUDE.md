@@ -152,8 +152,14 @@ The self-hosted demo runs on a Raspberry Pi 3 Model B (arm64) as a **single Dock
 container running both the API server and the GPIO pi agent**.
 
 - **SSH:** `ssh pi@sodatracker` (Tailscale, the only way in, since the Pi is on
-  client-isolated guest WiFi). Key-based: the owner's
-  `~/.ssh/id_ed25519` is authorized. The password is not kept in this repo.
+  client-isolated guest WiFi). Key-only (password login is off). Since
+  2026-11-02 the authorized key is the owner's `personal` key, held in the
+  Bitwarden SSH agent and selected by a `Host sodatracker` entry in
+  `~/.ssh/config` (`IdentityFile ~/.ssh/personal.pub`, since the config sets
+  `IdentitiesOnly yes`). It is also the owner's GitHub key, so if access is lost,
+  run `curl -fsSL https://github.com/jeffwnelson.keys >> ~/.ssh/authorized_keys`
+  at the Pi's console. The old `~/.ssh/id_ed25519` no longer exists. The password
+  is not kept in this repo.
 - **GHCR image:** `ghcr.io/jeffwnelson/sodatracker:latest` (linux/arm64 only)
 - **Container name:** `sodatracker`
 - **Compose dir on Pi:** `/home/pi/sodatracker` (git clone of this repo)
