@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.22.0](https://github.com/jeffwnelson/sodatracker/compare/7522941d202ded0f56ee0d87c76f563c65336982..v0.22.0) - 2026-11-02
+#### Features
+- (**review**) busiest hour, workday dry spell and weekend cans; plain facts, no cost - ([7522941](https://github.com/jeffwnelson/sodatracker/commit/7522941d202ded0f56ee0d87c76f563c65336982)) - Jeff Nelson
+
+- - -
+
 ## [v0.21.1](https://github.com/jeffwnelson/sodatracker/compare/302626a03e12ad4e9cac18c47cd6b13fd9a2500d..v0.21.1) - 2026-11-02
 #### Bug Fixes
 - (**review**) name rush hours (noon) and give short outages in minutes - ([d80cbfd](https://github.com/jeffwnelson/sodatracker/commit/d80cbfd444f832730d95eddb12969bce1b5cd587)) - Jeff Nelson
