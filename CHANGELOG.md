@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.21.1](https://github.com/jeffwnelson/sodatracker/compare/302626a03e12ad4e9cac18c47cd6b13fd9a2500d..v0.21.1) - 2026-11-02
+#### Bug Fixes
+- (**review**) name rush hours (noon) and give short outages in minutes - ([d80cbfd](https://github.com/jeffwnelson/sodatracker/commit/d80cbfd444f832730d95eddb12969bce1b5cd587)) - Jeff Nelson
+#### Documentation
+- Pi SSH goes through Tailscale SSH - ([a489aa4](https://github.com/jeffwnelson/sodatracker/commit/a489aa4f0b577a8b9c01e025385b805a7d3ebb82)) - Jeff Nelson
+- Pi SSH uses the personal key from Bitwarden - ([302626a](https://github.com/jeffwnelson/sodatracker/commit/302626a03e12ad4e9cac18c47cd6b13fd9a2500d)) - Jeff Nelson
+
+- - -
+
 ## [v0.21.0](https://github.com/jeffwnelson/sodatracker/compare/2adf38830eb05811d5e77e2b5e0a4072efccfa19..v0.21.0) - 2026-11-02
 #### Features
 - (**analytics**) monthly review to copy into Slack - ([5bc1143](https://github.com/jeffwnelson/sodatracker/commit/5bc114307bd2222dce186b940635b8793e5a181a)) - Jeff Nelson
