@@ -152,14 +152,20 @@ The self-hosted demo runs on a Raspberry Pi 3 Model B (arm64) as a **single Dock
 container running both the API server and the GPIO pi agent**.
 
 - **SSH:** `ssh pi@sodatracker` (Tailscale, the only way in, since the Pi is on
-  client-isolated guest WiFi). Key-only (password login is off). Since
-  2026-11-02 the authorized key is the owner's `personal` key, held in the
-  Bitwarden SSH agent and selected by a `Host sodatracker` entry in
-  `~/.ssh/config` (`IdentityFile ~/.ssh/personal.pub`, since the config sets
-  `IdentitiesOnly yes`). It is also the owner's GitHub key, so if access is lost,
-  run `curl -fsSL https://github.com/jeffwnelson.keys >> ~/.ssh/authorized_keys`
-  at the Pi's console. The old `~/.ssh/id_ed25519` no longer exists. The password
-  is not kept in this repo.
+  client-isolated guest WiFi). Since 2026-11-02 it's **Tailscale SSH**
+  (`tailscale set --ssh` on the Pi): tailscaled answers port 22 on the Tailscale
+  IP and authorizes by tailnet identity, not keys, so a plain `ssh` works from any
+  of the owner's tailnet devices. The tailnet's SSH rule is in `check` mode
+  unless changed to `accept`, so about every 12 h the first connection prints a
+  login.tailscale.com link and waits until it is opened. That blocks
+  `make pi-deploy` and non-interactive SSH until then. OpenSSH is the fallback
+  if Tailscale SSH is turned off (`sudo tailscale set --ssh=false` at the
+  console). It's key-only (password login off) and trusts the owner's `personal`
+  key from the Bitwarden SSH agent, selected by `Host sodatracker` in
+  `~/.ssh/config` (`IdentityFile ~/.ssh/personal.pub`, because the config sets
+  `IdentitiesOnly yes`). That's also the owner's GitHub key, so at the console
+  `curl -fsSL https://github.com/jeffwnelson.keys >> ~/.ssh/authorized_keys`
+  restores it. The password is not kept in this repo.
 - **GHCR image:** `ghcr.io/jeffwnelson/sodatracker:latest` (linux/arm64 only)
 - **Container name:** `sodatracker`
 - **Compose dir on Pi:** `/home/pi/sodatracker` (git clone of this repo)
