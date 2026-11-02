@@ -55,4 +55,25 @@ func TestAnalyticsEndpoints(t *testing.T) {
 			t.Errorf("query %q: %d, want 400", q, w.Code)
 		}
 	}
+
+	review := "/api/v1/analytics/review"
+	if w := get(review+"?machineId=m1", false); w.Code != http.StatusUnauthorized {
+		t.Errorf("review without auth: %d, want 401", w.Code)
+	}
+	w := get(review+"?machineId=m1&month=2026-09&tz=America/Chicago", true)
+	var body struct{ Month, Text string }
+	if w.Code != http.StatusOK || json.Unmarshal(w.Body.Bytes(), &body) != nil || body.Month != "2026-09" || body.Text == "" {
+		t.Errorf("review: %d %s", w.Code, w.Body)
+	}
+	if w := get(review+"?machineId=m1", true); w.Code != http.StatusOK {
+		t.Errorf("review of last month: %d %s", w.Code, w.Body)
+	}
+	if w := get(review+"?machineId=missing", true); w.Code != http.StatusNotFound {
+		t.Errorf("review unknown machine: %d, want 404", w.Code)
+	}
+	for _, q := range []string{"", "?machineId=m1&month=Sept", "?machineId=m1&month=2999-01", "?machineId=m1&tz=Mars/Olympus"} {
+		if w := get(review+q, true); w.Code != http.StatusBadRequest {
+			t.Errorf("review query %q: %d, want 400", q, w.Code)
+		}
+	}
 }

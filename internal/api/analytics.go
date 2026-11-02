@@ -183,3 +183,60 @@ func (h *handlers) getHighlightsAnalytics(w http.ResponseWriter, r *http.Request
 func (h *handlers) getUptimeAnalytics(w http.ResponseWriter, r *http.Request) {
 	serveAnalytics(w, r, h.svc.GetUptimeAnalytics)
 }
+
+// getMonthlyReview godoc
+// @Summary      Monthly review
+// @Description  One calendar month's stats written up as a Slack message to copy and paste: totals against the month before, top products, habits, and fun equivalents (capybaras of soda, cups of coffee, Boeing 737s of aluminum). The month in progress runs to now and is compared with the same stretch of the month before.
+// @Tags         Analytics
+// @Produce      json
+// @Param        machineId  query     string  true   "Machine ID"
+// @Param        month      query     string  false  "YYYY-MM (default: last month)"
+// @Param        tz         query     string  false  "IANA timezone for days and hours (default: UTC)"
+// @Success      200        {object}  service.MonthlyReview
+// @Failure      400        {object}  ErrorResponse
+// @Failure      404        {object}  ErrorResponse
+// @Failure      500        {object}  ErrorResponse
+// @Security     ApiKeyAuth || BearerAuth
+// @Router       /analytics/review [get]
+func (h *handlers) getMonthlyReview(w http.ResponseWriter, r *http.Request) {
+	v := r.URL.Query()
+	machineID := v.Get("machineId")
+	if machineID == "" {
+		writeErr(w, http.StatusBadRequest, "machineId is required")
+		return
+	}
+	loc := time.UTC
+	if tz := v.Get("tz"); tz != "" {
+		l, err := time.LoadLocation(tz)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, fmt.Sprintf("unknown timezone %q", tz))
+			return
+		}
+		loc = l
+	}
+	// Last month. From the 1st, so 31 March doesn't become "31 February", 3 March.
+	now := time.Now().In(loc)
+	month := time.Date(now.Year(), now.Month()-1, 1, 0, 0, 0, 0, loc)
+	if s := v.Get("month"); s != "" {
+		t, err := time.ParseInLocation("2006-01", s, loc)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "month must be YYYY-MM")
+			return
+		}
+		month = t
+	}
+	if month.After(time.Now()) {
+		writeErr(w, http.StatusBadRequest, "month hasn't started yet")
+		return
+	}
+	out, err := h.svc.GetMonthlyReview(r.Context(), machineID, month.Year(), month.Month(), loc)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if out == nil {
+		writeErr(w, http.StatusNotFound, "machine not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
+}

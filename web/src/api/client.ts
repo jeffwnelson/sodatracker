@@ -2,6 +2,7 @@ import type {
   HealthResponse,
   LiveEvent,
   Machine,
+  MonthlyReview,
   MachineStatus,
   Product,
   Slot,
@@ -404,4 +405,14 @@ export function getAnalytics<K extends AnalyticsKind>(
   if (params.tz) q.set("tz", params.tz);
   if (params.bucket) q.set("bucket", params.bucket);
   return fetchJSONAuth(`/analytics/${kind}?${q}`);
+}
+
+// Monthly review: one month's stats as Slack text. month is YYYY-MM.
+export function getMonthlyReview(params: {
+  machineId: string;
+  month: string;
+  tz: string;
+}): Promise<MonthlyReview> {
+  const q = new URLSearchParams(params);
+  return fetchJSONAuth(`/analytics/review?${q}`);
 }

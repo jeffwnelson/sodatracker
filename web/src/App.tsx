@@ -16,6 +16,7 @@ import { InventoryPage } from "./pages/analytics/InventoryPage";
 import { SpendPage } from "./pages/analytics/SpendPage";
 import { PredictionsPage } from "./pages/analytics/PredictionsPage";
 import { HighlightsPage } from "./pages/analytics/HighlightsPage";
+import { ReviewPage } from "./pages/analytics/ReviewPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,6 +56,7 @@ function App() {
                   <Route path="spend" element={<SpendPage />} />
                   <Route path="predictions" element={<PredictionsPage />} />
                   <Route path="highlights" element={<HighlightsPage />} />
+                  <Route path="review" element={<ReviewPage />} />
                   {/* Uptime moved to the Status tab. */}
                   <Route path="uptime" element={<Navigate to="/admin/status" replace />} />
                 </Route>

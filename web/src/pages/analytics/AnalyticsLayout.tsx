@@ -3,11 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { PageHeader } from "../../components/PageHeader";
 import { SkeletonCard } from "../../components/Skeleton";
 import { EmptyState } from "../../components/EmptyState";
-import {
-  RANGES,
-  timezone,
-  useAnalyticsFilters,
-} from "./analytics";
+import { RANGES, timezone, useAnalyticsFilters } from "./analytics";
 import { DateRangePicker } from "./DateRangePicker";
 
 const tabs = [
@@ -17,18 +13,12 @@ const tabs = [
   { to: "spend", label: "Cost" },
   { to: "predictions", label: "Predictions" },
   { to: "highlights", label: "Highlights" },
+  { to: "review", label: "Monthly review" },
 ];
 
 export function AnalyticsLayout() {
-  const {
-    machines,
-    range,
-    days,
-    compare,
-    compareRange,
-    setRange,
-    apply,
-  } = useAnalyticsFilters();
+  const { machines, range, days, compare, compareRange, setRange, apply } =
+    useAnalyticsFilters();
   const { search, pathname } = useLocation();
   // On phones the tab row scrolls; keep the open tab in view, e.g. Uptime.
   const tabsRef = useRef<HTMLElement>(null);
@@ -54,39 +44,42 @@ export function AnalyticsLayout() {
     <div className="space-y-8">
       <PageHeader title="Analytics" subtitle={`Times shown in ${timezone}`} />
 
-      {/* One filter row scopes every chart on every tab. It anchors the date
-          picker's popover, which is wider than the space right of its button. */}
-      <div className="relative flex flex-wrap items-center gap-3">
-        {/* One row that swipes on phones rather than wrapping. */}
-        <div
-          className="flex max-w-full overflow-x-auto scrollbar-none rounded-xl border border-border-primary bg-surface-primary p-0.5 sm:p-1"
-          role="group"
-          aria-label="Date range"
-        >
-          {RANGES.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => setRange(r.id)}
-              aria-pressed={range === r.id}
-              className={`shrink-0 whitespace-nowrap px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
-                range === r.id
-                  ? "bg-accent-soft text-accent"
-                  : "text-text-tertiary hover:text-text-primary"
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
+      {/* One filter row scopes every chart on every tab but the monthly
+          review, which picks its own month. It anchors the date picker's
+          popover, which is wider than the space right of its button. */}
+      {!pathname.endsWith("/review") && (
+        <div className="relative flex flex-wrap items-center gap-3">
+          {/* One row that swipes on phones rather than wrapping. */}
+          <div
+            className="flex max-w-full overflow-x-auto scrollbar-none rounded-xl border border-border-primary bg-surface-primary p-0.5 sm:p-1"
+            role="group"
+            aria-label="Date range"
+          >
+            {RANGES.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setRange(r.id)}
+                aria-pressed={range === r.id}
+                className={`shrink-0 whitespace-nowrap px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
+                  range === r.id
+                    ? "bg-accent-soft text-accent"
+                    : "text-text-tertiary hover:text-text-primary"
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <DateRangePicker
+            range={range}
+            days={days}
+            compare={compare}
+            compareRange={compareRange}
+            onApply={apply}
+          />
         </div>
-        <DateRangePicker
-          range={range}
-          days={days}
-          compare={compare}
-          compareRange={compareRange}
-          onApply={apply}
-        />
-      </div>
+      )}
 
       {/* The baseline is an inset shadow rather than a border, so the active
           tab's underline can cover it without a negative margin. A -1px

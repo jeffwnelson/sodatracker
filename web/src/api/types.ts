@@ -377,3 +377,12 @@ export interface SlackUpdate {
   webhookUrl?: string;
   appToken?: string;
 }
+
+/** GET /analytics/review: one month written up for Slack. */
+export interface MonthlyReview {
+  month: string;
+  /** The month in progress, reported up to now. */
+  partial: boolean;
+  cans: number;
+  text: string;
+}

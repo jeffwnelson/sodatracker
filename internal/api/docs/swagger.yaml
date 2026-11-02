@@ -521,6 +521,23 @@ definitions:
         example: 0.82
         type: number
     type: object
+  github_com_jeffwnelson_sodatracker_internal_service.MonthlyReview:
+    properties:
+      cans:
+        example: 412
+        type: integer
+      month:
+        example: "2026-10"
+        type: string
+      partial:
+        description: |-
+          Partial is true for the month in progress; its stats run to now and it
+          is compared with the same stretch of the month before.
+        example: false
+        type: boolean
+      text:
+        type: string
+    type: object
   github_com_jeffwnelson_sodatracker_internal_service.Outage:
     properties:
       from:
@@ -1511,6 +1528,52 @@ paths:
       - ApiKeyAuth: []
         BearerAuth: []
       summary: Product analytics
+      tags:
+      - Analytics
+  /analytics/review:
+    get:
+      description: 'One calendar month''s stats written up as a Slack message to
+        copy and paste: totals against the month before, top products, habits, and
+        fun equivalents (capybaras of soda, cups of coffee, Boeing 737s of aluminum).
+        The month in progress runs to now and is compared with the same stretch of
+        the month before.'
+      parameters:
+      - description: Machine ID
+        in: query
+        name: machineId
+        required: true
+        type: string
+      - description: 'YYYY-MM (default: last month)'
+        in: query
+        name: month
+        type: string
+      - description: 'IANA timezone for days and hours (default: UTC)'
+        in: query
+        name: tz
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_jeffwnelson_sodatracker_internal_service.MonthlyReview'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+        BearerAuth: []
+      summary: Monthly review
       tags:
       - Analytics
   /analytics/spend:

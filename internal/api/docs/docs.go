@@ -869,6 +869,71 @@ const docTemplate = `{
                 }
             }
         },
+        "/analytics/review": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": [],
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "One calendar month's stats written up as a Slack message to copy and paste: totals against the month before, top products, habits, and fun equivalents (capybaras of soda, cups of coffee, Boeing 737s of aluminum). The month in progress runs to now and is compared with the same stretch of the month before.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics"
+                ],
+                "summary": "Monthly review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Machine ID",
+                        "name": "machineId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM (default: last month)",
+                        "name": "month",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IANA timezone for days and hours (default: UTC)",
+                        "name": "tz",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_jeffwnelson_sodatracker_internal_service.MonthlyReview"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/analytics/spend": {
             "get": {
                 "security": [
@@ -2715,6 +2780,27 @@ const docTemplate = `{
                     "description": "UsedShare is the share of cans restocked in the window that were\ndispensed before that slot's next restock. Null with no restocks.",
                     "type": "number",
                     "example": 0.82
+                }
+            }
+        },
+        "github_com_jeffwnelson_sodatracker_internal_service.MonthlyReview": {
+            "type": "object",
+            "properties": {
+                "cans": {
+                    "type": "integer",
+                    "example": 412
+                },
+                "month": {
+                    "type": "string",
+                    "example": "2026-10"
+                },
+                "partial": {
+                    "description": "Partial is true for the month in progress; its stats run to now and it\nis compared with the same stretch of the month before.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "text": {
+                    "type": "string"
                 }
             }
         },

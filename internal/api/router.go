@@ -151,6 +151,7 @@ func NewRouter(st store.Store, svc *service.Service, cfg RouterConfig) *chi.Mux 
 			r.Get("/analytics/spend", h.getSpendAnalytics)
 			r.Get("/analytics/highlights", h.getHighlightsAnalytics)
 			r.Get("/analytics/uptime", h.getUptimeAnalytics)
+			r.Get("/analytics/review", h.getMonthlyReview)
 
 			if h.slack != nil {
 				r.Get("/admin/slack", h.getSlackSettings)
