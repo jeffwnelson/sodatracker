@@ -97,6 +97,13 @@ func TestReviewFormatting(t *testing.T) {
 		{stackCompare(9), "50% of a giraffe"},
 		{stackCompare(80), "2 telephone poles"},
 		{clock(0), "12:00 AM"},
+		{hourName(0), "midnight"},
+		{hourName(12), "noon"},
+		{hourName(14), "2 PM"},
+		{duration(0.4), "24 minutes"},
+		{duration(1.0 / 60), "1 minute"},
+		{duration(1), "1 hour"},
+		{duration(2.54), "2.5 hours"},
 		{clock(13*60 + 5), "1:05 PM"},
 	} {
 		if c.got != c.want {

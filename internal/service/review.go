@@ -295,7 +295,7 @@ func renderReview(st reviewStats) string {
 		}
 	}
 	if st.peakHour >= 0 {
-		fmt.Fprintf(&b, "• Rush hour: %s to %s\n", clock(st.peakHour*60), clock((st.peakHour+1)%24*60))
+		fmt.Fprintf(&b, "• Rush hour: %s to %s\n", hourName(st.peakHour), hourName((st.peakHour+1)%24))
 	}
 	if len(st.opens) > 0 {
 		fmt.Fprintf(&b, "• Opens the day: %s (%d of %d days)\n", st.opens[0].Name, st.opens[0].Count, st.activeDays)
@@ -338,7 +338,7 @@ func renderReview(st reviewStats) string {
 		notes = append(notes, fmt.Sprintf("Restocked %s.", times(st.restocks)))
 	}
 	if st.offlineH >= 0.1 {
-		notes = append(notes, fmt.Sprintf("The tracker was offline for %s hours, so a few cans may have gone uncounted.", oneDecimal(st.offlineH)))
+		notes = append(notes, fmt.Sprintf("The tracker was offline for %s, so a few cans may have gone uncounted.", duration(st.offlineH)))
 	}
 	if len(notes) > 0 {
 		fmt.Fprintf(&b, "\n_%s_\n", strings.Join(notes, " "))
@@ -417,6 +417,26 @@ func recordTime(rfc string) string {
 		return rfc
 	}
 	return fmt.Sprintf("%s on %s", clock(t.Hour()*60+t.Minute()), t.Format("Mon Jan 2"))
+}
+
+// hourName names an hour of the day: "noon", "midnight", "2 PM".
+func hourName(h int) string {
+	switch h {
+	case 0:
+		return "midnight"
+	case 12:
+		return "noon"
+	}
+	return time.Date(2000, 1, 1, h, 0, 0, 0, time.UTC).Format("3 PM")
+}
+
+// duration writes hours as minutes under an hour ("24 minutes"), else as
+// hours to one decimal ("2.5 hours").
+func duration(hours float64) string {
+	if m := int(math.Round(hours * 60)); m < 60 {
+		return fmt.Sprintf("%d %s", m, plural(m, "minute", "minutes"))
+	}
+	return fmt.Sprintf("%s %s", oneDecimal(hours), plural2(hours, "hour", "hours"))
 }
 
 // clock formats minutes after midnight as "8:05 AM".
